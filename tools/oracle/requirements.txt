@@ -1,0 +1,4 @@
+# gsp_oracle.py 依赖 (装进 tools/oracle/.venv)
+pywin32>=306
+# 可选: 失败时保存窗口截图 (--screenshots)
+Pillow>=10
