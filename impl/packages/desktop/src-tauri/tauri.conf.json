@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GSP-plus",
+  "version": "0.1.0",
+  "identifier": "com.gspplus.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev -w @gsp-plus/app",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "npm run build -w @gsp-plus/app",
+    "frontendDist": "../../app/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "GSP-plus",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 500,
+        "center": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "GSP-plus",
+    "copyright": "GSP-plus contributors",
+    "category": "Education",
+    "shortDescription": "动态几何软件",
+    "longDescription": "GSP-plus：兼容几何画板 .gsp 文件的动态几何软件。",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+[package]
+name = "gsp-plus"
+version = "0.1.0"
+description = "GSP-plus 桌面外壳（Tauri 2，仅 Windows 10+）"
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+name = "gsp_plus_lib"
+crate-type = ["rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"

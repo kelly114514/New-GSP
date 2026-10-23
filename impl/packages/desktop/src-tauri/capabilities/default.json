@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "主窗口权限：核心 API；dialog 只开“打开”；fs 只开“读文件”，且无静态路径范围（仅限用户在对话框中选中的文件）。",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "fs:allow-read-file"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@gsp-plus/render",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GSP-plus 的 Canvas 2D 绘制包（允许使用 DOM 类型）",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gsp-plus/core": "*"
+  }
+}

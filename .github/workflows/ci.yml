@@ -1,0 +1,31 @@
+name: CI
+
+# impl/ 的类型检查和测试。不构建 Tauri（安装包在本机构建）。
+# CI 里没有 original/，语料测试会自动跳过；samples/baseline/ 随仓库提交，始终会跑。
+on:
+  push:
+  pull_request:
+
+jobs:
+  impl:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: impl
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: impl/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 测试
+        run: npm test
