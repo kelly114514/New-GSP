@@ -1,0 +1,288 @@
+{
+  "schema": "gsp-original-minimal-baseline-v1",
+  "authority": "controlled-replay plus shipped-artifact converter interpretation",
+  "oracle_sha256": "bf22c09822ad2da66f8e3655e5a9cbd6c8e494feaf78690cf118f9261887c7b3",
+  "ui_observations": "ui-observations.json",
+  "field_sources": {
+    "header": "recovered/native/src/object_header.cpp FUN_0043CD70; external fields remain explicit",
+    "parents": "recovered/native/src/parent_references.cpp FUN_004A7220; 1-based save identifiers",
+    "point": "recovered/native/src/point_serialization.cpp FUN_00445EE0; two raw doubles"
+  },
+  "derived_midpoint_expectation": {
+    "midpoint.gsp": [
+      311.0,
+      214.0
+    ],
+    "midpoint-moved.gsp": [
+      331.0,
+      227.5
+    ]
+  },
+  "limitations": [
+    "These are original-app samples, not acceptance of a recovered loader.",
+    "Midpoint coordinates are derived from parent endpoints and corroborated visually; they are not serialized as kind2201.",
+    "Unidentified page/style payload fields remain opaque evidence, not restored semantics."
+  ],
+  "samples": {
+    "empty.gsp": {
+      "bytes": 1712,
+      "sha256": "904021d1c1476436300525a961fb3e93eae91f9934e0c66d40aead4793804250",
+      "format_version": 5,
+      "pages": 1,
+      "objects": []
+    },
+    "point.gsp": {
+      "bytes": 1848,
+      "sha256": "d2f397dbfaa819fc60fcf152bfc0f8c8eaf4c22d730220109e87c84b1c3fb9fd",
+      "format_version": 5,
+      "pages": 1,
+      "objects": [
+        {
+          "id": 1,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            211.0,
+            147.0
+          ]
+        }
+      ]
+    },
+    "segment.gsp": {
+      "bytes": 1980,
+      "sha256": "1615c71d73e977fab68e932461df45c748df7a152da9f9e5974b3bf5d70e8f9e",
+      "format_version": 5,
+      "pages": 1,
+      "objects": [
+        {
+          "id": 1,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            211.0,
+            147.0
+          ]
+        },
+        {
+          "id": 2,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            411.0,
+            281.0
+          ]
+        },
+        {
+          "id": 3,
+          "external_constraint": 2,
+          "external_kind": 2,
+          "external_genera": 14,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            2,
+            2,
+            1
+          ],
+          "colorref": 8388608,
+          "parents": [
+            2,
+            1
+          ]
+        }
+      ]
+    },
+    "midpoint.gsp": {
+      "bytes": 2040,
+      "sha256": "946750e640029729b91d8f98de6424c030ba3d9f3e6d4671607ecff555a2c903",
+      "format_version": 5,
+      "pages": 1,
+      "objects": [
+        {
+          "id": 1,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            211.0,
+            147.0
+          ]
+        },
+        {
+          "id": 2,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            411.0,
+            281.0
+          ]
+        },
+        {
+          "id": 3,
+          "external_constraint": 2,
+          "external_kind": 2,
+          "external_genera": 14,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            2,
+            2,
+            1
+          ],
+          "colorref": 8388608,
+          "parents": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": 4,
+          "external_constraint": 1,
+          "external_kind": 1,
+          "external_genera": 11,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [
+            3
+          ]
+        }
+      ]
+    },
+    "midpoint-moved.gsp": {
+      "bytes": 2040,
+      "sha256": "184fcbb42dc6f43fafa89e83997d8159f4c38906737481d4619b6fc9bcc949ba",
+      "format_version": 5,
+      "pages": 1,
+      "objects": [
+        {
+          "id": 1,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            251.0,
+            174.0
+          ]
+        },
+        {
+          "id": 2,
+          "external_constraint": 0,
+          "external_kind": 1,
+          "external_genera": 4,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [],
+          "saved_coordinates": [
+            411.0,
+            281.0
+          ]
+        },
+        {
+          "id": 3,
+          "external_constraint": 2,
+          "external_kind": 2,
+          "external_genera": 14,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            2,
+            2,
+            1
+          ],
+          "colorref": 8388608,
+          "parents": [
+            2,
+            1
+          ]
+        },
+        {
+          "id": 4,
+          "external_constraint": 1,
+          "external_kind": 1,
+          "external_genera": 11,
+          "field_08": 0,
+          "field_04": 0,
+          "style_words": [
+            1,
+            2,
+            2
+          ],
+          "colorref": 255,
+          "parents": [
+            3
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "gsp-original-minimal-ui-v1",
+  "date": "2026-10-20",
+  "authority": "controlled-replay",
+  "oracle": "oracle-runtime/GSP5chs.exe",
+  "steps": [
+    "Launch byte-identical copied original with copied Support Files",
+    "File > Save As empty.gsp",
+    "Point tool click (400,300); Save As point.gsp",
+    "Point tool click (700,500); Ctrl+A; Construct > Segment; Save As segment.gsp",
+    "Ctrl+M on selected segment; Save As midpoint.gsp",
+    "Arrow tool drag endpoint (400,300) to (460,340); observe midpoint moved; Save As midpoint-moved.gsp",
+    "Close document; Ctrl+O and open all five saved files together; inspect each, closing active document between inspections"
+  ],
+  "reopenObservations": [
+    {
+      "sample": "midpoint-moved.gsp",
+      "title": "几何画板",
+      "tree": "Window: \"几何画板 - [midpoint-moved.gsp]\", App: GSP5chs.exe.\n\t0 窗口 几何画板 - [midpoint-moved.gsp] Secondary Actions: Raise\n\t\t1 窗格 工作区 ID: 59648\n\t\t\t909 窗口 midpoint-moved.gsp Secondary Actions: Raise ID: 65284\n\t\t\t\t910 窗格 ID: 59648\n\t\t\t\t\t911 滚动条 (settable, float) Value: 83 ID: 59904\n\t\t\t\t\t\t912 按钮 左移一列 ID: UpButton\n\t\t\t\t\t\t913 按钮 向左翻页 ID: UpPageButton\n\t\t\t\t\t\t914 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t915 按钮 向右翻页 ID: DownPageButton\n\t\t\t\t\t\t916 按钮 右移一列 ID: DownButton\n\t\t\t\t\t917 滚动条 (settable, float) Value: 83 ID: 59920\n\t\t\t\t\t\t918 按钮 上一行 ID: UpButton\n\t\t\t\t\t\t919 按钮 向上翻页 ID: UpPageButton\n\t\t\t\t\t\t920 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t921 按钮 向下翻页 ID: DownPageButton\n\t\t\t\t\t\t922 按钮 下一行 ID: DownButton\n\t\t\t\t\t923 缩略图 (settable, float) Value: 0 ID: 59936\n\t\t\t\t\t924 窗格 ID: 59648\n\t\t\t\t925 标题栏 (settable, string) Value: midpoint-moved.gsp\n\t\t\t926 窗口 midpoint.gsp Secondary Actions: Raise ID: 65283\n\t\t\t\t927 窗格 ID: 59648\n\t\t\t\t\t928 滚动条 (settable, float) Value: 83 ID: 59904\n\t\t\t\t\t\t929 按钮 左移一列 ID: UpButton\n\t\t\t\t\t\t930 按钮 向左翻页 ID: UpPageButton\n\t\t\t\t\t\t931 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t932 按钮 向右翻页 ID: DownPageButton\n\t\t\t\t\t\t933 按钮 右移一列 ID: DownButton\n\t\t\t\t\t934 滚动条 (settable, float) Value: 83 ID: 59920\n\t\t\t\t\t\t935 按钮 上一行 ID: UpButton\n\t\t\t\t\t\t936 按钮 向上翻页 ID: UpPageButton\n\t\t\t\t\t\t937 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t938 按钮 向下翻页 ID: DownPageButton\n\t\t\t\t\t\t939 按钮 下一行 ID: DownButton\n\t\t\t\t\t940 缩略图 (settable, float) Value: 0 ID: 59936\n\t\t\t\t\t941 窗格 ID: 59648\n\t\t\t\t942 标题栏 (settable, string) Value: midpoint.gsp\n\t\t\t\t\t943 菜单栏 系统 ID: MenuBar\n\t\t\t\t\t\t944 菜单项 文档窗口\n\t\t\t\t\t945 按钮 最小化\n\t\t\t\t\t946 按钮 最大化\n\t\t\t\t\t947 按钮 关闭\n\t\t\t948 窗口 segment.gsp Secondary Actions: Raise ID: 65282\n\t\t\t\t949 窗格 ID: 59648\n\t\t\t\t\t950 滚动条 (settable, float) Value: 83 ID: 59904\n\t\t\t\t\t\t951 按钮 左移一列 ID: UpButton\n\t\t\t\t\t\t952 按钮 向左翻页 ID: UpPageButton\n\t\t\t\t\t\t953 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t954 按钮 向右翻页 ID: DownPageButton\n\t\t\t\t\t\t955 按钮 右移一列 ID: DownButton\n\t\t\t\t\t956 滚动条 (settable, float) Value: 83 ID: 59920\n\t\t\t\t\t\t957 按钮 上一行 ID: UpButton\n\t\t\t\t\t\t958 按钮 向上翻页 ID: UpPageButton\n\t\t\t\t\t\t959 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t960 按钮 向下翻页 ID: DownPageButton\n\t\t\t\t\t\t961 按钮 下一行 ID: DownButton\n\t\t\t\t\t962 缩略图 (settable, float) Value: 0 ID: 59936\n\t\t\t\t\t963 窗格 ID: 59648\n\t\t\t\t964 标题栏 (settable, string) Value: segment.gsp\n\t\t\t\t\t965 菜单栏 系统 ID: MenuBar\n\t\t\t\t\t\t966 菜单项 文档窗口\n\t\t\t\t\t967 按钮 最小化\n\t\t\t\t\t968 按钮 最大化\n\t\t\t\t\t969 按钮 关闭\n\t\t\t970 窗口 point.gsp Secondary Actions: Raise ID: 65281\n\t\t\t\t971 窗格 ID: 59648\n\t\t\t\t\t972 滚动条 (settable, float) Value: 0 ID: 59904\n\t\t\t\t\t\t973 按钮 左移一列 ID: UpButton\n\t\t\t\t\t\t974 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t975 按钮 向右翻页 ID: DownPageButton\n\t\t\t\t\t\t976 按钮 右移一列 ID: DownButton\n\t\t\t\t\t977 滚动条 (settable, float) Value: 0 ID: 59920\n\t\t\t\t\t\t978 按钮 上一行 ID: UpButton\n\t\t\t\t\t\t979 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t980 按钮 向下翻页 ID: DownPageButton\n\t\t\t\t\t\t981 按钮 下一行 ID: DownButton\n\t\t\t\t\t982 缩略图 (settable, float) Value: 0 ID: 59936\n\t\t\t\t\t983 窗格 ID: 59648\n\t\t\t\t984 标题栏 (settable, string) Value: point.gsp\n\t\t\t\t\t985 菜单栏 系统 ID: MenuBar\n\t\t\t\t\t\t986 菜单项 文档窗口\n\t\t\t\t\t987 按钮 最小化\n\t\t\t\t\t988 按钮 最大化\n\t\t\t\t\t989 按钮 关闭\n\t\t\t990 窗口 empty.gsp Secondary Actions: Raise ID: 65280\n\t\t\t\t991 窗格 ID: 59648\n\t\t\t\t\t992 滚动条 (settable, float) Value: 0 ID: 59904\n\t\t\t\t\t\t993 按钮 左移一列 ID: UpButton\n\t\t\t\t\t\t994 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t995 按钮 向右翻页 ID: DownPageButton\n\t\t\t\t\t\t996 按钮 右移一列 ID: DownButton\n\t\t\t\t\t997 滚动条 (settable, float) Value: 0 ID: 59920\n\t\t\t\t\t\t998 按钮 上一行 ID: UpButton\n\t\t\t\t\t\t999 缩略图 位置 ID: ScrollbarThumb\n\t\t\t\t\t\t1000 按钮 向下翻页 ID: DownPageButton\n\t\t\t\t\t\t1001 按钮 下一行 ID: DownButton\n\t\t\t\t\t1002 缩略图 (settable, float) Value: 0 ID: 59936\n\t\t\t\t\t1003 窗格 ID: 59648\n\t\t\t\t1004 标题栏 (settable, string) Value: empty.gsp\n\t\t\t\t\t1005 菜单栏 系统 ID: MenuBar\n\t\t\t\t\t\t1006 菜单项 文档窗口\n\t\t\t\t\t1007 按钮 最小化\n\t\t\t\t\t1008 按钮 最大化\n\t\t\t\t\t1009 按钮 关闭\n\t\t19 状态栏 ID: 59393\n\t\t\t20 文本 当前被选定的：1 点\n\t\t21 工具栏 ID: 59392\n\t\t\t22 复选框 移动箭头工具\n\t\t\t23 复选框 点工具\n\t\t\t24 复选框 圆工具\n\t\t\t25 复选框 线段直尺工具\n\t\t\t26 复选框 多边形工具\n\t\t\t27 复选框 文本工具\n\t\t\t28 复选框 标记工具\n\t\t\t29 复选框 信息工具\n\t\t\t30 复选框 自定义工具\n\t\t31 标题栏 (settable, string) Value: 几何画板 - [midpoint-moved.gsp]\n\t\t\t32 菜单栏 系统 ID: MenuBar\n\t\t\t\t33 菜单项 系统\n\t\t\t34 按钮 最小化\n\t\t\t35 按钮 最大化\n\t\t\t36 按钮 关闭\n\t\t1010 菜单栏 应用程序 ID: MenuBar\n\t\t\t1011 菜单项 文档窗口\n\t\t\t1012 菜单项 文件(F)\n\t\t\t1013 菜单项 编辑(E)\n\t\t\t1014 菜单项 显示(D)\n\t\t\t1015 菜单项 构造(C)\n\t\t\t1016 菜单项 变换(T)\n\t\t\t1017 菜单项 度量(M)\n\t\t\t1018 菜单项 数据(N)\n\t\t\t1019 菜单项 绘图(G)\n\t\t\t1020 菜单项 窗口(W)\n\t\t\t1021 菜单项 帮助(H)\n\t\t\t1022 按钮 最小化\n\t\t\t1023 按钮 还原\n\t\t\t1024 按钮 关闭\n\nThe focused UI element is 924 窗格 ID: 59648.",
+      "observation": "one segment with endpoints near (460,342),(701,502), dependent midpoint near (581,422); loaded from disk after document close"
+    },
+    {
+      "sample": "midpoint.gsp",
+      "title": "几何画板 - [midpoint.gsp]",
+      "observation": "one segment with endpoints near (400,301),(701,502), midpoint near (551,402); no load error"
+    },
+    {
+      "sample": "segment.gsp",
+      "title": "几何画板 - [segment.gsp]",
+      "observation": "one selected segment with two endpoints near (400,301),(701,502), no midpoint; no load error"
+    },
+    {
+      "sample": "point.gsp",
+      "title": "几何画板 - [point.gsp]",
+      "observation": "one free point near (400,301), no segment; no load error"
+    },
+    {
+      "sample": "empty.gsp",
+      "title": "几何画板 - [empty.gsp]",
+      "observation": "empty drawing area, one page; no load error"
+    }
+  ],
+  "limitations": [
+    "UI positions are observed window pixels; saved coordinates are in document logical units",
+    "No debugger model/memory capture; object headers/parent IDs/coordinates are extracted independently from saved records",
+    "Style/hidden field names require native converter evidence; selection highlight is not a permanent color"
+  ]
+}

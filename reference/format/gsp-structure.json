@@ -1,0 +1,262 @@
+{
+  "script_sha256": "50f8d8f60f730ad7d0ae5755b11747ab0479ed3cc0cad3c3e2754aa5ccfb1f92",
+  "paired_kind_hypothesis": {
+    "900": 901,
+    "902": 903,
+    "1000": 1001,
+    "1002": 1003,
+    "1006": 1007,
+    "2000": 2007
+  },
+  "paired_kind_stack_error_count": 0,
+  "paired_kind_stack_errors": [],
+  "page_count": 2455,
+  "page_payload_u32_at_24_equals_2000_count": 2455,
+  "page_mismatches": [],
+  "kind2002_checks": {
+    "records": 370457,
+    "size_equals_4_plus_4_times_first_u32": 370457
+  },
+  "kind2000_sizes_by_header_0c": {
+    "5": {
+      "28": 360923
+    },
+    "4": {
+      "16": 39821
+    }
+  },
+  "build_strings": [
+    {
+      "text": "GSP5_w_1066K/Jul 12 2012",
+      "count": 453,
+      "example": {
+        "path": "Sample.gsp",
+        "offset": 31572,
+        "payload_offset": 31580,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f313036364b2f4a756c20313220323031320001"
+      }
+    },
+    {
+      "text": "GSP5_w_0984K/Apr 28 2010",
+      "count": 931,
+      "example": {
+        "path": "Samples\\4.x实例\\初中数学积件库.gsp",
+        "offset": 1006,
+        "payload_offset": 1014,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f303938344b2f41707220323820323031300000"
+      }
+    },
+    {
+      "text": "GSP5_w_0958K/Nov  6 2009",
+      "count": 497,
+      "example": {
+        "path": "Samples\\4.x实例\\官长寿作品\\其它教学\\99table.gsp",
+        "offset": 986,
+        "payload_offset": 994,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f303935384b2f4e6f7620203620323030390000"
+      }
+    },
+    {
+      "text": "GSP4_W_0594/Aug 28 2006",
+      "count": 15,
+      "example": {
+        "path": "Samples\\4.x实例\\官长寿作品\\空间曲面\\example-39.gsp",
+        "offset": 590,
+        "payload_offset": 598,
+        "payload_size": 24,
+        "payload_hex": "475350345f575f303539342f417567203238203230303600"
+      }
+    },
+    {
+      "text": "GSP5_w_1012K/Oct 25 2010",
+      "count": 85,
+      "example": {
+        "path": "Samples\\5.x实例\\侯仰顺作品\\多边形(蚂蚁制作).gsp",
+        "offset": 990,
+        "payload_offset": 998,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f313031324b2f4f637420323520323031300000"
+      }
+    },
+    {
+      "text": "GSP5_w_1014K/Dec 17 2010",
+      "count": 411,
+      "example": {
+        "path": "Samples\\5.x实例\\侯仰顺作品\\平面镶嵌迭代(蚂蚁).gsp",
+        "offset": 990,
+        "payload_offset": 998,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f313031344b2f44656320313720323031300000"
+      }
+    },
+    {
+      "text": "GSP5_w_1046K/Dec 15 2011",
+      "count": 7,
+      "example": {
+        "path": "Samples\\5.x实例\\孙禄京作品\\2011年无锡.gsp",
+        "offset": 5792,
+        "payload_offset": 5800,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f313034364b2f44656320313520323031310000"
+      }
+    },
+    {
+      "text": "GSP4_W_0528/Mar 11 2003",
+      "count": 3,
+      "example": {
+        "path": "Samples\\5.x实例\\群师作品\\经典问题集\\时钟 (2).gsp",
+        "offset": 510,
+        "payload_offset": 518,
+        "payload_size": 24,
+        "payload_hex": "475350345f575f303532382f4d6172203131203230303300"
+      }
+    },
+    {
+      "text": "GSP4_W_0554/Mar  2 2004",
+      "count": 30,
+      "example": {
+        "path": "Samples\\5.x实例\\群师作品\\综合杂例类\\卫星.gsp",
+        "offset": 510,
+        "payload_offset": 518,
+        "payload_size": 24,
+        "payload_hex": "475350345f575f303535342f4d6172202032203230303400"
+      }
+    },
+    {
+      "text": "GSP5_m_0948K/Oct 26 2009",
+      "count": 10,
+      "example": {
+        "path": "Support Files\\Example Tools.gsp",
+        "offset": 1096,
+        "payload_offset": 1104,
+        "payload_size": 26,
+        "payload_hex": "475350355f6d5f303934384b2f4f637420323620323030390000"
+      }
+    },
+    {
+      "text": "GSP5_w_1074K/Apr 19 2013",
+      "count": 2,
+      "example": {
+        "path": "Tool Folder\\16 曲线工具.gsp",
+        "offset": 986,
+        "payload_offset": 994,
+        "payload_size": 26,
+        "payload_hex": "475350355f775f313037344b2f41707220313920323031330000"
+      }
+    },
+    {
+      "text": "GSP4_W_0534/Jun 30 2003",
+      "count": 8,
+      "example": {
+        "path": "Tool Folder\\20 虚线工具.gsp",
+        "offset": 604,
+        "payload_offset": 612,
+        "payload_size": 24,
+        "payload_hex": "475350345f575f303533342f4a756e203330203230303300"
+      }
+    },
+    {
+      "text": "GSP4_W_0516/Aug  7 2002",
+      "count": 3,
+      "example": {
+        "path": "Tool Folder\\40 [3d]基本工具.gsp",
+        "offset": 510,
+        "payload_offset": 518,
+        "payload_size": 24,
+        "payload_hex": "475350345f575f303531362f417567202037203230303200"
+      }
+    }
+  ],
+  "odd_payload_examples": [
+    {
+      "path": "Sample.gsp",
+      "sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "offset": 83978,
+      "payload_offset": 83986,
+      "payload_size": 25,
+      "kind": 9009,
+      "next_offset": 84012,
+      "padding_hex": "00"
+    },
+    {
+      "path": "Sample.gsp",
+      "sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "offset": 84012,
+      "payload_offset": 84020,
+      "payload_size": 27,
+      "kind": 9009,
+      "next_offset": 84048,
+      "padding_hex": "00"
+    },
+    {
+      "path": "Sample.gsp",
+      "sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "offset": 84048,
+      "payload_offset": 84056,
+      "payload_size": 27,
+      "kind": 9009,
+      "next_offset": 84084,
+      "padding_hex": "00"
+    },
+    {
+      "path": "Sample.gsp",
+      "sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "offset": 137392,
+      "payload_offset": 137400,
+      "payload_size": 27,
+      "kind": 9009,
+      "next_offset": 137428,
+      "padding_hex": "00"
+    },
+    {
+      "path": "Sample.gsp",
+      "sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "offset": 189202,
+      "payload_offset": 189210,
+      "payload_size": 25,
+      "kind": 9009,
+      "next_offset": 189236,
+      "padding_hex": "00"
+    },
+    {
+      "path": "Sample.gsp",
+      "sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "offset": 250256,
+      "payload_offset": 250264,
+      "payload_size": 27,
+      "kind": 9009,
+      "next_offset": 250292,
+      "padding_hex": "00"
+    }
+  ],
+  "kind1300_png_count": 370,
+  "kind1300_png_valid_count": 370,
+  "kind1300_png_offset_equals_payload_plus8": 370,
+  "kind1300_png_prefix_matches_dimensions": 370,
+  "kind1300_png_ends_at_payload_end": 370,
+  "kind1100_name_candidate_count": 1910,
+  "kind1100_within_1000_count": 802,
+  "png_preview_extractions": [
+    {
+      "path": "C:\\projects\\逆向几何画板\\analysis\\previews\\sample-01-128x128.png",
+      "sha256": "d763a91461298a6e7558d21f8319e3e56c6f4ac044583ba0b9ec18d1c9185c45",
+      "source_path": "Sample.gsp",
+      "source_sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "source_start": 426,
+      "source_end_exclusive": 21266,
+      "bytes": 20840
+    },
+    {
+      "path": "C:\\projects\\逆向几何画板\\analysis\\previews\\sample-02-278x87.png",
+      "sha256": "cf2760e7f7544d5df341b09d016bae11c3845e06acb2be893bff3b9a09c0ffa9",
+      "source_path": "Sample.gsp",
+      "source_sha256": "54f777cf5d5c76e2f1ac483f548a8e9a132ba2b581c327be66db4f399bb65e25",
+      "source_start": 21282,
+      "source_end_exclusive": 30980,
+      "bytes": 9698
+    }
+  ]
+}

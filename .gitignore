@@ -1,0 +1,25 @@
+# 原版发行包与解包件：受版权保护，只在本机使用
+original/
+re/unpacked/
+# 本机工具与可再生的分析输出（发布记录 *-release.json 入库）
+re/tools/*
+!re/tools/*-release.json
+re/sessions/
+re/native-evidence/
+# 旧工程历史备份
+archive/
+# 第三方版权内容：仓库公开，只在本机使用
+reference/java/decompiled/
+reference/features/manuals-text/
+reference/features/resource-text.json
+reference/format/recovery-object-dispatch.json
+reference/format/compatibility-container/*.json
+# 原版对照输出（由 tools/oracle 在本机生成）
+oracle/
+# 构建与依赖
+node_modules/
+dist/
+target/
+.venv/
+__pycache__/
+*.tsbuildinfo
