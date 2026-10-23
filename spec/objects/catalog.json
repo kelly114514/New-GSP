@@ -1,0 +1,8537 @@
+{
+ "schema": "gsp-object-catalog-v1",
+ "generated_by": "tools/build_object_catalog.py",
+ "inputs": {
+  "reference/features/resource-text.json": "f08b3dc22c987c7a5f2a8f28023d3e7aa0f76d87cc22fa65c4125f2402525592",
+  "reference/format/recovery-object-dispatch.json": "889ab00a62a15aafea21cee81dcf6fd9b0e40a36a5ca6aa602775c008a6ff34c"
+ },
+ "corpus": {
+  "root": "original/sketchpad5",
+  "files": 1431,
+  "objects": 400744
+ },
+ "constraints": [
+  {
+   "ext_id": 0,
+   "table_row": 0,
+   "main_kind": 1,
+   "genera": 4,
+   "parent_template_index": 0,
+   "parent_template_words": [
+    0
+   ],
+   "description_template_index": 156,
+   "description_template_id": 4572,
+   "description_template": null,
+   "object_count": 30287,
+   "file_count": 1431,
+   "child_records": {
+    "2005": {
+     "count": 19205,
+     "sizes": {
+      "26": 10339,
+      "28": 947,
+      "30": 4175,
+      "32": 713,
+      "34": 512,
+      "36": 198,
+      "38": 293,
+      "40": 1586,
+      "42": 39,
+      "44": 113,
+      "46": 158,
+      "48": 21,
+      "50": 15,
+      "52": 18,
+      "54": 18,
+      "56": 10,
+      "58": 4,
+      "60": 9,
+      "62": 13,
+      "64": 11,
+      "66": 2,
+      "68": 1,
+      "70": 2,
+      "72": 1,
+      "74": 2,
+      "76": 2,
+      "94": 1,
+      "100": 2
+     }
+    },
+    "2008": {
+     "count": 22551,
+     "sizes": {
+      "2": 22551
+     }
+    },
+    "2200": {
+     "count": 3402,
+     "sizes": {
+      "8": 3402
+     }
+    },
+    "2201": {
+     "count": 17760,
+     "sizes": {
+      "16": 17760
+     }
+    },
+    "2210": {
+     "count": 1983,
+     "sizes": {
+      "8": 1983
+     }
+    },
+    "2211": {
+     "count": 6847,
+     "sizes": {
+      "8": 6847
+     }
+    },
+    "2216": {
+     "count": 295,
+     "sizes": {
+      "8": 1,
+      "48": 294
+     }
+    },
+    "2300": {
+     "count": 3402,
+     "sizes": {
+      "24": 9,
+      "28": 256,
+      "32": 636,
+      "36": 238,
+      "40": 328,
+      "44": 127,
+      "48": 189,
+      "52": 119,
+      "56": 189,
+      "60": 133,
+      "64": 103,
+      "68": 74,
+      "72": 50,
+      "76": 50,
+      "80": 51,
+      "84": 53,
+      "88": 33,
+      "92": 20,
+      "96": 33,
+      "100": 22,
+      "104": 25,
+      "108": 24,
+      "112": 19,
+      "116": 24,
+      "120": 12,
+      "124": 17,
+      "128": 17,
+      "132": 11,
+      "136": 15,
+      "140": 19,
+      "144": 4,
+      "148": 12,
+      "152": 5,
+      "156": 11,
+      "160": 9,
+      "164": 17,
+      "168": 8,
+      "172": 6,
+      "176": 16,
+      "180": 8,
+      "184": 18,
+      "188": 7,
+      "192": 7,
+      "196": 1,
+      "200": 5,
+      "204": 5,
+      "208": 8,
+      "212": 8,
+      "216": 3,
+      "220": 6,
+      "224": 9,
+      "228": 8,
+      "232": 7,
+      "236": 11,
+      "240": 9,
+      "244": 8,
+      "248": 7,
+      "252": 1,
+      "256": 1,
+      "260": 7,
+      "264": 1,
+      "268": 3,
+      "272": 5,
+      "276": 1,
+      "280": 5,
+      "284": 2,
+      "288": 5,
+      "292": 4,
+      "296": 2,
+      "300": 1,
+      "304": 6,
+      "308": 2,
+      "312": 1,
+      "316": 2,
+      "320": 3,
+      "324": 7,
+      "328": 3,
+      "332": 1,
+      "336": 3,
+      "340": 4,
+      "352": 2,
+      "356": 3,
+      "360": 2,
+      "364": 1,
+      "368": 5,
+      "372": 1,
+      "376": 3,
+      "380": 2,
+      "384": 4,
+      "388": 1,
+      "392": 8,
+      "400": 2,
+      "404": 3,
+      "412": 4,
+      "416": 5,
+      "420": 3,
+      "424": 4,
+      "428": 2,
+      "436": 1,
+      "440": 1,
+      "444": 2,
+      "452": 5,
+      "456": 3,
+      "464": 1,
+      "468": 2,
+      "472": 2,
+      "480": 2,
+      "484": 1,
+      "492": 4,
+      "496": 1,
+      "500": 1,
+      "508": 2,
+      "512": 2,
+      "516": 4,
+      "520": 3,
+      "528": 1,
+      "536": 3,
+      "544": 2,
+      "556": 2,
+      "576": 1,
+      "588": 1,
+      "604": 1,
+      "608": 2,
+      "620": 1,
+      "624": 1,
+      "628": 1,
+      "632": 2,
+      "644": 1,
+      "648": 3,
+      "656": 2,
+      "660": 2,
+      "664": 1,
+      "668": 2,
+      "676": 1,
+      "680": 1,
+      "696": 2,
+      "704": 1,
+      "716": 1,
+      "720": 1,
+      "732": 1,
+      "736": 2,
+      "744": 1,
+      "748": 2,
+      "764": 1,
+      "768": 3,
+      "776": 1,
+      "784": 1,
+      "788": 1,
+      "792": 2,
+      "796": 1,
+      "808": 2,
+      "820": 1,
+      "832": 2,
+      "840": 1,
+      "860": 1,
+      "872": 2,
+      "916": 2,
+      "928": 1,
+      "960": 1,
+      "968": 2,
+      "972": 2,
+      "984": 1,
+      "1004": 2,
+      "1008": 1,
+      "1044": 3,
+      "1084": 1,
+      "1088": 2,
+      "1100": 1,
+      "1108": 1,
+      "1116": 1,
+      "1140": 2,
+      "1144": 1,
+      "1156": 1,
+      "1172": 2,
+      "1192": 1,
+      "1224": 1,
+      "1228": 1,
+      "1256": 1,
+      "1320": 1,
+      "1428": 1,
+      "1444": 1,
+      "1540": 2,
+      "1548": 1,
+      "1656": 1,
+      "1680": 2,
+      "1728": 1,
+      "1752": 1,
+      "1756": 1,
+      "1764": 1,
+      "1864": 1,
+      "2116": 3,
+      "2200": 1,
+      "2360": 1,
+      "2388": 1,
+      "2680": 1,
+      "2720": 1,
+      "2776": 2,
+      "2784": 1,
+      "3744": 1,
+      "4180": 2,
+      "5216": 1
+     }
+    },
+    "2310": {
+     "count": 1983,
+     "sizes": {
+      "24": 392,
+      "44": 1252,
+      "48": 162,
+      "56": 158,
+      "76": 5,
+      "80": 2,
+      "84": 6,
+      "88": 1,
+      "96": 1,
+      "104": 2,
+      "120": 1,
+      "172": 1
+     }
+    },
+    "2311": {
+     "count": 6847,
+     "sizes": {
+      "94": 4354,
+      "96": 741,
+      "98": 567,
+      "100": 393,
+      "102": 214,
+      "104": 35,
+      "106": 85,
+      "108": 27,
+      "110": 36,
+      "112": 20,
+      "114": 33,
+      "116": 6,
+      "118": 13,
+      "120": 5,
+      "122": 11,
+      "124": 12,
+      "126": 68,
+      "128": 118,
+      "130": 54,
+      "132": 21,
+      "134": 8,
+      "136": 3,
+      "138": 5,
+      "140": 2,
+      "142": 2,
+      "146": 6,
+      "156": 3,
+      "158": 1,
+      "160": 1,
+      "166": 1,
+      "222": 1,
+      "242": 1
+     }
+    },
+    "2316": {
+     "count": 295,
+     "sizes": {
+      "16": 295
+     }
+    },
+    "8000": {
+     "count": 1,
+     "sizes": {
+      "11916": 1
+     }
+    },
+    "8002": {
+     "count": 1,
+     "sizes": {
+      "49332": 1
+     }
+    },
+    "8004": {
+     "count": 294,
+     "sizes": {
+      "2": 294
+     }
+    },
+    "9006": {
+     "count": 1168,
+     "sizes": {
+      "0": 1168
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/不显示方法之至尊.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp"
+   ]
+  },
+  {
+   "ext_id": 1,
+   "table_row": 1,
+   "main_kind": 1,
+   "genera": 11,
+   "parent_template_index": 1,
+   "parent_template_words": [
+    14,
+    0
+   ],
+   "description_template_index": 1,
+   "description_template_id": 4417,
+   "description_template": "^A 是^B 的中点。^#",
+   "object_count": 3887,
+   "file_count": 465,
+   "child_records": {
+    "2002": {
+     "count": 3887,
+     "sizes": {
+      "8": 3887
+     }
+    },
+    "2005": {
+     "count": 2114,
+     "sizes": {
+      "26": 1579,
+      "28": 41,
+      "30": 492,
+      "46": 2
+     }
+    },
+    "2008": {
+     "count": 2114,
+     "sizes": {
+      "2": 2114
+     }
+    },
+    "9006": {
+     "count": 5,
+     "sizes": {
+      "0": 5
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹族.gsp",
+    "Samples/分形艺术/L-龙.gsp"
+   ]
+  },
+  {
+   "ext_id": 2,
+   "table_row": 2,
+   "main_kind": 2,
+   "genera": 14,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 2,
+   "description_template_id": 4418,
+   "description_template": "^A 是连接^B 和^C 的线段。^#",
+   "object_count": 45391,
+   "file_count": 1335,
+   "child_records": {
+    "2002": {
+     "count": 45391,
+     "sizes": {
+      "12": 45391
+     }
+    },
+    "2005": {
+     "count": 3450,
+     "sizes": {
+      "26": 1301,
+      "28": 1092,
+      "30": 904,
+      "32": 100,
+      "34": 18,
+      "36": 2,
+      "38": 11,
+      "40": 6,
+      "42": 10,
+      "44": 1,
+      "46": 2,
+      "50": 2,
+      "56": 1
+     }
+    },
+    "2008": {
+     "count": 3450,
+     "sizes": {
+      "2": 3450
+     }
+    },
+    "9006": {
+     "count": 2128,
+     "sizes": {
+      "0": 2128
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/不显示方法之至尊.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp"
+   ]
+  },
+  {
+   "ext_id": 3,
+   "table_row": 3,
+   "main_kind": 3,
+   "genera": 22,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 5,
+   "description_template_id": 4421,
+   "description_template": "^A 是以^B 为圆心，圆周通过^C 的圆。^#",
+   "object_count": 6266,
+   "file_count": 754,
+   "child_records": {
+    "2002": {
+     "count": 6266,
+     "sizes": {
+      "12": 6266
+     }
+    },
+    "2005": {
+     "count": 255,
+     "sizes": {
+      "26": 20,
+      "28": 110,
+      "30": 95,
+      "32": 21,
+      "34": 2,
+      "38": 5,
+      "42": 1,
+      "56": 1
+     }
+    },
+    "2008": {
+     "count": 255,
+     "sizes": {
+      "2": 255
+     }
+    },
+    "9006": {
+     "count": 115,
+     "sizes": {
+      "0": 115
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹族.gsp"
+   ]
+  },
+  {
+   "ext_id": 4,
+   "table_row": 4,
+   "main_kind": 3,
+   "genera": 22,
+   "parent_template_index": 3,
+   "parent_template_words": [
+    4,
+    77,
+    0
+   ],
+   "description_template_index": 6,
+   "description_template_id": 4422,
+   "description_template": "^A 是以^B 为圆心，^C 为半径的圆。^#",
+   "object_count": 1792,
+   "file_count": 365,
+   "child_records": {
+    "2002": {
+     "count": 1792,
+     "sizes": {
+      "12": 1792
+     }
+    },
+    "2005": {
+     "count": 257,
+     "sizes": {
+      "26": 12,
+      "28": 57,
+      "30": 170,
+      "32": 18
+     }
+    },
+    "2008": {
+     "count": 257,
+     "sizes": {
+      "2": 257
+     }
+    },
+    "9006": {
+     "count": 15,
+     "sizes": {
+      "0": 15
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/转动的太极图A.gsp",
+    "Samples/5.x实例/方小庆作品/圆系(inRm).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/筷子在椭圆中滑动中点的轨迹.gsp"
+   ]
+  },
+  {
+   "ext_id": 5,
+   "table_row": 5,
+   "main_kind": 2,
+   "genera": 42,
+   "parent_template_index": 4,
+   "parent_template_words": [
+    4,
+    7,
+    0
+   ],
+   "description_template_index": 7,
+   "description_template_id": 4423,
+   "description_template": "直线^a 过^B 垂直于^C。^#",
+   "object_count": 8233,
+   "file_count": 695,
+   "child_records": {
+    "2002": {
+     "count": 8233,
+     "sizes": {
+      "12": 8233
+     }
+    },
+    "2005": {
+     "count": 2477,
+     "sizes": {
+      "26": 1552,
+      "28": 391,
+      "30": 489,
+      "32": 4,
+      "34": 8,
+      "36": 5,
+      "38": 27,
+      "50": 1
+     }
+    },
+    "2008": {
+     "count": 2477,
+     "sizes": {
+      "2": 2477
+     }
+    },
+    "9006": {
+     "count": 14,
+     "sizes": {
+      "0": 14
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/过两定点且与一直线相切的圆.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/正方形边上的点 先构造多边形内部，再构造“边界上的点”。.gsp"
+   ]
+  },
+  {
+   "ext_id": 6,
+   "table_row": 6,
+   "main_kind": 2,
+   "genera": 41,
+   "parent_template_index": 4,
+   "parent_template_words": [
+    4,
+    7,
+    0
+   ],
+   "description_template_index": 8,
+   "description_template_id": 4424,
+   "description_template": "直线^a 过^B 平行于^C。^#",
+   "object_count": 4178,
+   "file_count": 332,
+   "child_records": {
+    "2002": {
+     "count": 4178,
+     "sizes": {
+      "12": 4178
+     }
+    },
+    "2005": {
+     "count": 1934,
+     "sizes": {
+      "26": 1321,
+      "28": 66,
+      "30": 543,
+      "34": 2,
+      "38": 2
+     }
+    },
+    "2008": {
+     "count": 1934,
+     "sizes": {
+      "2": 1934
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/正方形边上的点 先构造多边形内部，再构造“边界上的点”。.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆（尺规法）.gsp"
+   ]
+  },
+  {
+   "ext_id": 7,
+   "table_row": 7,
+   "main_kind": 2,
+   "genera": 39,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 9,
+   "description_template_id": 4425,
+   "description_template": "射线^a 平分∠^b^c^d。^#",
+   "object_count": 202,
+   "file_count": 59,
+   "child_records": {
+    "2002": {
+     "count": 202,
+     "sizes": {
+      "16": 202
+     }
+    },
+    "2005": {
+     "count": 93,
+     "sizes": {
+      "26": 83,
+      "28": 8,
+      "30": 2
+     }
+    },
+    "2008": {
+     "count": 93,
+     "sizes": {
+      "2": 93
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/方小庆作品/正多边形渐开线(inRm).gsp",
+    "Samples/5.x实例/孙禄京作品/角平分上线的点迭代.gsp"
+   ]
+  },
+  {
+   "ext_id": 8,
+   "table_row": 8,
+   "main_kind": 4,
+   "genera": 15,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 10,
+   "description_template_id": 4426,
+   "description_template": "^A 有^X个顶点：^y。^#",
+   "object_count": 7460,
+   "file_count": 648,
+   "child_records": {
+    "2002": {
+     "count": 7460,
+     "sizes": {
+      "16": 2984,
+      "20": 3442,
+      "24": 256,
+      "28": 209,
+      "32": 50,
+      "36": 117,
+      "40": 71,
+      "44": 66,
+      "48": 60,
+      "52": 16,
+      "56": 11,
+      "60": 3,
+      "64": 1,
+      "68": 16,
+      "72": 11,
+      "76": 16,
+      "80": 6,
+      "84": 8,
+      "92": 6,
+      "100": 1,
+      "104": 13,
+      "108": 7,
+      "116": 7,
+      "120": 12,
+      "124": 7,
+      "128": 8,
+      "132": 1,
+      "136": 1,
+      "140": 1,
+      "148": 7,
+      "176": 1,
+      "204": 1,
+      "220": 15,
+      "232": 4,
+      "236": 1,
+      "252": 1,
+      "256": 5,
+      "292": 1,
+      "296": 1,
+      "312": 2,
+      "356": 1,
+      "396": 4,
+      "420": 2,
+      "428": 1,
+      "508": 1,
+      "516": 1,
+      "740": 1,
+      "872": 1,
+      "1064": 1,
+      "1388": 1
+     }
+    },
+    "2005": {
+     "count": 1538,
+     "sizes": {
+      "26": 992,
+      "28": 254,
+      "30": 232,
+      "32": 5,
+      "34": 10,
+      "36": 1,
+      "38": 22,
+      "40": 20,
+      "52": 1,
+      "62": 1
+     }
+    },
+    "2008": {
+     "count": 1538,
+     "sizes": {
+      "2": 1538
+     }
+    },
+    "9006": {
+     "count": 1034,
+     "sizes": {
+      "0": 1034
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/平行四边形绕重心转动（方小庆老师）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/正方形边上的点 先构造多边形内部，再构造“边界上的点”。.gsp",
+    "Samples/5.x实例/方小庆作品/折纸(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 9,
+   "table_row": 9,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 5,
+   "parent_template_words": [
+    7,
+    7,
+    0
+   ],
+   "description_template_index": 11,
+   "description_template_id": 4427,
+   "description_template": "^A 是^B 和^C 的交点。^#",
+   "object_count": 14257,
+   "file_count": 731,
+   "child_records": {
+    "2002": {
+     "count": 14257,
+     "sizes": {
+      "12": 14257
+     }
+    },
+    "2005": {
+     "count": 7059,
+     "sizes": {
+      "26": 4348,
+      "28": 397,
+      "30": 2167,
+      "32": 42,
+      "34": 25,
+      "36": 4,
+      "38": 63,
+      "40": 1,
+      "44": 6,
+      "46": 5,
+      "100": 1
+     }
+    },
+    "2008": {
+     "count": 7059,
+     "sizes": {
+      "2": 7059
+     }
+    },
+    "9006": {
+     "count": 45,
+     "sizes": {
+      "0": 45
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/过两定点且与一直线相切的圆.gsp",
+    "Samples/5.x实例/方小庆作品/平行四边形绕重心转动（方小庆老师）.gsp"
+   ]
+  },
+  {
+   "ext_id": 10,
+   "table_row": 10,
+   "main_kind": 5,
+   "genera": 16,
+   "parent_template_index": 6,
+   "parent_template_words": [
+    22,
+    0
+   ],
+   "description_template_index": 12,
+   "description_template_id": 4428,
+   "description_template": "^A 是^B 的内部。^#",
+   "object_count": 356,
+   "file_count": 133,
+   "child_records": {
+    "2002": {
+     "count": 356,
+     "sizes": {
+      "8": 356
+     }
+    },
+    "2005": {
+     "count": 34,
+     "sizes": {
+      "26": 5,
+      "28": 12,
+      "30": 14,
+      "32": 2,
+      "92": 1
+     }
+    },
+    "2008": {
+     "count": 34,
+     "sizes": {
+      "2": 34
+     }
+    },
+    "9006": {
+     "count": 39,
+     "sizes": {
+      "0": 39
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/两圆之交(inRm).gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/有趣的花瓣.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/方和圆的互变.gsp"
+   ]
+  },
+  {
+   "ext_id": 11,
+   "table_row": 11,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 7,
+   "parent_template_words": [
+    7,
+    8,
+    0
+   ],
+   "description_template_index": 11,
+   "description_template_id": 4427,
+   "description_template": "^A 是^B 和^C 的交点。^#",
+   "object_count": 3757,
+   "file_count": 448,
+   "child_records": {
+    "2002": {
+     "count": 3757,
+     "sizes": {
+      "12": 3757
+     }
+    },
+    "2005": {
+     "count": 1457,
+     "sizes": {
+      "26": 1042,
+      "28": 132,
+      "30": 272,
+      "32": 5,
+      "34": 4,
+      "36": 1,
+      "40": 1
+     }
+    },
+    "2008": {
+     "count": 1457,
+     "sizes": {
+      "2": 1457
+     }
+    },
+    "9006": {
+     "count": 12,
+     "sizes": {
+      "0": 12
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆的又一个作法.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆（尺规法）.gsp"
+   ]
+  },
+  {
+   "ext_id": 12,
+   "table_row": 12,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 7,
+   "parent_template_words": [
+    7,
+    8,
+    0
+   ],
+   "description_template_index": 11,
+   "description_template_id": 4427,
+   "description_template": "^A 是^B 和^C 的交点。^#",
+   "object_count": 4719,
+   "file_count": 561,
+   "child_records": {
+    "2002": {
+     "count": 4719,
+     "sizes": {
+      "12": 4719
+     }
+    },
+    "2005": {
+     "count": 1760,
+     "sizes": {
+      "26": 1232,
+      "28": 202,
+      "30": 316,
+      "32": 5,
+      "34": 4,
+      "36": 1
+     }
+    },
+    "2008": {
+     "count": 1760,
+     "sizes": {
+      "2": 1760
+     }
+    },
+    "9006": {
+     "count": 7,
+     "sizes": {
+      "0": 7
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/图片也能构造轨迹.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/正方形边上的点 先构造多边形内部，再构造“边界上的点”。.gsp"
+   ]
+  },
+  {
+   "ext_id": 13,
+   "table_row": 13,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 8,
+   "parent_template_words": [
+    8,
+    8,
+    0
+   ],
+   "description_template_index": 11,
+   "description_template_id": 4427,
+   "description_template": "^A 是^B 和^C 的交点。^#",
+   "object_count": 470,
+   "file_count": 96,
+   "child_records": {
+    "2002": {
+     "count": 470,
+     "sizes": {
+      "12": 470
+     }
+    },
+    "2005": {
+     "count": 215,
+     "sizes": {
+      "26": 166,
+      "28": 4,
+      "30": 43,
+      "32": 1,
+      "50": 1
+     }
+    },
+    "2008": {
+     "count": 215,
+     "sizes": {
+      "2": 215
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/两圆之交(inRm).gsp",
+    "Samples/5.x实例/方小庆作品/滑块(inRm) (2).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/交集.gsp"
+   ]
+  },
+  {
+   "ext_id": 14,
+   "table_row": 14,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 8,
+   "parent_template_words": [
+    8,
+    8,
+    0
+   ],
+   "description_template_index": 11,
+   "description_template_id": 4427,
+   "description_template": "^A 是^B 和^C 的交点。^#",
+   "object_count": 468,
+   "file_count": 99,
+   "child_records": {
+    "2002": {
+     "count": 468,
+     "sizes": {
+      "12": 468
+     }
+    },
+    "2005": {
+     "count": 221,
+     "sizes": {
+      "26": 165,
+      "28": 6,
+      "30": 49,
+      "48": 1
+     }
+    },
+    "2008": {
+     "count": 221,
+     "sizes": {
+      "2": 221
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆的又一个作法.gsp",
+    "Samples/5.x实例/方小庆作品/两圆之交(inRm).gsp",
+    "Samples/5.x实例/方小庆作品/滑块(inRm) (2).gsp"
+   ]
+  },
+  {
+   "ext_id": 15,
+   "table_row": 15,
+   "main_kind": 1,
+   "genera": 10,
+   "parent_template_index": 9,
+   "parent_template_words": [
+    5,
+    0
+   ],
+   "description_template_index": 13,
+   "description_template_id": 4429,
+   "description_template": "^A 是^B 上一点。^#",
+   "object_count": 16780,
+   "file_count": 1266,
+   "child_records": {
+    "2002": {
+     "count": 16780,
+     "sizes": {
+      "8": 16780
+     }
+    },
+    "2003": {
+     "count": 15175,
+     "sizes": {
+      "12": 12856,
+      "20": 2319
+     }
+    },
+    "2005": {
+     "count": 9503,
+     "sizes": {
+      "26": 6673,
+      "28": 470,
+      "30": 1767,
+      "32": 255,
+      "34": 110,
+      "36": 80,
+      "38": 71,
+      "40": 38,
+      "42": 2,
+      "44": 16,
+      "46": 7,
+      "50": 3,
+      "52": 2,
+      "56": 5,
+      "58": 2,
+      "60": 1,
+      "62": 1
+     }
+    },
+    "2008": {
+     "count": 9503,
+     "sizes": {
+      "2": 9503
+     }
+    },
+    "9006": {
+     "count": 131,
+     "sizes": {
+      "0": 131
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹族.gsp"
+   ]
+  },
+  {
+   "ext_id": 16,
+   "table_row": 20,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 11,
+   "parent_template_words": [
+    88,
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 20,
+   "description_template_id": 4436,
+   "description_template": "^A 是^B 通过向量^c ^r ^d 的平移结果。^#",
+   "object_count": 26882,
+   "file_count": 820,
+   "child_records": {
+    "2002": {
+     "count": 26882,
+     "sizes": {
+      "16": 26882
+     }
+    },
+    "2005": {
+     "count": 2416,
+     "sizes": {
+      "26": 863,
+      "28": 871,
+      "30": 439,
+      "32": 95,
+      "34": 42,
+      "36": 9,
+      "38": 31,
+      "40": 41,
+      "42": 4,
+      "44": 5,
+      "46": 6,
+      "48": 4,
+      "50": 4,
+      "96": 1,
+      "98": 1
+     }
+    },
+    "2008": {
+     "count": 2416,
+     "sizes": {
+      "2": 2416
+     }
+    },
+    "2316": {
+     "count": 22,
+     "sizes": {
+      "16": 22
+     }
+    },
+    "9006": {
+     "count": 1034,
+     "sizes": {
+      "0": 1034
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/平行四边形绕重心转动（方小庆老师）.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆的又一个作法.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆（尺规法）.gsp"
+   ]
+  },
+  {
+   "ext_id": 17,
+   "table_row": 21,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 12,
+   "parent_template_words": [
+    88,
+    0
+   ],
+   "description_template_index": 21,
+   "description_template_id": 4437,
+   "description_template": "^A 是^B 通过水平移动^1 和垂直移动^3 的平移结果。^#",
+   "object_count": 6977,
+   "file_count": 429,
+   "child_records": {
+    "2002": {
+     "count": 6977,
+     "sizes": {
+      "8": 6977
+     }
+    },
+    "2003": {
+     "count": 6977,
+     "sizes": {
+      "52": 6977
+     }
+    },
+    "2005": {
+     "count": 296,
+     "sizes": {
+      "26": 42,
+      "28": 179,
+      "30": 47,
+      "32": 15,
+      "34": 3,
+      "36": 2,
+      "38": 5,
+      "46": 2,
+      "58": 1
+     }
+    },
+    "2008": {
+     "count": 296,
+     "sizes": {
+      "2": 296
+     }
+    },
+    "9006": {
+     "count": 39,
+     "sizes": {
+      "0": 39
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/平行四边形绕重心转动（方小庆老师）.gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)视觉暂留.gsp",
+    "Samples/5.x实例/方小庆作品/圆系(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 18,
+   "table_row": 22,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 13,
+   "parent_template_words": [
+    88,
+    95,
+    43,
+    0
+   ],
+   "description_template_index": 22,
+   "description_template_id": 4438,
+   "description_template": "^A 是^B 通过水平移动^1 和垂直移动^c 的平移结果。^#",
+   "object_count": 149,
+   "file_count": 26,
+   "child_records": {
+    "2002": {
+     "count": 149,
+     "sizes": {
+      "12": 149
+     }
+    },
+    "2003": {
+     "count": 149,
+     "sizes": {
+      "28": 149
+     }
+    },
+    "2005": {
+     "count": 23,
+     "sizes": {
+      "26": 12,
+      "28": 9,
+      "44": 1,
+      "48": 1
+     }
+    },
+    "2008": {
+     "count": 23,
+     "sizes": {
+      "2": 23
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/周维波作品/相切圆（飞狐制作）.gsp",
+    "Samples/5.x实例/方小庆作品/江西2012年文高考第十题(inRm).gsp",
+    "Samples/5.x实例/方小庆作品/凤凰第五期的征解题(inRm) .gsp"
+   ]
+  },
+  {
+   "ext_id": 19,
+   "table_row": 23,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 13,
+   "parent_template_words": [
+    88,
+    95,
+    43,
+    0
+   ],
+   "description_template_index": 23,
+   "description_template_id": 4439,
+   "description_template": "^A 是^B 通过水平移动^c 和垂直移动^1 的平移结果。^#",
+   "object_count": 348,
+   "file_count": 47,
+   "child_records": {
+    "2002": {
+     "count": 348,
+     "sizes": {
+      "12": 348
+     }
+    },
+    "2003": {
+     "count": 348,
+     "sizes": {
+      "28": 348
+     }
+    },
+    "2005": {
+     "count": 40,
+     "sizes": {
+      "26": 15,
+      "28": 18,
+      "30": 6,
+      "46": 1
+     }
+    },
+    "2008": {
+     "count": 40,
+     "sizes": {
+      "2": 40
+     }
+    },
+    "2316": {
+     "count": 3,
+     "sizes": {
+      "16": 3
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/抛豆实验.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/一个小圆沿一个大圆内圈滚动.gsp",
+    "Samples/5.x实例/方小庆作品/曲线上的均匀轨迹(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 20,
+   "table_row": 24,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 13,
+   "parent_template_words": [
+    88,
+    95,
+    43,
+    0
+   ],
+   "description_template_index": 24,
+   "description_template_id": 4440,
+   "description_template": "^A 是^B 通过水平移动^c 和垂直移动^d 的平移结果。^#",
+   "object_count": 190,
+   "file_count": 62,
+   "child_records": {
+    "2002": {
+     "count": 190,
+     "sizes": {
+      "16": 190
+     }
+    },
+    "2005": {
+     "count": 4,
+     "sizes": {
+      "28": 3,
+      "30": 1
+     }
+    },
+    "2008": {
+     "count": 4,
+     "sizes": {
+      "2": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/侯仰顺作品/点的迭代(蚂蚁).gsp",
+    "Samples/5.x实例/李有贵作品/正五边形点的迭代(yougui).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/杨辉三角形（2013－4－14）.gsp"
+   ]
+  },
+  {
+   "ext_id": 21,
+   "table_row": 25,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 12,
+   "parent_template_words": [
+    88,
+    0
+   ],
+   "description_template_index": 25,
+   "description_template_id": 4441,
+   "description_template": "^A 是^B 通过移动距离为^2 移动角度为^4 的平移结果。^#",
+   "object_count": 13549,
+   "file_count": 776,
+   "child_records": {
+    "2002": {
+     "count": 13549,
+     "sizes": {
+      "8": 13549
+     }
+    },
+    "2003": {
+     "count": 13549,
+     "sizes": {
+      "60": 13549
+     }
+    },
+    "2005": {
+     "count": 1825,
+     "sizes": {
+      "26": 275,
+      "28": 848,
+      "30": 251,
+      "32": 144,
+      "34": 48,
+      "36": 17,
+      "38": 95,
+      "40": 31,
+      "42": 2,
+      "44": 5,
+      "46": 10,
+      "48": 5,
+      "50": 2,
+      "52": 4,
+      "54": 9,
+      "56": 1,
+      "58": 26,
+      "60": 44,
+      "64": 2,
+      "70": 4,
+      "94": 1,
+      "96": 1
+     }
+    },
+    "2008": {
+     "count": 1825,
+     "sizes": {
+      "2": 1825
+     }
+    },
+    "9006": {
+     "count": 197,
+     "sizes": {
+      "0": 197
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/不显示方法之至尊.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阴阳鱼.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/多边形内部一点.gsp"
+   ]
+  },
+  {
+   "ext_id": 22,
+   "table_row": 26,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 11,
+   "parent_template_words": [
+    88,
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 26,
+   "description_template_id": 4442,
+   "description_template": "^A 是^B 通过移动距离为^1 移动角度为∠^c^d^e 的平移结果。^#",
+   "object_count": 5,
+   "file_count": 5,
+   "child_records": {
+    "2002": {
+     "count": 5,
+     "sizes": {
+      "20": 5
+     }
+    },
+    "2003": {
+     "count": 5,
+     "sizes": {
+      "28": 5
+     }
+    },
+    "2005": {
+     "count": 4,
+     "sizes": {
+      "58": 4
+     }
+    },
+    "2008": {
+     "count": 4,
+     "sizes": {
+      "2": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/J40.gsp",
+    "Samples/分形艺术/J39.1.gsp",
+    "Samples/分形艺术/J39.1'.gsp"
+   ]
+  },
+  {
+   "ext_id": 23,
+   "table_row": 27,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 14,
+   "parent_template_words": [
+    88,
+    44,
+    0
+   ],
+   "description_template_index": 27,
+   "description_template_id": 4443,
+   "description_template": "^A 是^B 通过移动距离为^1 移动方向为^c 的平移结果。^#",
+   "object_count": 16,
+   "file_count": 7,
+   "child_records": {
+    "2002": {
+     "count": 16,
+     "sizes": {
+      "12": 16
+     }
+    },
+    "2003": {
+     "count": 16,
+     "sizes": {
+      "28": 16
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/演示台球（最终效果）.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/锐角三角函数.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/箱子里的水.gsp"
+   ]
+  },
+  {
+   "ext_id": 24,
+   "table_row": 29,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 13,
+   "parent_template_words": [
+    88,
+    95,
+    43,
+    0
+   ],
+   "description_template_index": 29,
+   "description_template_id": 4445,
+   "description_template": "^A 是^B 通过移动距离为^c 移动角度为^4 的平移结果。^#",
+   "object_count": 4385,
+   "file_count": 327,
+   "child_records": {
+    "2002": {
+     "count": 4385,
+     "sizes": {
+      "12": 4385
+     }
+    },
+    "2003": {
+     "count": 4385,
+     "sizes": {
+      "36": 4385
+     }
+    },
+    "2005": {
+     "count": 539,
+     "sizes": {
+      "26": 167,
+      "28": 306,
+      "30": 22,
+      "32": 10,
+      "34": 3,
+      "36": 3,
+      "38": 2,
+      "40": 2,
+      "48": 13,
+      "66": 11
+     }
+    },
+    "2008": {
+     "count": 539,
+     "sizes": {
+      "2": 539
+     }
+    },
+    "9006": {
+     "count": 36,
+     "sizes": {
+      "0": 36
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/周维波作品/相切圆（飞狐制作）.gsp",
+    "Samples/5.x实例/李有贵作品/圆弧展开(yougui).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/彩色分层钢管.gsp"
+   ]
+  },
+  {
+   "ext_id": 25,
+   "table_row": 30,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 16,
+   "parent_template_words": [
+    88,
+    4,
+    4,
+    4,
+    43,
+    0
+   ],
+   "description_template_index": 30,
+   "description_template_id": 4446,
+   "description_template": "^A 是^B 通过移动距离为^f 移动角度为∠^c^d^e 的平移结果。^#",
+   "object_count": 12,
+   "file_count": 5,
+   "child_records": {
+    "2002": {
+     "count": 12,
+     "sizes": {
+      "24": 12
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/50°角平分线的尺规作图.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/椭圆在正多边形上的滚动.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/椭圆在椭圆上滚动.gsp"
+   ]
+  },
+  {
+   "ext_id": 26,
+   "table_row": 31,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 17,
+   "parent_template_words": [
+    88,
+    44,
+    43,
+    0
+   ],
+   "description_template_index": 31,
+   "description_template_id": 4447,
+   "description_template": "^A 是^B 沿^c 方向平移^d 的结果。^#",
+   "object_count": 53,
+   "file_count": 20,
+   "child_records": {
+    "2002": {
+     "count": 53,
+     "sizes": {
+      "16": 53
+     }
+    },
+    "2005": {
+     "count": 9,
+     "sizes": {
+      "28": 2,
+      "30": 1,
+      "32": 6
+     }
+    },
+    "2008": {
+     "count": 9,
+     "sizes": {
+      "2": 9
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/梁宝同作品/点列（梁宝同）.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/正方形的折叠.gsp",
+    "Samples/5.x实例/侯仰顺作品/正n边形的渐开线(蚂蚁).gsp"
+   ]
+  },
+  {
+   "ext_id": 27,
+   "table_row": 33,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 11,
+   "parent_template_words": [
+    88,
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 33,
+   "description_template_id": 4449,
+   "description_template": "^A 是^B 关于中心^C 的旋转结果。^#",
+   "object_count": 16372,
+   "file_count": 847,
+   "child_records": {
+    "2002": {
+     "count": 16372,
+     "sizes": {
+      "12": 16372
+     }
+    },
+    "2003": {
+     "count": 16372,
+     "sizes": {
+      "36": 16372
+     }
+    },
+    "2005": {
+     "count": 1484,
+     "sizes": {
+      "26": 588,
+      "28": 466,
+      "30": 272,
+      "32": 83,
+      "34": 24,
+      "36": 9,
+      "38": 7,
+      "40": 4,
+      "42": 7,
+      "44": 5,
+      "46": 7,
+      "48": 8,
+      "50": 3,
+      "52": 1
+     }
+    },
+    "2008": {
+     "count": 1484,
+     "sizes": {
+      "2": 1484
+     }
+    },
+    "2316": {
+     "count": 24,
+     "sizes": {
+      "16": 24
+     }
+    },
+    "9006": {
+     "count": 941,
+     "sizes": {
+      "0": 941
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/分形艺术/L-龙曲线2.gsp",
+    "Samples/分形艺术/L-龙.gsp"
+   ]
+  },
+  {
+   "ext_id": 28,
+   "table_row": 34,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 11,
+   "parent_template_words": [
+    88,
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 34,
+   "description_template_id": 4450,
+   "description_template": "^A 是^B 关于中心^C 旋转角度为∠^d^e^f 的旋转结果。^#",
+   "object_count": 981,
+   "file_count": 149,
+   "child_records": {
+    "2002": {
+     "count": 981,
+     "sizes": {
+      "24": 981
+     }
+    },
+    "2005": {
+     "count": 75,
+     "sizes": {
+      "26": 10,
+      "28": 40,
+      "30": 15,
+      "32": 4,
+      "36": 1,
+      "38": 5
+     }
+    },
+    "2008": {
+     "count": 75,
+     "sizes": {
+      "2": 75
+     }
+    },
+    "9006": {
+     "count": 75,
+     "sizes": {
+      "0": 75
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹旋转C.gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)太极图.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/三角形割补成平行四边形.gsp"
+   ]
+  },
+  {
+   "ext_id": 29,
+   "table_row": 35,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 19,
+   "parent_template_words": [
+    88,
+    4,
+    44,
+    0
+   ],
+   "description_template_index": 35,
+   "description_template_id": 4451,
+   "description_template": "^A 是^B 关于中心^C 旋转角度为^d 的旋转结果。^#",
+   "object_count": 4720,
+   "file_count": 297,
+   "child_records": {
+    "2002": {
+     "count": 4720,
+     "sizes": {
+      "16": 4720
+     }
+    },
+    "2005": {
+     "count": 497,
+     "sizes": {
+      "26": 141,
+      "28": 220,
+      "30": 69,
+      "32": 37,
+      "34": 10,
+      "36": 16,
+      "38": 1,
+      "40": 3
+     }
+    },
+    "2008": {
+     "count": 497,
+     "sizes": {
+      "2": 497
+     }
+    },
+    "2316": {
+     "count": 17,
+     "sizes": {
+      "16": 17
+     }
+    },
+    "9006": {
+     "count": 6,
+     "sizes": {
+      "0": 6
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/正多边形的展开.gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)视觉暂留.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/视频上的形变.gsp"
+   ]
+  },
+  {
+   "ext_id": 30,
+   "table_row": 37,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 11,
+   "parent_template_words": [
+    88,
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 37,
+   "description_template_id": 4453,
+   "description_template": "^A 是^B 关于中心^C 缩放比为^8% 的缩放结果。^#",
+   "object_count": 10126,
+   "file_count": 710,
+   "child_records": {
+    "2002": {
+     "count": 10126,
+     "sizes": {
+      "12": 10126
+     }
+    },
+    "2003": {
+     "count": 10126,
+     "sizes": {
+      "12": 10126
+     }
+    },
+    "2005": {
+     "count": 1441,
+     "sizes": {
+      "26": 540,
+      "28": 513,
+      "30": 212,
+      "32": 61,
+      "34": 31,
+      "36": 33,
+      "38": 32,
+      "40": 3,
+      "46": 3,
+      "48": 13
+     }
+    },
+    "2008": {
+     "count": 1441,
+     "sizes": {
+      "2": 1441
+     }
+    },
+    "9006": {
+     "count": 515,
+     "sizes": {
+      "0": 515
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/L-龙曲线2.gsp",
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阴阳鱼.gsp"
+   ]
+  },
+  {
+   "ext_id": 31,
+   "table_row": 38,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 22,
+   "parent_template_words": [
+    88,
+    4,
+    14,
+    14,
+    0
+   ],
+   "description_template_index": 38,
+   "description_template_id": 4454,
+   "description_template": "^A 是^B 关于中心^C 缩放比为^d/^e 的缩放结果。^#",
+   "object_count": 8,
+   "file_count": 5,
+   "child_records": {
+    "2002": {
+     "count": 8,
+     "sizes": {
+      "20": 8
+     }
+    },
+    "2005": {
+     "count": 7,
+     "sizes": {
+      "28": 4,
+      "30": 1,
+      "36": 1,
+      "42": 1
+     }
+    },
+    "2008": {
+     "count": 7,
+     "sizes": {
+      "2": 7
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/N等分角(0-2pi).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/梯形的对称.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/机械的连动.gsp"
+   ]
+  },
+  {
+   "ext_id": 32,
+   "table_row": 39,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 11,
+   "parent_template_words": [
+    88,
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 39,
+   "description_template_id": 4455,
+   "description_template": "^A 是^B 关于中心^C 缩放比为^d^f/^d^e 的缩放结果。^#",
+   "object_count": 3573,
+   "file_count": 205,
+   "child_records": {
+    "2002": {
+     "count": 3573,
+     "sizes": {
+      "24": 3573
+     }
+    },
+    "2005": {
+     "count": 370,
+     "sizes": {
+      "26": 209,
+      "28": 125,
+      "30": 7,
+      "32": 7,
+      "34": 14,
+      "36": 1,
+      "40": 7
+     }
+    },
+    "2008": {
+     "count": 370,
+     "sizes": {
+      "2": 370
+     }
+    },
+    "9006": {
+     "count": 4,
+     "sizes": {
+      "0": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/5.x实例/方小庆作品/折纸(inRm).gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)太极图.gsp"
+   ]
+  },
+  {
+   "ext_id": 33,
+   "table_row": 40,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 23,
+   "parent_template_words": [
+    88,
+    4,
+    46,
+    0
+   ],
+   "description_template_index": 40,
+   "description_template_id": 4456,
+   "description_template": "^A 是^B 关于中心^C 缩放比等于^d 的缩放结果。^#",
+   "object_count": 12181,
+   "file_count": 609,
+   "child_records": {
+    "2002": {
+     "count": 12181,
+     "sizes": {
+      "16": 12181
+     }
+    },
+    "2005": {
+     "count": 2241,
+     "sizes": {
+      "26": 574,
+      "28": 877,
+      "30": 373,
+      "32": 195,
+      "34": 80,
+      "36": 43,
+      "38": 33,
+      "40": 56,
+      "42": 6,
+      "44": 1,
+      "48": 2,
+      "50": 1
+     }
+    },
+    "2008": {
+     "count": 2241,
+     "sizes": {
+      "2": 2241
+     }
+    },
+    "2316": {
+     "count": 1,
+     "sizes": {
+      "16": 1
+     }
+    },
+    "9006": {
+     "count": 17,
+     "sizes": {
+      "0": 17
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/运动方向(inRm).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/三角网格.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/三角网格2.gsp"
+   ]
+  },
+  {
+   "ext_id": 34,
+   "table_row": 41,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 24,
+   "parent_template_words": [
+    88,
+    7,
+    0
+   ],
+   "description_template_index": 41,
+   "description_template_id": 4457,
+   "description_template": "^A 是^B 关于镜面^C 的反射结果。^#",
+   "object_count": 6899,
+   "file_count": 378,
+   "child_records": {
+    "2002": {
+     "count": 6899,
+     "sizes": {
+      "12": 6899
+     }
+    },
+    "2005": {
+     "count": 367,
+     "sizes": {
+      "26": 68,
+      "28": 168,
+      "30": 53,
+      "32": 37,
+      "34": 27,
+      "36": 7,
+      "38": 6,
+      "40": 1
+     }
+    },
+    "2008": {
+     "count": 367,
+     "sizes": {
+      "2": 367
+     }
+    },
+    "2316": {
+     "count": 8,
+     "sizes": {
+      "16": 8
+     }
+    },
+    "9006": {
+     "count": 46,
+     "sizes": {
+      "0": 46
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/折纸(inRm).gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)太极图.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹问题.gsp"
+   ]
+  },
+  {
+   "ext_id": 35,
+   "table_row": 42,
+   "main_kind": 6,
+   "genera": 93,
+   "parent_template_index": 25,
+   "parent_template_words": [
+    96,
+    5,
+    4,
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 42,
+   "description_template_id": 4458,
+   "description_template": "^A 描述了当^D 沿着^C 移动时^B 的位置。^#",
+   "object_count": 3125,
+   "file_count": 582,
+   "child_records": {
+    "2002": {
+     "count": 3125,
+     "sizes": {
+      "20": 119,
+      "24": 320,
+      "28": 343,
+      "32": 195,
+      "36": 342,
+      "40": 177,
+      "44": 188,
+      "48": 114,
+      "52": 292,
+      "56": 88,
+      "60": 110,
+      "64": 70,
+      "68": 39,
+      "72": 130,
+      "76": 41,
+      "80": 29,
+      "84": 26,
+      "88": 61,
+      "92": 18,
+      "96": 15,
+      "100": 35,
+      "104": 41,
+      "108": 23,
+      "112": 21,
+      "116": 10,
+      "120": 17,
+      "124": 19,
+      "128": 6,
+      "132": 19,
+      "136": 4,
+      "140": 7,
+      "144": 13,
+      "148": 41,
+      "152": 17,
+      "156": 14,
+      "160": 10,
+      "164": 12,
+      "168": 4,
+      "172": 1,
+      "176": 4,
+      "180": 3,
+      "184": 4,
+      "188": 12,
+      "192": 4,
+      "196": 5,
+      "200": 3,
+      "204": 4,
+      "208": 3,
+      "216": 2,
+      "220": 5,
+      "224": 2,
+      "236": 3,
+      "240": 2,
+      "244": 1,
+      "248": 1,
+      "252": 1,
+      "256": 2,
+      "260": 1,
+      "264": 1,
+      "272": 1,
+      "296": 1,
+      "320": 1,
+      "324": 1,
+      "336": 1,
+      "360": 1,
+      "364": 1,
+      "372": 1,
+      "376": 2,
+      "380": 1,
+      "388": 1,
+      "392": 1,
+      "404": 1,
+      "408": 1,
+      "424": 2,
+      "440": 1,
+      "464": 1,
+      "468": 1,
+      "492": 1,
+      "512": 1,
+      "516": 1,
+      "536": 2,
+      "548": 1,
+      "556": 1,
+      "564": 1,
+      "644": 1,
+      "756": 2
+     }
+    },
+    "2005": {
+     "count": 497,
+     "sizes": {
+      "26": 14,
+      "28": 31,
+      "30": 413,
+      "32": 14,
+      "34": 13,
+      "36": 6,
+      "38": 5,
+      "76": 1
+     }
+    },
+    "2008": {
+     "count": 497,
+     "sizes": {
+      "2": 497
+     }
+    },
+    "2306": {
+     "count": 3125,
+     "sizes": {
+      "32": 178,
+      "40": 2947
+     }
+    },
+    "9006": {
+     "count": 193,
+     "sizes": {
+      "0": 193
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹族.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/过两定点且与一直线相切的圆.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阴阳鱼.gsp"
+   ]
+  },
+  {
+   "ext_id": 36,
+   "table_row": 43,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 1,
+   "parent_template_words": [
+    14,
+    0
+   ],
+   "description_template_index": 43,
+   "description_template_id": 4459,
+   "description_template": "^* 度量^B 的长度。^#",
+   "object_count": 1055,
+   "file_count": 297,
+   "child_records": {
+    "2002": {
+     "count": 1055,
+     "sizes": {
+      "8": 1055
+     }
+    },
+    "2005": {
+     "count": 266,
+     "sizes": {
+      "26": 30,
+      "28": 46,
+      "30": 183,
+      "34": 5,
+      "40": 2
+     }
+    },
+    "2008": {
+     "count": 1055,
+     "sizes": {
+      "2": 1055
+     }
+    },
+    "2307": {
+     "count": 1055,
+     "sizes": {
+      "32": 1055
+     }
+    },
+    "9006": {
+     "count": 353,
+     "sizes": {
+      "0": 353
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/任意角.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/点的轨迹.gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)摆线.gsp"
+   ]
+  },
+  {
+   "ext_id": 37,
+   "table_row": 44,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 44,
+   "description_template_id": 4460,
+   "description_template": "^* 度量^B 到^C 的距离。^#",
+   "object_count": 3060,
+   "file_count": 426,
+   "child_records": {
+    "2002": {
+     "count": 3060,
+     "sizes": {
+      "12": 3060
+     }
+    },
+    "2005": {
+     "count": 860,
+     "sizes": {
+      "26": 141,
+      "28": 52,
+      "30": 406,
+      "32": 16,
+      "34": 237,
+      "36": 2,
+      "38": 6
+     }
+    },
+    "2008": {
+     "count": 3060,
+     "sizes": {
+      "2": 3060
+     }
+    },
+    "2307": {
+     "count": 3060,
+     "sizes": {
+      "32": 3060
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/两个点都动的轨迹.gsp",
+    "Samples/5.x实例/周维波作品/相切圆（飞狐制作）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/视频上的形变.gsp"
+   ]
+  },
+  {
+   "ext_id": 38,
+   "table_row": 45,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 4,
+   "parent_template_words": [
+    4,
+    7,
+    0
+   ],
+   "description_template_index": 83,
+   "description_template_id": 4499,
+   "description_template": "^* 度量^B 到^C 延长线的垂直距离。^#",
+   "object_count": 266,
+   "file_count": 13,
+   "child_records": {
+    "2002": {
+     "count": 266,
+     "sizes": {
+      "12": 266
+     }
+    },
+    "2005": {
+     "count": 36,
+     "sizes": {
+      "30": 6,
+      "32": 30
+     }
+    },
+    "2008": {
+     "count": 266,
+     "sizes": {
+      "2": 266
+     }
+    },
+    "2307": {
+     "count": 266,
+     "sizes": {
+      "32": 266
+     }
+    },
+    "9006": {
+     "count": 4,
+     "sizes": {
+      "0": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/梁宝同作品/扇形在直线上的滚动（梁宝同）.gsp",
+    "Samples/分形艺术/Mandelbrot集球面贴图.gsp",
+    "Samples/5.x实例/周维波作品/正三角形与任意长方形的滚动（飞狐制作）.gsp"
+   ]
+  },
+  {
+   "ext_id": 39,
+   "table_row": 46,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 47,
+   "parent_template_words": [
+    83,
+    0
+   ],
+   "description_template_index": 45,
+   "description_template_id": 4461,
+   "description_template": "^* 度量^B 的周长。^#",
+   "object_count": 38,
+   "file_count": 18,
+   "child_records": {
+    "2002": {
+     "count": 38,
+     "sizes": {
+      "8": 38
+     }
+    },
+    "2005": {
+     "count": 13,
+     "sizes": {
+      "26": 2,
+      "30": 11
+     }
+    },
+    "2008": {
+     "count": 38,
+     "sizes": {
+      "2": 38
+     }
+    },
+    "2307": {
+     "count": 38,
+     "sizes": {
+      "32": 38
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/路程函数法做变速运动（有说明）.gsp",
+    "Samples/5.x实例/方小庆作品/圆在四边形上滚动(inRm).gsp",
+    "Samples/5.x实例/孙禄京作品/三种方法构造重叠面积(8.20).gsp"
+   ]
+  },
+  {
+   "ext_id": 40,
+   "table_row": 47,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 36,
+   "parent_template_words": [
+    78,
+    0
+   ],
+   "description_template_index": 46,
+   "description_template_id": 4462,
+   "description_template": "^* 度量^B 的圆周长。^#",
+   "object_count": 15,
+   "file_count": 9,
+   "child_records": {
+    "2002": {
+     "count": 15,
+     "sizes": {
+      "8": 15
+     }
+    },
+    "2005": {
+     "count": 3,
+     "sizes": {
+      "26": 3
+     }
+    },
+    "2008": {
+     "count": 15,
+     "sizes": {
+      "2": 15
+     }
+    },
+    "2307": {
+     "count": 15,
+     "sizes": {
+      "32": 15
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/圆周展开(changxde).gsp",
+    "Samples/分形艺术/未命名分形3.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/动态演示0-360°【梁卷明】.gsp"
+   ]
+  },
+  {
+   "ext_id": 41,
+   "table_row": 48,
+   "main_kind": 7,
+   "genera": 44,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 47,
+   "description_template_id": 4463,
+   "description_template": "^* 度量∠^b^c^d 的度数。^#",
+   "object_count": 2336,
+   "file_count": 198,
+   "child_records": {
+    "2002": {
+     "count": 2336,
+     "sizes": {
+      "16": 2336
+     }
+    },
+    "2005": {
+     "count": 332,
+     "sizes": {
+      "26": 105,
+      "28": 37,
+      "30": 160,
+      "32": 22,
+      "34": 4,
+      "52": 2,
+      "54": 2
+     }
+    },
+    "2008": {
+     "count": 2336,
+     "sizes": {
+      "2": 2336
+     }
+    },
+    "2307": {
+     "count": 2336,
+     "sizes": {
+      "32": 2335,
+      "40": 1
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/线板.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/多边形内部一点.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/橡皮筋.gsp"
+   ]
+  },
+  {
+   "ext_id": 42,
+   "table_row": 50,
+   "main_kind": 7,
+   "genera": 45,
+   "parent_template_index": 48,
+   "parent_template_words": [
+    82,
+    0
+   ],
+   "description_template_index": 49,
+   "description_template_id": 4465,
+   "description_template": "^* 度量^B 的面积。^#",
+   "object_count": 286,
+   "file_count": 142,
+   "child_records": {
+    "2002": {
+     "count": 286,
+     "sizes": {
+      "8": 286
+     }
+    },
+    "2005": {
+     "count": 144,
+     "sizes": {
+      "26": 13,
+      "28": 5,
+      "30": 117,
+      "32": 1,
+      "38": 1,
+      "40": 1,
+      "42": 1,
+      "44": 1,
+      "48": 4
+     }
+    },
+    "2008": {
+     "count": 286,
+     "sizes": {
+      "2": 286
+     }
+    },
+    "2307": {
+     "count": 286,
+     "sizes": {
+      "32": 286
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/谢氏三角形2.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/四边形-fxq.gsp",
+    "Samples/5.x实例/方小庆作品/江西2012年文高考第十题(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 43,
+   "table_row": 51,
+   "main_kind": 7,
+   "genera": 44,
+   "parent_template_index": 28,
+   "parent_template_words": [
+    97,
+    1,
+    2,
+    23,
+    0
+   ],
+   "description_template_index": 154,
+   "description_template_id": 4570,
+   "description_template": null,
+   "object_count": 60,
+   "file_count": 27,
+   "child_records": {
+    "2002": {
+     "count": 60,
+     "sizes": {
+      "8": 60
+     }
+    },
+    "2005": {
+     "count": 30,
+     "sizes": {
+      "26": 5,
+      "28": 11,
+      "30": 7,
+      "34": 2,
+      "38": 5
+     }
+    },
+    "2008": {
+     "count": 60,
+     "sizes": {
+      "2": 60
+     }
+    },
+    "2307": {
+     "count": 60,
+     "sizes": {
+      "32": 60
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/有趣的花瓣.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/N等分角(0-2pi).gsp",
+    "Samples/5.x实例/方益初作品/犹抱琵琶半遮面（温州小刀）.gsp"
+   ]
+  },
+  {
+   "ext_id": 44,
+   "table_row": 52,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 28,
+   "parent_template_words": [
+    97,
+    1,
+    2,
+    23,
+    0
+   ],
+   "description_template_index": 153,
+   "description_template_id": 4569,
+   "description_template": null,
+   "object_count": 123,
+   "file_count": 31,
+   "child_records": {
+    "2002": {
+     "count": 123,
+     "sizes": {
+      "8": 117,
+      "16": 6
+     }
+    },
+    "2005": {
+     "count": 87,
+     "sizes": {
+      "26": 8,
+      "30": 75,
+      "32": 3,
+      "34": 1
+     }
+    },
+    "2008": {
+     "count": 123,
+     "sizes": {
+      "2": 123
+     }
+    },
+    "2307": {
+     "count": 123,
+     "sizes": {
+      "32": 123
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/李有贵作品/圆弧展开(yougui).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/缩放法构造渐开线--初学迭代的老师可以此增加些理解.gsp",
+    "Samples/5.x实例/方小庆作品/圆周弹性展开(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 45,
+   "table_row": 53,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 29,
+   "parent_template_words": [
+    7,
+    0
+   ],
+   "description_template_index": 54,
+   "description_template_id": 4470,
+   "description_template": "^* 度量^B 的斜率。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 46,
+   "table_row": 54,
+   "main_kind": 7,
+   "genera": 43,
+   "parent_template_index": 46,
+   "parent_template_words": [
+    81,
+    0
+   ],
+   "description_template_index": 55,
+   "description_template_id": 4471,
+   "description_template": "^* 度量^B 的半径。^#",
+   "object_count": 55,
+   "file_count": 22,
+   "child_records": {
+    "2002": {
+     "count": 55,
+     "sizes": {
+      "8": 55
+     }
+    },
+    "2005": {
+     "count": 15,
+     "sizes": {
+      "26": 10,
+      "30": 5
+     }
+    },
+    "2008": {
+     "count": 55,
+     "sizes": {
+      "2": 55
+     }
+    },
+    "2307": {
+     "count": 55,
+     "sizes": {
+      "32": 55
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/(inRm)摆线.gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)万花规.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/内外摆线的统一.gsp"
+   ]
+  },
+  {
+   "ext_id": 47,
+   "table_row": 55,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 35,
+   "parent_template_words": [
+    97,
+    2,
+    3,
+    14,
+    14,
+    0
+   ],
+   "description_template_index": 152,
+   "description_template_id": 4568,
+   "description_template": null,
+   "object_count": 4484,
+   "file_count": 485,
+   "child_records": {
+    "2002": {
+     "count": 4484,
+     "sizes": {
+      "12": 145,
+      "16": 4339
+     }
+    },
+    "2005": {
+     "count": 2979,
+     "sizes": {
+      "26": 696,
+      "28": 234,
+      "30": 1669,
+      "32": 151,
+      "34": 32,
+      "36": 12,
+      "38": 14,
+      "40": 6,
+      "42": 130,
+      "44": 33,
+      "50": 2
+     }
+    },
+    "2008": {
+     "count": 4484,
+     "sizes": {
+      "2": 4484
+     }
+    },
+    "2307": {
+     "count": 4484,
+     "sizes": {
+      "32": 4480,
+      "36": 4
+     }
+    },
+    "9006": {
+     "count": 555,
+     "sizes": {
+      "0": 555
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/渐变色线段.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/任意角.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/如何使AB闪烁.gsp"
+   ]
+  },
+  {
+   "ext_id": 48,
+   "table_row": 56,
+   "main_kind": 11,
+   "genera": 28,
+   "parent_template_index": 30,
+   "parent_template_words": [
+    95,
+    99,
+    28,
+    54,
+    0
+   ],
+   "description_template_index": 157,
+   "description_template_id": 4573,
+   "description_template": null,
+   "object_count": 49419,
+   "file_count": 1156,
+   "child_records": {
+    "2002": {
+     "count": 49419,
+     "sizes": {
+      "8": 20141,
+      "12": 17062,
+      "16": 5110,
+      "20": 3175,
+      "24": 1159,
+      "28": 1552,
+      "32": 376,
+      "36": 152,
+      "40": 148,
+      "44": 232,
+      "48": 29,
+      "52": 52,
+      "56": 164,
+      "60": 10,
+      "76": 6,
+      "84": 1,
+      "92": 2,
+      "100": 48
+     }
+    },
+    "2005": {
+     "count": 17643,
+     "sizes": {
+      "26": 3571,
+      "28": 1618,
+      "30": 7870,
+      "32": 1829,
+      "34": 864,
+      "36": 222,
+      "38": 379,
+      "40": 410,
+      "42": 339,
+      "44": 348,
+      "46": 14,
+      "48": 146,
+      "50": 4,
+      "54": 4,
+      "56": 3,
+      "60": 10,
+      "62": 1,
+      "64": 1,
+      "66": 4,
+      "68": 1,
+      "74": 1,
+      "84": 2,
+      "148": 1,
+      "160": 1
+     }
+    },
+    "2008": {
+     "count": 49419,
+     "sizes": {
+      "2": 49419
+     }
+    },
+    "2311": {
+     "count": 49419,
+     "sizes": {
+      "94": 1620,
+      "96": 325,
+      "98": 17050,
+      "100": 2340,
+      "102": 3620,
+      "104": 1058,
+      "106": 5156,
+      "108": 1052,
+      "110": 3849,
+      "112": 1376,
+      "114": 3111,
+      "116": 225,
+      "118": 1519,
+      "120": 313,
+      "122": 780,
+      "124": 426,
+      "126": 639,
+      "128": 116,
+      "130": 755,
+      "132": 258,
+      "134": 668,
+      "136": 114,
+      "138": 448,
+      "140": 103,
+      "142": 202,
+      "144": 57,
+      "146": 310,
+      "148": 113,
+      "150": 130,
+      "152": 19,
+      "154": 275,
+      "156": 49,
+      "158": 32,
+      "160": 39,
+      "162": 241,
+      "164": 33,
+      "166": 116,
+      "168": 7,
+      "170": 98,
+      "172": 6,
+      "174": 32,
+      "176": 12,
+      "178": 134,
+      "180": 5,
+      "182": 42,
+      "184": 1,
+      "186": 61,
+      "188": 9,
+      "190": 3,
+      "192": 1,
+      "194": 13,
+      "196": 3,
+      "198": 8,
+      "200": 7,
+      "202": 11,
+      "204": 3,
+      "206": 4,
+      "208": 7,
+      "210": 7,
+      "212": 3,
+      "214": 3,
+      "216": 3,
+      "218": 3,
+      "220": 4,
+      "222": 3,
+      "224": 1,
+      "226": 229,
+      "228": 2,
+      "230": 4,
+      "232": 5,
+      "234": 1,
+      "236": 49,
+      "238": 5,
+      "240": 3,
+      "242": 2,
+      "244": 4,
+      "246": 3,
+      "248": 3,
+      "250": 3,
+      "252": 1,
+      "258": 4,
+      "260": 12,
+      "262": 1,
+      "264": 1,
+      "268": 8,
+      "278": 1,
+      "280": 3,
+      "282": 3,
+      "284": 2,
+      "288": 1,
+      "290": 3,
+      "292": 1,
+      "294": 2,
+      "300": 2,
+      "302": 1,
+      "308": 1,
+      "318": 1,
+      "320": 1,
+      "324": 1,
+      "326": 2,
+      "334": 1,
+      "336": 2,
+      "338": 6,
+      "340": 2,
+      "342": 1,
+      "344": 1,
+      "352": 1,
+      "354": 2,
+      "358": 1,
+      "362": 1,
+      "370": 1,
+      "390": 1,
+      "392": 1,
+      "420": 1,
+      "430": 1
+     }
+    },
+    "9006": {
+     "count": 3435,
+     "sizes": {
+      "0": 3435
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/线板.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/任意角.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/点的轨迹.gsp"
+   ]
+  },
+  {
+   "ext_id": 49,
+   "table_row": 57,
+   "main_kind": 0,
+   "genera": 29,
+   "parent_template_index": 31,
+   "parent_template_words": [
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 59,
+   "description_template_id": 4475,
+   "description_template": "^* 度量^B 在^C 上的坐标。^#",
+   "object_count": 153,
+   "file_count": 87,
+   "child_records": {
+    "2002": {
+     "count": 153,
+     "sizes": {
+      "12": 153
+     }
+    },
+    "2005": {
+     "count": 23,
+     "sizes": {
+      "28": 4,
+      "30": 19
+     }
+    },
+    "2008": {
+     "count": 153,
+     "sizes": {
+      "2": 153
+     }
+    },
+    "2300": {
+     "count": 153,
+     "sizes": {
+      "24": 4,
+      "84": 17,
+      "88": 17,
+      "92": 76,
+      "96": 8,
+      "100": 12,
+      "104": 2,
+      "108": 4,
+      "112": 6,
+      "116": 3,
+      "120": 3,
+      "124": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/验证双曲线是中心对称图形.gsp",
+    "Samples/分形艺术/分形图19(Mira10).gsp"
+   ]
+  },
+  {
+   "ext_id": 50,
+   "table_row": 58,
+   "main_kind": 0,
+   "genera": 31,
+   "parent_template_index": 32,
+   "parent_template_words": [
+    12,
+    34,
+    0
+   ],
+   "description_template_index": 60,
+   "description_template_id": 4476,
+   "description_template": "^* 度量^B 在^C 上的方程。^#",
+   "object_count": 4,
+   "file_count": 2,
+   "child_records": {
+    "2002": {
+     "count": 4,
+     "sizes": {
+      "12": 4
+     }
+    },
+    "2005": {
+     "count": 4,
+     "sizes": {
+      "30": 4
+     }
+    },
+    "2008": {
+     "count": 4,
+     "sizes": {
+      "2": 4
+     }
+    },
+    "2300": {
+     "count": 4,
+     "sizes": {
+      "172": 1,
+      "208": 1,
+      "212": 1,
+      "224": 1
+     }
+    }
+   },
+   "example_files": [
+    "Tool Folder/10 函数工具.gsp",
+    "Tool Folder/26 老巷工具.gsp"
+   ]
+  },
+  {
+   "ext_id": 51,
+   "table_row": 59,
+   "main_kind": 0,
+   "genera": 32,
+   "parent_template_index": 33,
+   "parent_template_words": [
+    22,
+    34,
+    0
+   ],
+   "description_template_index": 60,
+   "description_template_id": 4476,
+   "description_template": "^* 度量^B 在^C 上的方程。^#",
+   "object_count": 1,
+   "file_count": 1,
+   "child_records": {
+    "2002": {
+     "count": 1,
+     "sizes": {
+      "12": 1
+     }
+    },
+    "2005": {
+     "count": 1,
+     "sizes": {
+      "30": 1
+     }
+    },
+    "2008": {
+     "count": 1,
+     "sizes": {
+      "2": 1
+     }
+    },
+    "2300": {
+     "count": 1,
+     "sizes": {
+      "744": 1
+     }
+    }
+   },
+   "example_files": [
+    "Tool Folder/10 函数工具.gsp"
+   ]
+  },
+  {
+   "ext_id": 52,
+   "table_row": 60,
+   "main_kind": 1,
+   "genera": 35,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 61,
+   "description_template_id": 4477,
+   "description_template": "^A 决定了水平坐标轴的单位长度。^#",
+   "object_count": 1072,
+   "file_count": 600,
+   "child_records": {
+    "2002": {
+     "count": 1072,
+     "sizes": {
+      "8": 1072
+     }
+    },
+    "2003": {
+     "count": 1072,
+     "sizes": {
+      "12": 1072
+     }
+    },
+    "2005": {
+     "count": 490,
+     "sizes": {
+      "26": 421,
+      "28": 7,
+      "30": 40,
+      "32": 1,
+      "34": 5,
+      "36": 1,
+      "38": 10,
+      "40": 5
+     }
+    },
+    "2008": {
+     "count": 490,
+     "sizes": {
+      "2": 490
+     }
+    },
+    "9006": {
+     "count": 4,
+     "sizes": {
+      "0": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/分段函数的代数表达方法.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹旋转C.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp"
+   ]
+  },
+  {
+   "ext_id": 53,
+   "table_row": 61,
+   "main_kind": 1,
+   "genera": 35,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 62,
+   "description_template_id": 4478,
+   "description_template": "^A 决定了垂直坐标轴的单位长度。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 54,
+   "table_row": 62,
+   "main_kind": 1,
+   "genera": 35,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 62,
+   "description_template_id": 4478,
+   "description_template": "^A 决定了垂直坐标轴的单位长度。^#",
+   "object_count": 873,
+   "file_count": 566,
+   "child_records": {
+    "2002": {
+     "count": 873,
+     "sizes": {
+      "8": 873
+     }
+    },
+    "2003": {
+     "count": 873,
+     "sizes": {
+      "12": 873
+     }
+    },
+    "2005": {
+     "count": 6,
+     "sizes": {
+      "26": 5,
+      "28": 1
+     }
+    },
+    "2008": {
+     "count": 6,
+     "sizes": {
+      "2": 6
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/分段函数的代数表达方法.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹旋转C.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp"
+   ]
+  },
+  {
+   "ext_id": 55,
+   "table_row": 63,
+   "main_kind": 1,
+   "genera": 35,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 62,
+   "description_template_id": 4478,
+   "description_template": "^A 决定了垂直坐标轴的单位长度。^#",
+   "object_count": 115,
+   "file_count": 35,
+   "child_records": {
+    "2002": {
+     "count": 115,
+     "sizes": {
+      "8": 115
+     }
+    },
+    "2003": {
+     "count": 115,
+     "sizes": {
+      "12": 115
+     }
+    },
+    "2005": {
+     "count": 87,
+     "sizes": {
+      "26": 71,
+      "30": 16
+     }
+    },
+    "2008": {
+     "count": 87,
+     "sizes": {
+      "2": 87
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/随机演奏.gsp",
+    "Samples/5.x实例/周维波作品/可编辑函数的区间分色（烟台飞狐）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/代数法椭圆.gsp"
+   ]
+  },
+  {
+   "ext_id": 56,
+   "table_row": 64,
+   "main_kind": 1,
+   "genera": 35,
+   "parent_template_index": 34,
+   "parent_template_words": [
+    95,
+    33,
+    0
+   ],
+   "description_template_index": 62,
+   "description_template_id": 4478,
+   "description_template": "^A 决定了垂直坐标轴的单位长度。^#",
+   "object_count": 27,
+   "file_count": 24,
+   "child_records": {
+    "2002": {
+     "count": 27,
+     "sizes": {
+      "8": 27
+     }
+    },
+    "2003": {
+     "count": 27,
+     "sizes": {
+      "12": 27
+     }
+    },
+    "2005": {
+     "count": 3,
+     "sizes": {
+      "26": 3
+     }
+    },
+    "2008": {
+     "count": 3,
+     "sizes": {
+      "2": 3
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/陈发铨作品/太极图整体轨迹(一线天).gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/正弦函数图像的变换.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/保形映射1.gsp"
+   ]
+  },
+  {
+   "ext_id": 57,
+   "table_row": 65,
+   "main_kind": 1,
+   "genera": 35,
+   "parent_template_index": 34,
+   "parent_template_words": [
+    95,
+    33,
+    0
+   ],
+   "description_template_index": 62,
+   "description_template_id": 4478,
+   "description_template": "^A 决定了垂直坐标轴的单位长度。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 58,
+   "table_row": 66,
+   "main_kind": 9,
+   "genera": 33,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 63,
+   "description_template_id": 4479,
+   "description_template": "^A 以^B 为中心，单位长度由^C 决定。^#",
+   "object_count": 3027,
+   "file_count": 602,
+   "child_records": {
+    "2002": {
+     "count": 3027,
+     "sizes": {
+      "12": 3027
+     }
+    },
+    "2005": {
+     "count": 3027,
+     "sizes": {
+      "26": 3027
+     }
+    },
+    "2008": {
+     "count": 3027,
+     "sizes": {
+      "2": 3027
+     }
+    },
+    "2309": {
+     "count": 3027,
+     "sizes": {
+      "2": 71,
+      "4": 2956
+     }
+    },
+    "9006": {
+     "count": 20,
+     "sizes": {
+      "0": 20
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/分段函数的代数表达方法.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹旋转C.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp"
+   ]
+  },
+  {
+   "ext_id": 59,
+   "table_row": 67,
+   "main_kind": 9,
+   "genera": 33,
+   "parent_template_index": 3,
+   "parent_template_words": [
+    4,
+    77,
+    0
+   ],
+   "description_template_index": 63,
+   "description_template_id": 4479,
+   "description_template": "^A 以^B 为中心，单位长度由^C 决定。^#",
+   "object_count": 544,
+   "file_count": 162,
+   "child_records": {
+    "2002": {
+     "count": 544,
+     "sizes": {
+      "12": 544
+     }
+    },
+    "2005": {
+     "count": 544,
+     "sizes": {
+      "26": 544
+     }
+    },
+    "2008": {
+     "count": 544,
+     "sizes": {
+      "2": 544
+     }
+    },
+    "2309": {
+     "count": 544,
+     "sizes": {
+      "2": 1,
+      "4": 543
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/陈发铨作品/太极图整体轨迹(一线天).gsp",
+    "Samples/5.x实例/周维波作品/2010年江苏盐城24题（飞狐制作）.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/正弦函数图像的变换.gsp"
+   ]
+  },
+  {
+   "ext_id": 60,
+   "table_row": 68,
+   "main_kind": 9,
+   "genera": 33,
+   "parent_template_index": 6,
+   "parent_template_words": [
+    22,
+    0
+   ],
+   "description_template_index": 64,
+   "description_template_id": 4480,
+   "description_template": "^A 是单位圆^B 的一条坐标轴。^#",
+   "object_count": 28,
+   "file_count": 11,
+   "child_records": {
+    "2002": {
+     "count": 28,
+     "sizes": {
+      "8": 28
+     }
+    },
+    "2005": {
+     "count": 28,
+     "sizes": {
+      "26": 28
+     }
+    },
+    "2008": {
+     "count": 28,
+     "sizes": {
+      "2": 28
+     }
+    },
+    "2309": {
+     "count": 28,
+     "sizes": {
+      "4": 28
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/扫描框10528.gsp",
+    "Samples/分形艺术/lx10527.gsp",
+    "Samples/分形艺术/分式变换下的复分形2.gsp"
+   ]
+  },
+  {
+   "ext_id": 61,
+   "table_row": 69,
+   "main_kind": 8,
+   "genera": 34,
+   "parent_template_index": 34,
+   "parent_template_words": [
+    95,
+    33,
+    0
+   ],
+   "description_template_index": 65,
+   "description_template_id": 4481,
+   "description_template": "^A 是由^B 和^C 决定的坐标系。^#",
+   "object_count": 1772,
+   "file_count": 737,
+   "child_records": {
+    "2002": {
+     "count": 1772,
+     "sizes": {
+      "12": 1772
+     }
+    },
+    "2005": {
+     "count": 88,
+     "sizes": {
+      "30": 88
+     }
+    },
+    "2008": {
+     "count": 88,
+     "sizes": {
+      "2": 88
+     }
+    },
+    "2308": {
+     "count": 1772,
+     "sizes": {
+      "2": 36,
+      "8": 1736
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/分段函数的代数表达方法.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹旋转C.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp"
+   ]
+  },
+  {
+   "ext_id": 62,
+   "table_row": 70,
+   "main_kind": 10,
+   "genera": 20,
+   "parent_template_index": 62,
+   "parent_template_words": null,
+   "description_template_index": 155,
+   "description_template_id": 4571,
+   "description_template": null,
+   "object_count": 14312,
+   "file_count": 993,
+   "child_records": {
+    "2002": {
+     "count": 14312,
+     "sizes": {
+      "8": 2956,
+      "12": 6030,
+      "16": 819,
+      "20": 1072,
+      "24": 287,
+      "28": 530,
+      "32": 220,
+      "36": 405,
+      "40": 167,
+      "44": 209,
+      "48": 95,
+      "52": 249,
+      "56": 143,
+      "60": 48,
+      "64": 75,
+      "68": 65,
+      "72": 80,
+      "76": 49,
+      "80": 24,
+      "84": 72,
+      "88": 16,
+      "92": 60,
+      "96": 93,
+      "100": 44,
+      "104": 13,
+      "108": 77,
+      "112": 69,
+      "116": 14,
+      "120": 38,
+      "124": 18,
+      "128": 4,
+      "132": 17,
+      "136": 15,
+      "140": 31,
+      "144": 9,
+      "148": 10,
+      "152": 3,
+      "156": 6,
+      "160": 10,
+      "164": 6,
+      "168": 7,
+      "172": 27,
+      "176": 11,
+      "180": 6,
+      "184": 3,
+      "188": 13,
+      "192": 4,
+      "196": 1,
+      "200": 4,
+      "204": 2,
+      "208": 1,
+      "212": 5,
+      "216": 2,
+      "220": 7,
+      "224": 4,
+      "228": 6,
+      "232": 4,
+      "240": 1,
+      "244": 6,
+      "248": 2,
+      "256": 1,
+      "260": 1,
+      "264": 3,
+      "272": 1,
+      "284": 3,
+      "288": 2,
+      "296": 2,
+      "308": 1,
+      "312": 1,
+      "316": 1,
+      "328": 1,
+      "332": 1,
+      "356": 1,
+      "368": 1,
+      "372": 1,
+      "392": 1,
+      "404": 1,
+      "408": 4,
+      "420": 2,
+      "428": 2,
+      "436": 1,
+      "476": 1,
+      "492": 1,
+      "508": 1,
+      "512": 2,
+      "516": 3,
+      "696": 2,
+      "740": 1,
+      "884": 1,
+      "1316": 1,
+      "1376": 1,
+      "1412": 1,
+      "2820": 1
+     }
+    },
+    "2003": {
+     "count": 1482,
+     "sizes": {
+      "36": 1410,
+      "68": 23,
+      "100": 20,
+      "132": 2,
+      "164": 8,
+      "228": 3,
+      "260": 4,
+      "292": 2,
+      "388": 2,
+      "516": 2,
+      "868": 3,
+      "2244": 1,
+      "10500": 1,
+      "11268": 1
+     }
+    },
+    "2005": {
+     "count": 12367,
+     "sizes": {
+      "26": 162,
+      "28": 154,
+      "30": 300,
+      "32": 1884,
+      "34": 2478,
+      "36": 1140,
+      "38": 2657,
+      "40": 1832,
+      "42": 497,
+      "44": 649,
+      "46": 348,
+      "48": 72,
+      "50": 52,
+      "52": 70,
+      "54": 19,
+      "56": 25,
+      "58": 7,
+      "60": 4,
+      "62": 6,
+      "66": 1,
+      "68": 1,
+      "70": 1,
+      "74": 1,
+      "94": 1,
+      "130": 1,
+      "178": 5
+     }
+    },
+    "2008": {
+     "count": 14312,
+     "sizes": {
+      "2": 14312
+     }
+    },
+    "2310": {
+     "count": 14312,
+     "sizes": {
+      "24": 14312
+     }
+    },
+    "9006": {
+     "count": 1913,
+     "sizes": {
+      "0": 1913
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/渐变色线段.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阴阳鱼.gsp"
+   ]
+  },
+  {
+   "ext_id": 63,
+   "table_row": 71,
+   "main_kind": 2,
+   "genera": 12,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 4,
+   "description_template_id": 4420,
+   "description_template": "^A 是通过^B 和^C 的直线。^#",
+   "object_count": 5166,
+   "file_count": 460,
+   "child_records": {
+    "2002": {
+     "count": 5166,
+     "sizes": {
+      "12": 5166
+     }
+    },
+    "2005": {
+     "count": 233,
+     "sizes": {
+      "26": 181,
+      "28": 30,
+      "30": 17,
+      "34": 4,
+      "38": 1
+     }
+    },
+    "2008": {
+     "count": 233,
+     "sizes": {
+      "2": 233
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/直线对称轴(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/过两定点且与一直线相切的圆.gsp",
+    "Samples/5.x实例/方小庆作品/折纸(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 64,
+   "table_row": 72,
+   "main_kind": 2,
+   "genera": 13,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 3,
+   "description_template_id": 4419,
+   "description_template": "^A 是从^B 开始通过^C 的射线。^#",
+   "object_count": 3934,
+   "file_count": 626,
+   "child_records": {
+    "2002": {
+     "count": 3934,
+     "sizes": {
+      "12": 3934
+     }
+    },
+    "2005": {
+     "count": 175,
+     "sizes": {
+      "26": 73,
+      "28": 7,
+      "30": 94,
+      "40": 1
+     }
+    },
+    "2008": {
+     "count": 175,
+     "sizes": {
+      "2": 175
+     }
+    },
+    "9006": {
+     "count": 15,
+     "sizes": {
+      "0": 15
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/平行四边形绕重心转动（方小庆老师）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/正方形边上的点 先构造多边形内部，再构造“边界上的点”。.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/任意角.gsp"
+   ]
+  },
+  {
+   "ext_id": 65,
+   "table_row": 73,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 31,
+   "parent_template_words": [
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 66,
+   "description_template_id": 4482,
+   "description_template": "^* 度量^B 在^C 上的横坐标(x坐标)。^#",
+   "object_count": 4705,
+   "file_count": 511,
+   "child_records": {
+    "2002": {
+     "count": 4705,
+     "sizes": {
+      "12": 4705
+     }
+    },
+    "2005": {
+     "count": 920,
+     "sizes": {
+      "26": 108,
+      "28": 16,
+      "30": 714,
+      "32": 27,
+      "34": 2,
+      "36": 2,
+      "38": 2,
+      "44": 49
+     }
+    },
+    "2008": {
+     "count": 4705,
+     "sizes": {
+      "2": 4705
+     }
+    },
+    "2307": {
+     "count": 4705,
+     "sizes": {
+      "32": 4705
+     }
+    },
+    "9006": {
+     "count": 60,
+     "sizes": {
+      "0": 60
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/用轨迹描点.gsp",
+    "Samples/分形艺术/牛顿求根序列.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/利用制表功能快速获取点的坐标.gsp"
+   ]
+  },
+  {
+   "ext_id": 66,
+   "table_row": 74,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 31,
+   "parent_template_words": [
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 67,
+   "description_template_id": 4483,
+   "description_template": "^* 度量^B 在^C 上的纵坐标(y坐标)。^#",
+   "object_count": 4082,
+   "file_count": 459,
+   "child_records": {
+    "2002": {
+     "count": 4082,
+     "sizes": {
+      "12": 4082
+     }
+    },
+    "2005": {
+     "count": 683,
+     "sizes": {
+      "26": 73,
+      "28": 16,
+      "30": 514,
+      "32": 22,
+      "34": 3,
+      "36": 1,
+      "38": 6,
+      "42": 5,
+      "44": 43
+     }
+    },
+    "2008": {
+     "count": 4082,
+     "sizes": {
+      "2": 4082
+     }
+    },
+    "2307": {
+     "count": 4082,
+     "sizes": {
+      "32": 4082
+     }
+    },
+    "9006": {
+     "count": 59,
+     "sizes": {
+      "0": 59
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/利用制表功能快速获取点的坐标.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/橡皮筋 (2).gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/过三点的二次函数.gsp"
+   ]
+  },
+  {
+   "ext_id": 67,
+   "table_row": 77,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 38,
+   "parent_template_words": [
+    34,
+    0
+   ],
+   "description_template_index": 70,
+   "description_template_id": 4486,
+   "description_template": "^A 是在^B 上绘制的点(^6，^7)。^#",
+   "object_count": 1176,
+   "file_count": 244,
+   "child_records": {
+    "2002": {
+     "count": 1176,
+     "sizes": {
+      "8": 1176
+     }
+    },
+    "2003": {
+     "count": 1176,
+     "sizes": {
+      "20": 1176
+     }
+    },
+    "2005": {
+     "count": 529,
+     "sizes": {
+      "26": 458,
+      "28": 50,
+      "30": 20,
+      "32": 1
+     }
+    },
+    "2008": {
+     "count": 529,
+     "sizes": {
+      "2": 529
+     }
+    },
+    "9006": {
+     "count": 27,
+     "sizes": {
+      "0": 27
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/构造半径为5的圆中，过定点且长为9的弦2.gsp",
+    "Samples/分形艺术/Quadrup Two Orbit Fractal.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/正弦线与正弦函数.gsp"
+   ]
+  },
+  {
+   "ext_id": 68,
+   "table_row": 81,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 38,
+   "parent_template_words": [
+    34,
+    0
+   ],
+   "description_template_index": 74,
+   "description_template_id": 4490,
+   "description_template": "^A 是在极坐标^B 上绘制的点(^6，^5)。^#",
+   "object_count": 16,
+   "file_count": 5,
+   "child_records": {
+    "2002": {
+     "count": 16,
+     "sizes": {
+      "8": 16
+     }
+    },
+    "2003": {
+     "count": 16,
+     "sizes": {
+      "20": 16
+     }
+    },
+    "2005": {
+     "count": 16,
+     "sizes": {
+      "26": 16
+     }
+    },
+    "2008": {
+     "count": 16,
+     "sizes": {
+      "2": 16
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/IFS-(z^3+c)z^-1→z.gsp",
+    "Tool Folder/05 正多边形.gsp",
+    "Samples/分形艺术/IFS[xuefeiyang-zhongba].gsp"
+   ]
+  },
+  {
+   "ext_id": 69,
+   "table_row": 80,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 40,
+   "parent_template_words": [
+    28,
+    28,
+    34,
+    0
+   ],
+   "description_template_index": 73,
+   "description_template_id": 4489,
+   "description_template": "^A 是在^D 上绘制的点(^b，^c)。^#",
+   "object_count": 3392,
+   "file_count": 565,
+   "child_records": {
+    "2002": {
+     "count": 3392,
+     "sizes": {
+      "16": 3392
+     }
+    },
+    "2005": {
+     "count": 2219,
+     "sizes": {
+      "26": 855,
+      "28": 207,
+      "30": 245,
+      "32": 316,
+      "34": 83,
+      "36": 43,
+      "38": 148,
+      "40": 50,
+      "42": 26,
+      "44": 36,
+      "46": 30,
+      "48": 22,
+      "50": 28,
+      "52": 13,
+      "54": 24,
+      "56": 29,
+      "58": 4,
+      "60": 16,
+      "62": 8,
+      "64": 4,
+      "66": 9,
+      "68": 1,
+      "70": 4,
+      "72": 1,
+      "80": 4,
+      "82": 1,
+      "102": 8,
+      "118": 1,
+      "128": 3
+     }
+    },
+    "2008": {
+     "count": 2219,
+     "sizes": {
+      "2": 2219
+     }
+    },
+    "9006": {
+     "count": 5,
+     "sizes": {
+      "0": 5
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/用轨迹描点.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/特殊的分段函数.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/定点直线.gsp"
+   ]
+  },
+  {
+   "ext_id": 70,
+   "table_row": 84,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 40,
+   "parent_template_words": [
+    28,
+    28,
+    34,
+    0
+   ],
+   "description_template_index": 77,
+   "description_template_id": 4493,
+   "description_template": "^A 是在极坐标^D 上绘制的点(^b，^c)。^#",
+   "object_count": 239,
+   "file_count": 25,
+   "child_records": {
+    "2002": {
+     "count": 239,
+     "sizes": {
+      "16": 239
+     }
+    },
+    "2005": {
+     "count": 232,
+     "sizes": {
+      "26": 38,
+      "28": 6,
+      "30": 32,
+      "32": 15,
+      "34": 35,
+      "36": 24,
+      "38": 42,
+      "40": 8,
+      "42": 9,
+      "44": 3,
+      "46": 7,
+      "48": 2,
+      "50": 1,
+      "54": 2,
+      "58": 1,
+      "68": 1,
+      "70": 2,
+      "74": 1,
+      "124": 3
+     }
+    },
+    "2008": {
+     "count": 232,
+     "sizes": {
+      "2": 232
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/简化牛顿.gsp",
+    "Samples/分形艺术/f(x)=tanz-c的牛迭M集1.gsp",
+    "Samples/分形艺术/IFS2.gsp"
+   ]
+  },
+  {
+   "ext_id": 71,
+   "table_row": 85,
+   "main_kind": 11,
+   "genera": 54,
+   "parent_template_index": 30,
+   "parent_template_words": [
+    95,
+    99,
+    28,
+    54,
+    0
+   ],
+   "description_template_index": 78,
+   "description_template_id": 4494,
+   "description_template": "^A 是在条件^y 中定义。^#",
+   "object_count": 1049,
+   "file_count": 194,
+   "child_records": {
+    "2002": {
+     "count": 1049,
+     "sizes": {
+      "8": 197,
+      "12": 167,
+      "16": 173,
+      "20": 15,
+      "24": 38,
+      "28": 6,
+      "32": 10,
+      "36": 30,
+      "40": 43,
+      "44": 352,
+      "52": 14,
+      "56": 1,
+      "76": 3
+     }
+    },
+    "2005": {
+     "count": 1049,
+     "sizes": {
+      "26": 510,
+      "28": 48,
+      "30": 467,
+      "32": 3,
+      "36": 2,
+      "38": 9,
+      "40": 4,
+      "44": 4,
+      "46": 2
+     }
+    },
+    "2008": {
+     "count": 1049,
+     "sizes": {
+      "2": 1049
+     }
+    },
+    "2311": {
+     "count": 1049,
+     "sizes": {
+      "94": 6,
+      "98": 35,
+      "102": 40,
+      "104": 4,
+      "106": 27,
+      "108": 1,
+      "110": 122,
+      "112": 7,
+      "114": 78,
+      "116": 1,
+      "118": 31,
+      "120": 7,
+      "122": 6,
+      "124": 14,
+      "126": 34,
+      "128": 30,
+      "130": 28,
+      "132": 1,
+      "134": 11,
+      "136": 2,
+      "138": 11,
+      "140": 1,
+      "142": 17,
+      "144": 11,
+      "146": 3,
+      "148": 2,
+      "150": 3,
+      "154": 12,
+      "156": 4,
+      "158": 2,
+      "160": 1,
+      "162": 39,
+      "166": 3,
+      "168": 1,
+      "170": 26,
+      "172": 2,
+      "178": 3,
+      "182": 10,
+      "186": 4,
+      "190": 5,
+      "198": 5,
+      "210": 1,
+      "214": 1,
+      "226": 2,
+      "234": 3,
+      "246": 1,
+      "248": 21,
+      "258": 2,
+      "268": 1,
+      "290": 351,
+      "300": 1,
+      "318": 1,
+      "322": 1,
+      "334": 1,
+      "344": 11,
+      "410": 1
+     }
+    },
+    "9006": {
+     "count": 9,
+     "sizes": {
+      "0": 9
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/周期函数的图象.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/过三点的二次函数.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/环形跑道上的点.gsp"
+   ]
+  },
+  {
+   "ext_id": 72,
+   "table_row": 86,
+   "main_kind": 6,
+   "genera": 55,
+   "parent_template_index": 41,
+   "parent_template_words": [
+    54,
+    34,
+    0
+   ],
+   "description_template_index": 158,
+   "description_template_id": 4574,
+   "description_template": null,
+   "object_count": 340,
+   "file_count": 111,
+   "child_records": {
+    "2002": {
+     "count": 340,
+     "sizes": {
+      "12": 340
+     }
+    },
+    "2005": {
+     "count": 20,
+     "sizes": {
+      "26": 1,
+      "28": 1,
+      "32": 7,
+      "34": 10,
+      "36": 1
+     }
+    },
+    "2008": {
+     "count": 20,
+     "sizes": {
+      "2": 20
+     }
+    },
+    "2306": {
+     "count": 340,
+     "sizes": {
+      "32": 15,
+      "40": 325
+     }
+    },
+    "9006": {
+     "count": 10,
+     "sizes": {
+      "0": 10
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/分段函数的代数表达方法.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/周期函数的图象.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/过三点的二次函数.gsp"
+   ]
+  },
+  {
+   "ext_id": 73,
+   "table_row": 87,
+   "main_kind": 0,
+   "genera": 56,
+   "parent_template_index": 42,
+   "parent_template_words": [
+    95,
+    1,
+    0
+   ],
+   "description_template_index": 80,
+   "description_template_id": 4496,
+   "description_template": "^*|c 的超链接文本指向 ^x ^Y|c: ^y。^#",
+   "object_count": 2024,
+   "file_count": 586,
+   "child_records": {
+    "2002": {
+     "count": 2024,
+     "sizes": {
+      "8": 1101,
+      "12": 316,
+      "16": 132,
+      "20": 169,
+      "24": 40,
+      "28": 35,
+      "32": 19,
+      "36": 71,
+      "40": 113,
+      "44": 9,
+      "48": 7,
+      "52": 7,
+      "60": 2,
+      "68": 1,
+      "80": 2
+     }
+    },
+    "2005": {
+     "count": 102,
+     "sizes": {
+      "26": 1,
+      "30": 101
+     }
+    },
+    "2008": {
+     "count": 2024,
+     "sizes": {
+      "2": 2024
+     }
+    },
+    "2300": {
+     "count": 2024,
+     "sizes": {
+      "24": 1,
+      "28": 11,
+      "32": 22,
+      "36": 64,
+      "40": 133,
+      "44": 46,
+      "48": 48,
+      "52": 176,
+      "56": 71,
+      "60": 117,
+      "64": 24,
+      "68": 54,
+      "72": 128,
+      "76": 91,
+      "80": 181,
+      "84": 37,
+      "88": 34,
+      "92": 29,
+      "96": 21,
+      "100": 8,
+      "104": 9,
+      "108": 18,
+      "112": 22,
+      "116": 22,
+      "120": 22,
+      "124": 18,
+      "128": 10,
+      "132": 13,
+      "136": 13,
+      "140": 10,
+      "144": 9,
+      "148": 20,
+      "152": 18,
+      "156": 9,
+      "160": 17,
+      "164": 12,
+      "168": 9,
+      "172": 6,
+      "176": 39,
+      "180": 5,
+      "184": 13,
+      "188": 7,
+      "192": 5,
+      "196": 6,
+      "200": 6,
+      "204": 5,
+      "208": 51,
+      "212": 3,
+      "216": 3,
+      "220": 10,
+      "224": 12,
+      "228": 2,
+      "232": 41,
+      "236": 3,
+      "244": 19,
+      "248": 5,
+      "252": 4,
+      "256": 6,
+      "260": 6,
+      "264": 7,
+      "268": 3,
+      "272": 11,
+      "276": 7,
+      "280": 4,
+      "284": 6,
+      "292": 3,
+      "296": 5,
+      "300": 2,
+      "308": 1,
+      "312": 4,
+      "316": 1,
+      "320": 2,
+      "328": 1,
+      "336": 6,
+      "340": 9,
+      "344": 1,
+      "348": 1,
+      "352": 2,
+      "356": 2,
+      "360": 1,
+      "364": 22,
+      "368": 1,
+      "380": 2,
+      "384": 1,
+      "392": 1,
+      "408": 2,
+      "420": 12,
+      "452": 1,
+      "460": 1,
+      "464": 1,
+      "468": 3,
+      "472": 1,
+      "476": 2,
+      "480": 1,
+      "484": 3,
+      "488": 1,
+      "492": 2,
+      "508": 7,
+      "512": 8,
+      "528": 1,
+      "540": 2,
+      "544": 1,
+      "548": 1,
+      "560": 1,
+      "572": 1,
+      "576": 1,
+      "580": 1,
+      "584": 1,
+      "588": 1,
+      "592": 1,
+      "596": 1,
+      "604": 2,
+      "624": 1,
+      "628": 1,
+      "648": 1,
+      "652": 1,
+      "664": 1,
+      "668": 2,
+      "672": 1,
+      "676": 1,
+      "696": 1,
+      "708": 1,
+      "712": 1,
+      "724": 2,
+      "728": 1,
+      "732": 1,
+      "776": 1,
+      "784": 2,
+      "800": 2,
+      "804": 2,
+      "844": 5,
+      "852": 2,
+      "908": 1,
+      "920": 1,
+      "932": 1,
+      "976": 1,
+      "984": 1,
+      "1000": 1,
+      "1020": 1,
+      "1048": 1,
+      "1052": 1,
+      "1088": 1,
+      "1132": 1,
+      "1140": 1,
+      "1144": 1,
+      "1188": 1,
+      "1208": 1,
+      "1228": 1,
+      "1252": 1,
+      "1272": 1,
+      "1316": 1,
+      "1356": 1,
+      "1560": 1,
+      "1564": 1,
+      "1604": 1,
+      "2920": 1
+     }
+    },
+    "9006": {
+     "count": 343,
+     "sizes": {
+      "0": 343
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp",
+    "Samples/5.x实例/方小庆作品/折纸(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp"
+   ]
+  },
+  {
+   "ext_id": 74,
+   "table_row": 88,
+   "main_kind": 0,
+   "genera": 29,
+   "parent_template_index": 31,
+   "parent_template_words": [
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 82,
+   "description_template_id": 4498,
+   "description_template": "^* 度量^B 在^C 上的极坐标。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 75,
+   "table_row": 89,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 43,
+   "parent_template_words": [
+    80,
+    95,
+    28,
+    0
+   ],
+   "description_template_index": 160,
+   "description_template_id": 4576,
+   "description_template": null,
+   "object_count": 3681,
+   "file_count": 508,
+   "child_records": {
+    "2002": {
+     "count": 3681,
+     "sizes": {
+      "12": 2172,
+      "20": 1509
+     }
+    },
+    "2003": {
+     "count": 3681,
+     "sizes": {
+      "24": 3681
+     }
+    },
+    "2005": {
+     "count": 147,
+     "sizes": {
+      "26": 24,
+      "28": 54,
+      "30": 37,
+      "32": 7,
+      "34": 8,
+      "36": 2,
+      "40": 4,
+      "42": 6,
+      "44": 1,
+      "46": 1,
+      "52": 2,
+      "58": 1
+     }
+    },
+    "2008": {
+     "count": 147,
+     "sizes": {
+      "2": 147
+     }
+    },
+    "9006": {
+     "count": 30,
+     "sizes": {
+      "0": 30
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/渐变色线段.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/线板.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/如何使AB闪烁.gsp"
+   ]
+  },
+  {
+   "ext_id": 76,
+   "table_row": 16,
+   "main_kind": 14,
+   "genera": 51,
+   "parent_template_index": 62,
+   "parent_template_words": null,
+   "description_template_index": 159,
+   "description_template_id": 4575,
+   "description_template": null,
+   "object_count": 85,
+   "file_count": 47,
+   "child_records": {
+    "2002": {
+     "count": 85,
+     "sizes": {
+      "16": 1,
+      "20": 4,
+      "24": 2,
+      "28": 6,
+      "32": 5,
+      "36": 2,
+      "40": 13,
+      "44": 5,
+      "48": 3,
+      "52": 7,
+      "56": 2,
+      "60": 4,
+      "64": 5,
+      "72": 2,
+      "84": 2,
+      "88": 1,
+      "92": 1,
+      "100": 1,
+      "108": 1,
+      "124": 1,
+      "140": 1,
+      "144": 1,
+      "168": 1,
+      "176": 1,
+      "196": 1,
+      "220": 1,
+      "256": 2,
+      "272": 1,
+      "288": 1,
+      "352": 1,
+      "536": 1,
+      "884": 1,
+      "924": 3,
+      "948": 1
+     }
+    },
+    "2005": {
+     "count": 13,
+     "sizes": {
+      "28": 13
+     }
+    },
+    "2314": {
+     "count": 85,
+     "sizes": {
+      "24": 85
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/L-龙.gsp",
+    "Samples/分形艺术/牛顿求根序列.gsp",
+    "Samples/分形艺术/球形勾股树.gsp"
+   ]
+  },
+  {
+   "ext_id": 77,
+   "table_row": 18,
+   "main_kind": 15,
+   "genera": 52,
+   "parent_template_index": 26,
+   "parent_template_words": [
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 18,
+   "description_template_id": 4434,
+   "description_template": "^A 是^B 在^C 下的象。^#",
+   "object_count": 6976,
+   "file_count": 693,
+   "child_records": {
+    "2002": {
+     "count": 6976,
+     "sizes": {
+      "12": 6976
+     }
+    },
+    "2005": {
+     "count": 511,
+     "sizes": {
+      "28": 382,
+      "30": 129
+     }
+    },
+    "9006": {
+     "count": 1601,
+     "sizes": {
+      "0": 1601
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/L-龙曲线2.gsp",
+    "Samples/分形艺术/L-龙.gsp",
+    "Samples/分形艺术/L-Christmas Tree.gsp"
+   ]
+  },
+  {
+   "ext_id": 78,
+   "table_row": 90,
+   "main_kind": 11,
+   "genera": 59,
+   "parent_template_index": 44,
+   "parent_template_words": [
+    54,
+    100,
+    0
+   ],
+   "description_template_index": 112,
+   "description_template_id": 4528,
+   "description_template": "^a 是关于^z 的^b(^z) 的导数。^#",
+   "object_count": 34,
+   "file_count": 14,
+   "child_records": {
+    "2002": {
+     "count": 34,
+     "sizes": {
+      "8": 34
+     }
+    },
+    "2005": {
+     "count": 9,
+     "sizes": {
+      "28": 7,
+      "30": 1,
+      "34": 1
+     }
+    },
+    "2008": {
+     "count": 34,
+     "sizes": {
+      "2": 34
+     }
+    },
+    "2311": {
+     "count": 34,
+     "sizes": {
+      "94": 3,
+      "98": 4,
+      "102": 2,
+      "104": 2,
+      "114": 1,
+      "144": 22
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/二次函数图像的切线轨迹.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/二次函数图像的切线.gsp",
+    "Samples/5.x实例/周维波作品/可编辑函数的区间分色（烟台飞狐）.gsp"
+   ]
+  },
+  {
+   "ext_id": 79,
+   "table_row": 91,
+   "main_kind": 12,
+   "genera": 24,
+   "parent_template_index": 45,
+   "parent_template_words": [
+    22,
+    4,
+    4,
+    0
+   ],
+   "description_template_index": 104,
+   "description_template_id": 4520,
+   "description_template": "^A 是^B 上从点^c 到点^d 的弧。^#",
+   "object_count": 470,
+   "file_count": 88,
+   "child_records": {
+    "2002": {
+     "count": 470,
+     "sizes": {
+      "16": 470
+     }
+    },
+    "2005": {
+     "count": 104,
+     "sizes": {
+      "26": 15,
+      "28": 71,
+      "30": 17,
+      "38": 1
+     }
+    },
+    "2008": {
+     "count": 104,
+     "sizes": {
+      "2": 104
+     }
+    },
+    "9006": {
+     "count": 12,
+     "sizes": {
+      "0": 12
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/有趣的花瓣.gsp",
+    "Samples/5.x实例/方小庆作品/圆弧展开(inRm).gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/平行四边形的变化.gsp"
+   ]
+  },
+  {
+   "ext_id": 80,
+   "table_row": 92,
+   "main_kind": 12,
+   "genera": 24,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 105,
+   "description_template_id": 4521,
+   "description_template": "^A 是以^b 为圆心，从点^c 到点^d 的弧。^#",
+   "object_count": 1141,
+   "file_count": 246,
+   "child_records": {
+    "2002": {
+     "count": 1141,
+     "sizes": {
+      "16": 1141
+     }
+    },
+    "2005": {
+     "count": 88,
+     "sizes": {
+      "26": 7,
+      "28": 14,
+      "30": 67
+     }
+    },
+    "2008": {
+     "count": 88,
+     "sizes": {
+      "2": 88
+     }
+    },
+    "9006": {
+     "count": 11,
+     "sizes": {
+      "0": 11
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp",
+    "Samples/分形艺术/L-龙.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阴阳鱼.gsp"
+   ]
+  },
+  {
+   "ext_id": 81,
+   "table_row": 93,
+   "main_kind": 12,
+   "genera": 24,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 106,
+   "description_template_id": 4522,
+   "description_template": "^A 是从点^b 通过点^c 到点^d 的弧。^#",
+   "object_count": 463,
+   "file_count": 86,
+   "child_records": {
+    "2002": {
+     "count": 463,
+     "sizes": {
+      "16": 463
+     }
+    },
+    "2005": {
+     "count": 33,
+     "sizes": {
+      "28": 12,
+      "30": 17,
+      "32": 4
+     }
+    },
+    "2008": {
+     "count": 33,
+     "sizes": {
+      "2": 33
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆的又一个作法.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/半圆的内切圆（尺规法）.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阴阳鱼2.gsp"
+   ]
+  },
+  {
+   "ext_id": 82,
+   "table_row": 94,
+   "main_kind": 13,
+   "genera": 26,
+   "parent_template_index": 49,
+   "parent_template_words": [
+    24,
+    0
+   ],
+   "description_template_index": 107,
+   "description_template_id": 4523,
+   "description_template": "^A 是由^B 决定的扇形。^#",
+   "object_count": 160,
+   "file_count": 53,
+   "child_records": {
+    "2002": {
+     "count": 160,
+     "sizes": {
+      "8": 160
+     }
+    },
+    "2005": {
+     "count": 24,
+     "sizes": {
+      "28": 22,
+      "30": 2
+     }
+    },
+    "2008": {
+     "count": 24,
+     "sizes": {
+      "2": 24
+     }
+    },
+    "9006": {
+     "count": 7,
+     "sizes": {
+      "0": 7
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/(inRm)割圆为方.gsp",
+    "Samples/5.x实例/方小庆作品/江西2012年文高考第十题(inRm).gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/正弦线与正弦函数.gsp"
+   ]
+  },
+  {
+   "ext_id": 83,
+   "table_row": 95,
+   "main_kind": 13,
+   "genera": 27,
+   "parent_template_index": 49,
+   "parent_template_words": [
+    24,
+    0
+   ],
+   "description_template_index": 108,
+   "description_template_id": 4524,
+   "description_template": "^A 是由^B 决定的弓形。^#",
+   "object_count": 122,
+   "file_count": 62,
+   "child_records": {
+    "2002": {
+     "count": 122,
+     "sizes": {
+      "8": 122
+     }
+    },
+    "2005": {
+     "count": 3,
+     "sizes": {
+      "30": 3
+     }
+    },
+    "2008": {
+     "count": 3,
+     "sizes": {
+      "2": 3
+     }
+    },
+    "9006": {
+     "count": 12,
+     "sizes": {
+      "0": 12
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/两圆之交(inRm).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/转动的太极图A.gsp",
+    "Samples/5.x实例/李有贵作品/勾股弦图(liyougui).gsp"
+   ]
+  },
+  {
+   "ext_id": 84,
+   "table_row": 96,
+   "main_kind": 16,
+   "genera": 91,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 161,
+   "description_template_id": 4577,
+   "description_template": null,
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 85,
+   "table_row": 98,
+   "main_kind": 16,
+   "genera": 91,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 161,
+   "description_template_id": 4577,
+   "description_template": null,
+   "object_count": 38,
+   "file_count": 12,
+   "child_records": {
+    "2002": {
+     "count": 38,
+     "sizes": {
+      "12": 38
+     }
+    },
+    "2316": {
+     "count": 38,
+     "sizes": {
+      "16": 38
+     }
+    },
+    "8004": {
+     "count": 38,
+     "sizes": {
+      "2": 38
+     }
+    },
+    "9006": {
+     "count": 3,
+     "sizes": {
+      "0": 3
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/FlyingCar(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/折扇另一法.gsp",
+    "Samples/5.x实例/群师作品/中考动态题/09成都第28题等.gsp"
+   ]
+  },
+  {
+   "ext_id": 86,
+   "table_row": 102,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 50,
+   "parent_template_words": [
+    4,
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 129,
+   "description_template_id": 4545,
+   "description_template": "^* 度量^D 上^B 到^C 的坐标距离。^#",
+   "object_count": 727,
+   "file_count": 215,
+   "child_records": {
+    "2002": {
+     "count": 727,
+     "sizes": {
+      "16": 727
+     }
+    },
+    "2005": {
+     "count": 413,
+     "sizes": {
+      "26": 88,
+      "28": 103,
+      "30": 216,
+      "32": 4,
+      "38": 2
+     }
+    },
+    "2008": {
+     "count": 727,
+     "sizes": {
+      "2": 727
+     }
+    },
+    "2307": {
+     "count": 727,
+     "sizes": {
+      "32": 727
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/迭代象的和.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/迭代象的和(无单位）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/路程函数法做变速运动（有说明）.gsp"
+   ]
+  },
+  {
+   "ext_id": 87,
+   "table_row": 103,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 51,
+   "parent_template_words": [
+    7,
+    34,
+    0
+   ],
+   "description_template_index": 130,
+   "description_template_id": 4546,
+   "description_template": "^* 度量^B 在^C 上的斜率。^#",
+   "object_count": 78,
+   "file_count": 12,
+   "child_records": {
+    "2002": {
+     "count": 78,
+     "sizes": {
+      "12": 78
+     }
+    },
+    "2005": {
+     "count": 26,
+     "sizes": {
+      "26": 2,
+      "30": 24
+     }
+    },
+    "2008": {
+     "count": 78,
+     "sizes": {
+      "2": 78
+     }
+    },
+    "2307": {
+     "count": 78,
+     "sizes": {
+      "32": 78
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/定点直线.gsp",
+    "Samples/5.x实例/方小庆作品/过任意点作曲线的法线(inRm).gsp",
+    "Samples/5.x实例/李章博作品/椭圆定长弦轨迹（李章博）.gsp"
+   ]
+  },
+  {
+   "ext_id": 88,
+   "table_row": 19,
+   "main_kind": 1,
+   "genera": 4,
+   "parent_template_index": 26,
+   "parent_template_words": [
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 19,
+   "description_template_id": 4435,
+   "description_template": "^A 是^B 迭代图像中的终点。^#",
+   "object_count": 617,
+   "file_count": 248,
+   "child_records": {
+    "2002": {
+     "count": 617,
+     "sizes": {
+      "8": 617
+     }
+    },
+    "2005": {
+     "count": 548,
+     "sizes": {
+      "26": 403,
+      "28": 81,
+      "30": 53,
+      "32": 5,
+      "34": 1,
+      "36": 1,
+      "38": 3,
+      "42": 1
+     }
+    },
+    "2008": {
+     "count": 548,
+     "sizes": {
+      "2": 548
+     }
+    },
+    "9006": {
+     "count": 3,
+     "sizes": {
+      "0": 3
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/牛顿求根序列.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/阶乘.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/N!.gsp"
+   ]
+  },
+  {
+   "ext_id": 89,
+   "table_row": 17,
+   "main_kind": 14,
+   "genera": 51,
+   "parent_template_index": 62,
+   "parent_template_words": null,
+   "description_template_index": 159,
+   "description_template_id": 4575,
+   "description_template": null,
+   "object_count": 2395,
+   "file_count": 669,
+   "child_records": {
+    "2002": {
+     "count": 2395,
+     "sizes": {
+      "20": 2,
+      "24": 49,
+      "28": 27,
+      "32": 34,
+      "36": 121,
+      "40": 254,
+      "44": 59,
+      "48": 57,
+      "52": 257,
+      "56": 51,
+      "60": 148,
+      "64": 263,
+      "68": 148,
+      "72": 31,
+      "76": 23,
+      "80": 36,
+      "84": 39,
+      "88": 14,
+      "92": 46,
+      "96": 24,
+      "100": 34,
+      "104": 27,
+      "108": 19,
+      "112": 23,
+      "116": 31,
+      "120": 15,
+      "124": 12,
+      "128": 19,
+      "132": 14,
+      "136": 218,
+      "140": 32,
+      "144": 17,
+      "148": 6,
+      "152": 19,
+      "156": 10,
+      "160": 24,
+      "164": 13,
+      "168": 14,
+      "172": 2,
+      "176": 10,
+      "180": 8,
+      "184": 6,
+      "188": 3,
+      "196": 1,
+      "200": 12,
+      "204": 7,
+      "208": 3,
+      "212": 1,
+      "216": 6,
+      "220": 4,
+      "228": 1,
+      "232": 1,
+      "236": 1,
+      "240": 9,
+      "244": 2,
+      "248": 2,
+      "252": 5,
+      "260": 1,
+      "264": 1,
+      "268": 3,
+      "276": 4,
+      "280": 1,
+      "284": 1,
+      "288": 1,
+      "292": 1,
+      "296": 4,
+      "304": 2,
+      "308": 3,
+      "312": 6,
+      "316": 1,
+      "328": 1,
+      "340": 1,
+      "364": 3,
+      "368": 4,
+      "372": 1,
+      "404": 3,
+      "436": 2,
+      "440": 1,
+      "444": 6,
+      "452": 3,
+      "468": 1,
+      "476": 1,
+      "484": 1,
+      "492": 1,
+      "544": 3,
+      "552": 1,
+      "584": 1,
+      "628": 1,
+      "632": 1,
+      "636": 2,
+      "640": 1,
+      "652": 1,
+      "736": 1,
+      "804": 2,
+      "888": 1,
+      "956": 1,
+      "964": 2,
+      "968": 1,
+      "1672": 1,
+      "1984": 1,
+      "2856": 1,
+      "3004": 1
+     }
+    },
+    "2005": {
+     "count": 161,
+     "sizes": {
+      "28": 161
+     }
+    },
+    "2314": {
+     "count": 2395,
+     "sizes": {
+      "24": 2395
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/L-龙曲线2.gsp",
+    "Samples/分形艺术/L-Christmas Tree.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/正多边形的展开.gsp"
+   ]
+  },
+  {
+   "ext_id": 90,
+   "table_row": 104,
+   "main_kind": 0,
+   "genera": 56,
+   "parent_template_index": 52,
+   "parent_template_words": [
+    4,
+    17,
+    0
+   ],
+   "description_template_index": 81,
+   "description_template_id": 4497,
+   "description_template": "^*|c 在^B 上显示^C。",
+   "object_count": 4414,
+   "file_count": 320,
+   "child_records": {
+    "2002": {
+     "count": 4414,
+     "sizes": {
+      "12": 4414
+     }
+    },
+    "2005": {
+     "count": 185,
+     "sizes": {
+      "30": 185
+     }
+    },
+    "2008": {
+     "count": 4414,
+     "sizes": {
+      "2": 4414
+     }
+    },
+    "2300": {
+     "count": 4414,
+     "sizes": {
+      "24": 1993,
+      "32": 180,
+      "36": 1457,
+      "40": 367,
+      "44": 41,
+      "48": 66,
+      "52": 67,
+      "56": 47,
+      "60": 80,
+      "64": 30,
+      "68": 16,
+      "72": 23,
+      "76": 10,
+      "80": 8,
+      "84": 6,
+      "88": 2,
+      "92": 4,
+      "96": 2,
+      "100": 2,
+      "104": 1,
+      "108": 1,
+      "112": 3,
+      "116": 2,
+      "128": 1,
+      "132": 1,
+      "136": 1,
+      "152": 1,
+      "156": 1,
+      "180": 1
+     }
+    },
+    "9006": {
+     "count": 396,
+     "sizes": {
+      "0": 396
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/坐标随点.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/杨辉三角形（2013－4－14）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/平分正方形为n^2个.gsp"
+   ]
+  },
+  {
+   "ext_id": 91,
+   "table_row": 105,
+   "main_kind": 17,
+   "genera": 68,
+   "parent_template_index": 26,
+   "parent_template_words": [
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 131,
+   "description_template_id": 4547,
+   "description_template": "^*|d ^X 个^Y|c (^y) 的缩写列表。",
+   "object_count": 119,
+   "file_count": 68,
+   "child_records": {
+    "2002": {
+     "count": 119,
+     "sizes": {
+      "12": 19,
+      "16": 64,
+      "20": 19,
+      "24": 8,
+      "28": 4,
+      "32": 4,
+      "36": 1
+     }
+    },
+    "2005": {
+     "count": 30,
+     "sizes": {
+      "26": 22,
+      "30": 8
+     }
+    },
+    "2008": {
+     "count": 119,
+     "sizes": {
+      "2": 119
+     }
+    },
+    "2317": {
+     "count": 119,
+     "sizes": {
+      "48": 1,
+      "80": 1,
+      "108": 1,
+      "116": 2,
+      "124": 4,
+      "132": 1,
+      "136": 1,
+      "140": 6,
+      "144": 35,
+      "148": 11,
+      "152": 6,
+      "156": 4,
+      "160": 3,
+      "164": 8,
+      "168": 1,
+      "172": 1,
+      "176": 2,
+      "180": 3,
+      "184": 1,
+      "188": 1,
+      "200": 3,
+      "204": 3,
+      "212": 1,
+      "224": 1,
+      "236": 1,
+      "240": 2,
+      "248": 2,
+      "284": 1,
+      "288": 1,
+      "292": 1,
+      "296": 1,
+      "304": 1,
+      "308": 1,
+      "312": 2,
+      "320": 1,
+      "336": 1,
+      "352": 1,
+      "704": 1,
+      "2116": 1
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/利用制表功能快速获取点的坐标.gsp",
+    "Samples/5.x实例/方小庆作品/反比例函数课件(inRm).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/抛豆实验估算圆周率.gsp"
+   ]
+  },
+  {
+   "ext_id": 92,
+   "table_row": 106,
+   "main_kind": 17,
+   "genera": 69,
+   "parent_template_index": 26,
+   "parent_template_words": [
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 132,
+   "description_template_id": 4548,
+   "description_template": "^*|d 是随着^B 变化的度量值列表。",
+   "object_count": 49,
+   "file_count": 37,
+   "child_records": {
+    "2002": {
+     "count": 49,
+     "sizes": {
+      "12": 18,
+      "16": 11,
+      "20": 8,
+      "24": 2,
+      "28": 5,
+      "36": 1,
+      "92": 1,
+      "240": 3
+     }
+    },
+    "2005": {
+     "count": 16,
+     "sizes": {
+      "26": 6,
+      "30": 10
+     }
+    },
+    "2008": {
+     "count": 49,
+     "sizes": {
+      "2": 49
+     }
+    },
+    "2317": {
+     "count": 49,
+     "sizes": {
+      "28": 49
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/n等分线段.gsp",
+    "Samples/分形艺术/牛顿求根序列.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/勾股树.gsp"
+   ]
+  },
+  {
+   "ext_id": 93,
+   "table_row": 107,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 53,
+   "parent_template_words": [
+    13,
+    15,
+    0
+   ],
+   "description_template_index": 133,
+   "description_template_id": 4549,
+   "description_template": "^A 是由^C 的周界与^B 的第一个交点。^#",
+   "object_count": 269,
+   "file_count": 77,
+   "child_records": {
+    "2002": {
+     "count": 269,
+     "sizes": {
+      "12": 269
+     }
+    },
+    "2005": {
+     "count": 161,
+     "sizes": {
+      "26": 157,
+      "28": 3,
+      "30": 1
+     }
+    },
+    "2008": {
+     "count": 161,
+     "sizes": {
+      "2": 161
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/平行四边形绕重心转动（方小庆老师）.gsp",
+    "Samples/5.x实例/方小庆作品/橡皮筋最简作法(inRm).gsp",
+    "Samples/5.x实例/群师作品/经典问题集/多边形内部的点2.gsp"
+   ]
+  },
+  {
+   "ext_id": 94,
+   "table_row": 109,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 54,
+   "parent_template_words": [
+    4,
+    5,
+    0
+   ],
+   "description_template_index": 137,
+   "description_template_id": 4553,
+   "description_template": "^* 度量^B 在^C 上的相对位置。^#",
+   "object_count": 3774,
+   "file_count": 448,
+   "child_records": {
+    "2002": {
+     "count": 3774,
+     "sizes": {
+      "12": 3774
+     }
+    },
+    "2005": {
+     "count": 907,
+     "sizes": {
+      "26": 291,
+      "28": 61,
+      "30": 529,
+      "32": 10,
+      "34": 3,
+      "36": 7,
+      "38": 3,
+      "46": 2,
+      "48": 1
+     }
+    },
+    "2008": {
+     "count": 3774,
+     "sizes": {
+      "2": 3774
+     }
+    },
+    "2307": {
+     "count": 3774,
+     "sizes": {
+      "32": 3774
+     }
+    },
+    "9006": {
+     "count": 610,
+     "sizes": {
+      "0": 610
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/滑块变速.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/正多边形的展开.gsp",
+    "Samples/5.x实例/方小庆作品/运动方向(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 95,
+   "table_row": 110,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 55,
+   "parent_template_words": [
+    28,
+    5,
+    0
+   ],
+   "description_template_index": 138,
+   "description_template_id": 4554,
+   "description_template": "^A 是在^C 上绘制数值等于^b 的点。^#",
+   "object_count": 1788,
+   "file_count": 340,
+   "child_records": {
+    "2002": {
+     "count": 1788,
+     "sizes": {
+      "12": 1788
+     }
+    },
+    "2005": {
+     "count": 986,
+     "sizes": {
+      "26": 737,
+      "28": 21,
+      "30": 221,
+      "32": 3,
+      "34": 3,
+      "38": 1
+     }
+    },
+    "2008": {
+     "count": 986,
+     "sizes": {
+      "2": 986
+     }
+    },
+    "9006": {
+     "count": 64,
+     "sizes": {
+      "0": 64
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/滑块变速.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/n等分线段.gsp",
+    "Samples/分形艺术/牛顿求根序列.gsp"
+   ]
+  },
+  {
+   "ext_id": 96,
+   "table_row": 113,
+   "main_kind": 6,
+   "genera": 72,
+   "parent_template_index": 57,
+   "parent_template_words": [
+    4,
+    62,
+    4,
+    95,
+    96
+   ],
+   "description_template_index": 140,
+   "description_template_id": 4556,
+   "description_template": "^A 是^c 的图像在^d 到^b 下的变换结果。^#",
+   "object_count": 7,
+   "file_count": 7,
+   "child_records": {
+    "2002": {
+     "count": 7,
+     "sizes": {
+      "28": 1,
+      "32": 1,
+      "40": 2,
+      "48": 1,
+      "52": 1,
+      "76": 1
+     }
+    },
+    "2003": {
+     "count": 7,
+     "sizes": {
+      "12": 7
+     }
+    },
+    "2306": {
+     "count": 7,
+     "sizes": {
+      "40": 7
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/复变换.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/飘动的国旗.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/自定义变换——折叠效果.gsp"
+   ]
+  },
+  {
+   "ext_id": 97,
+   "table_row": 108,
+   "main_kind": 6,
+   "genera": 93,
+   "parent_template_index": 26,
+   "parent_template_words": [
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 134,
+   "description_template_id": 4550,
+   "description_template": "^A 描述^c 的值在^u 和^U 之间变化时^B 的位置。^#",
+   "object_count": 38,
+   "file_count": 21,
+   "child_records": {
+    "2002": {
+     "count": 38,
+     "sizes": {
+      "16": 12,
+      "20": 3,
+      "28": 9,
+      "32": 5,
+      "44": 2,
+      "48": 1,
+      "52": 1,
+      "68": 2,
+      "84": 2,
+      "156": 1
+     }
+    },
+    "2005": {
+     "count": 2,
+     "sizes": {
+      "30": 2
+     }
+    },
+    "2008": {
+     "count": 2,
+     "sizes": {
+      "2": 2
+     }
+    },
+    "2306": {
+     "count": 38,
+     "sizes": {
+      "40": 38
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/(inRm)摆线.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/渐变.gsp",
+    "Samples/5.x实例/方小庆作品/(inRm)万花规.gsp"
+   ]
+  },
+  {
+   "ext_id": 98,
+   "table_row": 112,
+   "main_kind": 1,
+   "genera": 40,
+   "parent_template_index": 56,
+   "parent_template_words": [
+    87,
+    84,
+    0
+   ],
+   "description_template_index": 11,
+   "description_template_id": 4427,
+   "description_template": "^A 是^B 和^C 的交点。^#",
+   "object_count": 744,
+   "file_count": 123,
+   "child_records": {
+    "2002": {
+     "count": 744,
+     "sizes": {
+      "12": 744
+     }
+    },
+    "2003": {
+     "count": 744,
+     "sizes": {
+      "8": 744
+     }
+    },
+    "2005": {
+     "count": 416,
+     "sizes": {
+      "26": 316,
+      "28": 3,
+      "30": 95,
+      "34": 2
+     }
+    },
+    "2008": {
+     "count": 416,
+     "sizes": {
+      "2": 416
+     }
+    },
+    "9006": {
+     "count": 3,
+     "sizes": {
+      "0": 3
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/过两定点且与一直线相切的圆.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/筷子在椭圆中滑动中点的轨迹.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/构造半径为5的圆中，过定点且长为9的弦2.gsp"
+   ]
+  },
+  {
+   "ext_id": 99,
+   "table_row": 97,
+   "main_kind": 16,
+   "genera": 91,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 161,
+   "description_template_id": 4577,
+   "description_template": null,
+   "object_count": 60,
+   "file_count": 30,
+   "child_records": {
+    "2002": {
+     "count": 60,
+     "sizes": {
+      "8": 60
+     }
+    },
+    "2003": {
+     "count": 60,
+     "sizes": {
+      "28": 60
+     }
+    },
+    "2005": {
+     "count": 4,
+     "sizes": {
+      "28": 4
+     }
+    },
+    "2316": {
+     "count": 60,
+     "sizes": {
+      "16": 60
+     }
+    },
+    "8004": {
+     "count": 60,
+     "sizes": {
+      "2": 60
+     }
+    },
+    "9006": {
+     "count": 10,
+     "sizes": {
+      "0": 10
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/图片也能构造轨迹.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/0°→360°.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/智能出题与判断.gsp"
+   ]
+  },
+  {
+   "ext_id": 100,
+   "table_row": 99,
+   "main_kind": 16,
+   "genera": 91,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 161,
+   "description_template_id": 4577,
+   "description_template": null,
+   "object_count": 47,
+   "file_count": 19,
+   "child_records": {
+    "2002": {
+     "count": 47,
+     "sizes": {
+      "16": 47
+     }
+    },
+    "2005": {
+     "count": 1,
+     "sizes": {
+      "28": 1
+     }
+    },
+    "2316": {
+     "count": 47,
+     "sizes": {
+      "16": 47
+     }
+    },
+    "8004": {
+     "count": 47,
+     "sizes": {
+      "2": 47
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/新功能.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/用几何画板做可控的翻折动画.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/飘动的国旗.gsp"
+   ]
+  },
+  {
+   "ext_id": 101,
+   "table_row": 114,
+   "main_kind": 1,
+   "genera": 70,
+   "parent_template_index": 58,
+   "parent_template_words": [
+    4,
+    4,
+    4,
+    95,
+    96
+   ],
+   "description_template_index": 140,
+   "description_template_id": 4556,
+   "description_template": "^A 是^c 的图像在^d 到^b 下的变换结果。^#",
+   "object_count": 1032,
+   "file_count": 40,
+   "child_records": {
+    "2002": {
+     "count": 1032,
+     "sizes": {
+      "28": 151,
+      "36": 36,
+      "40": 121,
+      "44": 612,
+      "48": 5,
+      "52": 13,
+      "56": 12,
+      "60": 6,
+      "64": 2,
+      "68": 6,
+      "72": 19,
+      "76": 4,
+      "80": 14,
+      "84": 3,
+      "108": 3,
+      "120": 15,
+      "180": 4,
+      "336": 2,
+      "340": 2,
+      "344": 2
+     }
+    },
+    "2005": {
+     "count": 109,
+     "sizes": {
+      "26": 60,
+      "28": 17,
+      "30": 32
+     }
+    },
+    "2008": {
+     "count": 109,
+     "sizes": {
+      "2": 109
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/0°→360°.gsp",
+    "Samples/分形艺术/Sierpinski三角及其反演.gsp",
+    "Samples/分形艺术/IFS-铺满正方形的连续曲线.gsp"
+   ]
+  },
+  {
+   "ext_id": 102,
+   "table_row": 115,
+   "main_kind": 6,
+   "genera": 71,
+   "parent_template_index": 25,
+   "parent_template_words": [
+    96,
+    5,
+    4,
+    95,
+    96,
+    0
+   ],
+   "description_template_index": 140,
+   "description_template_id": 4556,
+   "description_template": "^A 是^c 的图像在^d 到^b 下的变换结果。^#",
+   "object_count": 300,
+   "file_count": 176,
+   "child_records": {
+    "2002": {
+     "count": 300,
+     "sizes": {
+      "24": 6,
+      "28": 19,
+      "32": 4,
+      "36": 13,
+      "40": 9,
+      "44": 23,
+      "48": 8,
+      "52": 6,
+      "56": 6,
+      "60": 7,
+      "64": 5,
+      "68": 6,
+      "72": 6,
+      "76": 6,
+      "80": 5,
+      "84": 3,
+      "88": 6,
+      "92": 5,
+      "96": 5,
+      "100": 8,
+      "104": 9,
+      "108": 18,
+      "112": 7,
+      "116": 33,
+      "120": 6,
+      "124": 4,
+      "128": 8,
+      "132": 4,
+      "140": 1,
+      "144": 2,
+      "148": 2,
+      "152": 3,
+      "156": 3,
+      "160": 6,
+      "172": 2,
+      "176": 7,
+      "180": 3,
+      "188": 2,
+      "192": 7,
+      "196": 1,
+      "200": 1,
+      "204": 1,
+      "208": 3,
+      "212": 1,
+      "216": 1,
+      "220": 2,
+      "252": 1,
+      "260": 2,
+      "280": 1,
+      "296": 1,
+      "312": 1,
+      "484": 1
+     }
+    },
+    "2005": {
+     "count": 6,
+     "sizes": {
+      "28": 6
+     }
+    },
+    "2008": {
+     "count": 6,
+     "sizes": {
+      "2": 6
+     }
+    },
+    "2306": {
+     "count": 300,
+     "sizes": {
+      "40": 300
+     }
+    },
+    "9006": {
+     "count": 4,
+     "sizes": {
+      "0": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/有趣的花瓣.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/视频上的形变.gsp",
+    "Samples/5.x实例/周维波作品/可编辑函数的区间分色（烟台飞狐）.gsp"
+   ]
+  },
+  {
+   "ext_id": 108,
+   "table_row": 100,
+   "main_kind": 16,
+   "genera": 91,
+   "parent_template_index": 59,
+   "parent_template_words": [
+    62,
+    96,
+    0
+   ],
+   "description_template_index": 161,
+   "description_template_id": 4577,
+   "description_template": null,
+   "object_count": 49,
+   "file_count": 12,
+   "child_records": {
+    "2002": {
+     "count": 49,
+     "sizes": {
+      "12": 49
+     }
+    },
+    "2316": {
+     "count": 49,
+     "sizes": {
+      "16": 49
+     }
+    },
+    "9006": {
+     "count": 20,
+     "sizes": {
+      "0": 20
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/随机点名.gsp",
+    "Samples/5.x实例/周维波作品/2010年四川眉山中考数学试题最后一题.gsp",
+    "Samples/5.x实例/周维波作品/2010年湖南衡阳数学中考.gsp"
+   ]
+  },
+  {
+   "ext_id": 109,
+   "table_row": 78,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 39,
+   "parent_template_words": [
+    28,
+    34,
+    0
+   ],
+   "description_template_index": 71,
+   "description_template_id": 4487,
+   "description_template": "^A 是在^C 上绘制的点(^6，^b)。^#",
+   "object_count": 820,
+   "file_count": 83,
+   "child_records": {
+    "2002": {
+     "count": 820,
+     "sizes": {
+      "12": 820
+     }
+    },
+    "2003": {
+     "count": 820,
+     "sizes": {
+      "12": 820
+     }
+    },
+    "2005": {
+     "count": 92,
+     "sizes": {
+      "26": 51,
+      "30": 41
+     }
+    },
+    "2008": {
+     "count": 92,
+     "sizes": {
+      "2": 92
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/已知内角平分线长度作三角形.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/台球瞄准练习.gsp",
+    "Samples/5.x实例/向忠作品/三角函数线.gsp"
+   ]
+  },
+  {
+   "ext_id": 110,
+   "table_row": 79,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 39,
+   "parent_template_words": [
+    28,
+    34,
+    0
+   ],
+   "description_template_index": 72,
+   "description_template_id": 4488,
+   "description_template": "^A 是在^C 上绘制的点(^b，^6)。^#",
+   "object_count": 855,
+   "file_count": 101,
+   "child_records": {
+    "2002": {
+     "count": 855,
+     "sizes": {
+      "12": 855
+     }
+    },
+    "2003": {
+     "count": 855,
+     "sizes": {
+      "12": 855
+     }
+    },
+    "2005": {
+     "count": 110,
+     "sizes": {
+      "26": 85,
+      "28": 3,
+      "30": 22
+     }
+    },
+    "2008": {
+     "count": 110,
+     "sizes": {
+      "2": 110
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/二次函数的一般式的动态演示.gsp",
+    "Samples/5.x实例/梁宝同作品/质数表（梁宝同）4.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/幂函数.gsp"
+   ]
+  },
+  {
+   "ext_id": 111,
+   "table_row": 82,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 39,
+   "parent_template_words": [
+    28,
+    34,
+    0
+   ],
+   "description_template_index": 75,
+   "description_template_id": 4491,
+   "description_template": "^A 是在极坐标^C 上绘制的点(^6，^b)。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 112,
+   "table_row": 83,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 39,
+   "parent_template_words": [
+    28,
+    34,
+    0
+   ],
+   "description_template_index": 76,
+   "description_template_id": 4492,
+   "description_template": "^A 是在极坐标^C 上绘制的点(^b，^Q)。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 113,
+   "table_row": 116,
+   "main_kind": 18,
+   "genera": 74,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 146,
+   "description_template_id": 4562,
+   "description_template": "^*|k 标记劣角∠^b^c^d。^#",
+   "object_count": 123,
+   "file_count": 48,
+   "child_records": {
+    "2002": {
+     "count": 123,
+     "sizes": {
+      "16": 123
+     }
+    },
+    "2005": {
+     "count": 18,
+     "sizes": {
+      "26": 5,
+      "28": 3,
+      "30": 10
+     }
+    },
+    "2008": {
+     "count": 18,
+     "sizes": {
+      "2": 18
+     }
+    },
+    "2318": {
+     "count": 123,
+     "sizes": {
+      "12": 123
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/周维波作品/垂径定理（雪山飞狐）.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/代数法椭圆.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/三角形内角和定理.gsp"
+   ]
+  },
+  {
+   "ext_id": 114,
+   "table_row": 117,
+   "main_kind": 18,
+   "genera": 74,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 147,
+   "description_template_id": 4563,
+   "description_template": "^*|k 标记优角∠^b^c^d。^#",
+   "object_count": 3,
+   "file_count": 3,
+   "child_records": {
+    "2002": {
+     "count": 3,
+     "sizes": {
+      "16": 3
+     }
+    },
+    "2318": {
+     "count": 3,
+     "sizes": {
+      "12": 3
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/(inRm)摆线.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/动态演示0-360°【梁卷明】.gsp",
+    "Samples/5.x实例/方小庆作品/圆的滚动全解(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 115,
+   "table_row": 118,
+   "main_kind": 18,
+   "genera": 74,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 148,
+   "description_template_id": 4564,
+   "description_template": "^*|k 在^c 标记从^b 到^d 逆时针旋转的角。^#",
+   "object_count": 14,
+   "file_count": 12,
+   "child_records": {
+    "2002": {
+     "count": 14,
+     "sizes": {
+      "16": 14
+     }
+    },
+    "2005": {
+     "count": 4,
+     "sizes": {
+      "28": 2,
+      "38": 2
+     }
+    },
+    "2008": {
+     "count": 4,
+     "sizes": {
+      "2": 4
+     }
+    },
+    "2318": {
+     "count": 14,
+     "sizes": {
+      "12": 14
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/崩床.gsp",
+    "Samples/5.x实例/群师作品/经典问题集/角的演示.gsp",
+    "Samples/5.x实例/陈发铨作品/橡皮筋(一线天).gsp"
+   ]
+  },
+  {
+   "ext_id": 116,
+   "table_row": 119,
+   "main_kind": 18,
+   "genera": 74,
+   "parent_template_index": 2,
+   "parent_template_words": [
+    95,
+    4,
+    0
+   ],
+   "description_template_index": 149,
+   "description_template_id": 4565,
+   "description_template": "^*|k 在^c 标记从^b 到^d 顺时针旋转的角。^#",
+   "object_count": 13,
+   "file_count": 3,
+   "child_records": {
+    "2002": {
+     "count": 13,
+     "sizes": {
+      "16": 13
+     }
+    },
+    "2005": {
+     "count": 1,
+     "sizes": {
+      "50": 1
+     }
+    },
+    "2008": {
+     "count": 1,
+     "sizes": {
+      "2": 1
+     }
+    },
+    "2318": {
+     "count": 13,
+     "sizes": {
+      "12": 13
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/孙禄京作品/时钟.gsp",
+    "Samples/5.x实例/方小庆作品/圆的滚动全解(inRm).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/两点不同路径速度的工具化课件.gsp"
+   ]
+  },
+  {
+   "ext_id": 117,
+   "table_row": 28,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 15,
+   "parent_template_words": [
+    88,
+    74,
+    0
+   ],
+   "description_template_index": 28,
+   "description_template_id": 4444,
+   "description_template": "^A 是^B 通过移动距离为^1 移动方向为^c 的平移结果。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 118,
+   "table_row": 32,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 18,
+   "parent_template_words": [
+    88,
+    74,
+    43,
+    0
+   ],
+   "description_template_index": 32,
+   "description_template_id": 4448,
+   "description_template": "^A 是^B 沿^c 方向平移^d 的结果。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  },
+  {
+   "ext_id": 119,
+   "table_row": 36,
+   "main_kind": 22,
+   "genera": 92,
+   "parent_template_index": 20,
+   "parent_template_words": [
+    88,
+    4,
+    74,
+    0
+   ],
+   "description_template_index": 36,
+   "description_template_id": 4452,
+   "description_template": "^A 是^B 关于中心^C 旋转角度为^d 的旋转结果。^#",
+   "object_count": 2,
+   "file_count": 2,
+   "child_records": {
+    "2002": {
+     "count": 2,
+     "sizes": {
+      "16": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/方小庆作品/(inRm)摆线.gsp",
+    "Samples/5.x实例/方小庆作品/圆的滚动全解(inRm).gsp"
+   ]
+  },
+  {
+   "ext_id": 120,
+   "table_row": 49,
+   "main_kind": 7,
+   "genera": 44,
+   "parent_template_index": 10,
+   "parent_template_words": [
+    74,
+    0
+   ],
+   "description_template_index": 48,
+   "description_template_id": 4464,
+   "description_template": "^* 度量标记的角^b 的度数。^#",
+   "object_count": 36,
+   "file_count": 18,
+   "child_records": {
+    "2002": {
+     "count": 36,
+     "sizes": {
+      "8": 36
+     }
+    },
+    "2005": {
+     "count": 9,
+     "sizes": {
+      "26": 4,
+      "28": 1,
+      "30": 2,
+      "40": 2
+     }
+    },
+    "2008": {
+     "count": 36,
+     "sizes": {
+      "2": 36
+     }
+    },
+    "2307": {
+     "count": 36,
+     "sizes": {
+      "32": 36
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/崩床.gsp",
+    "Samples/5.x实例/陈发铨作品/橡皮筋(一线天).gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/代数法椭圆.gsp"
+   ]
+  },
+  {
+   "ext_id": 121,
+   "table_row": 120,
+   "main_kind": 19,
+   "genera": 75,
+   "parent_template_index": 9,
+   "parent_template_words": [
+    5,
+    0
+   ],
+   "description_template_index": 150,
+   "description_template_id": 4566,
+   "description_template": "^*|i 标记^B。^#",
+   "object_count": 61,
+   "file_count": 6,
+   "child_records": {
+    "2002": {
+     "count": 61,
+     "sizes": {
+      "8": 61
+     }
+    },
+    "2005": {
+     "count": 10,
+     "sizes": {
+      "30": 10
+     }
+    },
+    "2008": {
+     "count": 10,
+     "sizes": {
+      "2": 10
+     }
+    },
+    "2319": {
+     "count": 61,
+     "sizes": {
+      "16": 61
+     }
+    },
+    "9006": {
+     "count": 4,
+     "sizes": {
+      "0": 4
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/综合杂例类/二次函数图像的切线轨迹.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/二次函数图像的切线.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/几何最值三例.gsp"
+   ]
+  },
+  {
+   "ext_id": 122,
+   "table_row": 101,
+   "main_kind": 11,
+   "genera": 60,
+   "parent_template_index": 60,
+   "parent_template_words": [
+    62,
+    34,
+    0
+   ],
+   "description_template_index": 125,
+   "description_template_id": 4541,
+   "description_template": "^A 是在^C中，以^B 的最大高度作为度量定义的函数。^#",
+   "object_count": 6,
+   "file_count": 4,
+   "child_records": {
+    "2002": {
+     "count": 6,
+     "sizes": {
+      "12": 6
+     }
+    },
+    "2003": {
+     "count": 6,
+     "sizes": {
+      "16": 6
+     }
+    },
+    "2005": {
+     "count": 6,
+     "sizes": {
+      "26": 6
+     }
+    },
+    "2008": {
+     "count": 6,
+     "sizes": {
+      "2": 6
+     }
+    },
+    "2311": {
+     "count": 6,
+     "sizes": {
+      "92": 6
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/动态颜色.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/视频上的2个函数例子.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/点在手绘线上自由运动.gsp"
+   ]
+  },
+  {
+   "ext_id": 123,
+   "table_row": 111,
+   "main_kind": 1,
+   "genera": 53,
+   "parent_template_index": 9,
+   "parent_template_words": [
+    5,
+    0
+   ],
+   "description_template_index": 139,
+   "description_template_id": 4555,
+   "description_template": "^A 是在^B 上绘制数值等于^6 的点。^#",
+   "object_count": 233,
+   "file_count": 46,
+   "child_records": {
+    "2002": {
+     "count": 233,
+     "sizes": {
+      "8": 233
+     }
+    },
+    "2003": {
+     "count": 233,
+     "sizes": {
+      "12": 233
+     }
+    },
+    "2005": {
+     "count": 98,
+     "sizes": {
+      "26": 94,
+      "28": 2,
+      "30": 1,
+      "34": 1
+     }
+    },
+    "2008": {
+     "count": 98,
+     "sizes": {
+      "2": 98
+     }
+    },
+    "9006": {
+     "count": 1,
+     "sizes": {
+      "0": 1
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/学做阴阳鱼.gsp",
+    "Samples/5.x实例/群师作品/技巧型案例/构造半径为5的圆中，过定点且长为9的弦-代数法（相交弦定理）、扫描法.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/中学教学实例应用之一.gsp"
+   ]
+  },
+  {
+   "ext_id": 124,
+   "table_row": 75,
+   "main_kind": 7,
+   "genera": 46,
+   "parent_template_index": 31,
+   "parent_template_words": [
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 68,
+   "description_template_id": 4484,
+   "description_template": "^* 度量^B 在^C 上的极坐标距离(r坐标)。^#",
+   "object_count": 302,
+   "file_count": 30,
+   "child_records": {
+    "2002": {
+     "count": 302,
+     "sizes": {
+      "12": 302
+     }
+    },
+    "2005": {
+     "count": 44,
+     "sizes": {
+      "26": 35,
+      "30": 9
+     }
+    },
+    "2008": {
+     "count": 302,
+     "sizes": {
+      "2": 302
+     }
+    },
+    "2307": {
+     "count": 302,
+     "sizes": {
+      "32": 302
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/经典问题集/环形跑道上的点.gsp",
+    "Samples/分形艺术/M(et).gsp",
+    "Samples/分形艺术/简化牛顿.gsp"
+   ]
+  },
+  {
+   "ext_id": 125,
+   "table_row": 76,
+   "main_kind": 7,
+   "genera": 44,
+   "parent_template_index": 31,
+   "parent_template_words": [
+    4,
+    34,
+    0
+   ],
+   "description_template_index": 69,
+   "description_template_id": 4485,
+   "description_template": "^* 度量^B 在^C 上的极坐标方向角(θ坐标)。^#",
+   "object_count": 288,
+   "file_count": 27,
+   "child_records": {
+    "2002": {
+     "count": 288,
+     "sizes": {
+      "12": 288
+     }
+    },
+    "2005": {
+     "count": 5,
+     "sizes": {
+      "30": 5
+     }
+    },
+    "2008": {
+     "count": 288,
+     "sizes": {
+      "2": 288
+     }
+    },
+    "2307": {
+     "count": 288,
+     "sizes": {
+      "32": 288
+     }
+    }
+   },
+   "example_files": [
+    "Samples/分形艺术/M(et).gsp",
+    "Samples/分形艺术/简化牛顿.gsp",
+    "Samples/分形艺术/f(x)=tanz-c的牛迭M集1.gsp"
+   ]
+  },
+  {
+   "ext_id": 126,
+   "table_row": 121,
+   "main_kind": 6,
+   "genera": 76,
+   "parent_template_index": 61,
+   "parent_template_words": [
+    54,
+    54,
+    34,
+    0
+   ],
+   "description_template_index": 135,
+   "description_template_id": 4551,
+   "description_template": "^A 绘制参数函数 (x，y)=(^b(t)，^c(t)) 取值范围从t=^u到t=^U的图像 （在^D上）。^#",
+   "object_count": 9,
+   "file_count": 5,
+   "child_records": {
+    "2002": {
+     "count": 9,
+     "sizes": {
+      "16": 9
+     }
+    },
+    "2005": {
+     "count": 5,
+     "sizes": {
+      "30": 5
+     }
+    },
+    "2008": {
+     "count": 5,
+     "sizes": {
+      "2": 5
+     }
+    },
+    "2306": {
+     "count": 9,
+     "sizes": {
+      "40": 9
+     }
+    },
+    "9006": {
+     "count": 2,
+     "sizes": {
+      "0": 2
+     }
+    }
+   },
+   "example_files": [
+    "Samples/5.x实例/群师作品/技巧型案例/轨迹问题.gsp",
+    "Samples/5.x实例/群师作品/综合杂例类/双曲线之最短距离之求解.gsp",
+    "Samples/5.x实例/郑飞宇作品/直线与曲线.gsp"
+   ]
+  },
+  {
+   "ext_id": 127,
+   "table_row": 122,
+   "main_kind": 6,
+   "genera": 76,
+   "parent_template_index": 61,
+   "parent_template_words": [
+    54,
+    54,
+    34,
+    0
+   ],
+   "description_template_index": 136,
+   "description_template_id": 4552,
+   "description_template": "^A 绘制极坐标参数函数 (r，θ)=(^b(t)，^c(t)) 取值范围从t=^u到t=^U的图像 （在^D上）。^#",
+   "object_count": 0,
+   "file_count": 0,
+   "child_records": {},
+   "example_files": []
+  }
+ ],
+ "unknown_ext_ids_in_corpus": [],
+ "genera_taxonomy": [
+  {
+   "index": 0,
+   "raw_u32": [
+    0,
+    0,
+    0,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 1,
+   "raw_u32": [
+    1,
+    0,
+    1,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 2,
+   "raw_u32": [
+    2,
+    1,
+    2,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 3,
+   "raw_u32": [
+    3,
+    2,
+    3,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 4,
+   "raw_u32": [
+    4,
+    3,
+    4,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 5,
+   "raw_u32": [
+    5,
+    2,
+    5,
+    9,
+    0,
+    0
+   ]
+  },
+  {
+   "index": 6,
+   "raw_u32": [
+    6,
+    5,
+    6,
+    9,
+    0,
+    0
+   ]
+  },
+  {
+   "index": 7,
+   "raw_u32": [
+    7,
+    6,
+    7,
+    9,
+    0,
+    0
+   ]
+  },
+  {
+   "index": 8,
+   "raw_u32": [
+    8,
+    6,
+    8,
+    9,
+    3,
+    0
+   ]
+  },
+  {
+   "index": 9,
+   "raw_u32": [
+    9,
+    6,
+    9,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 10,
+   "raw_u32": [
+    10,
+    4,
+    10,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 11,
+   "raw_u32": [
+    11,
+    4,
+    4,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 12,
+   "raw_u32": [
+    12,
+    7,
+    12,
+    2,
+    2,
+    0
+   ]
+  },
+  {
+   "index": 13,
+   "raw_u32": [
+    13,
+    7,
+    13,
+    1,
+    1,
+    0
+   ]
+  },
+  {
+   "index": 14,
+   "raw_u32": [
+    14,
+    7,
+    14,
+    0,
+    0,
+    0
+   ]
+  },
+  {
+   "index": 15,
+   "raw_u32": [
+    15,
+    9,
+    15,
+    4,
+    4,
+    0
+   ]
+  },
+  {
+   "index": 16,
+   "raw_u32": [
+    16,
+    9,
+    16,
+    5,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 17,
+   "raw_u32": [
+    17,
+    1,
+    17,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 18,
+   "raw_u32": [
+    18,
+    17,
+    18,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 19,
+   "raw_u32": [
+    19,
+    17,
+    19,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 20,
+   "raw_u32": [
+    23,
+    1,
+    20,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 21,
+   "raw_u32": [
+    27,
+    17,
+    21,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 22,
+   "raw_u32": [
+    28,
+    8,
+    22,
+    5,
+    3,
+    0
+   ]
+  },
+  {
+   "index": 23,
+   "raw_u32": [
+    66,
+    8,
+    23,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 24,
+   "raw_u32": [
+    67,
+    23,
+    24,
+    7,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 25,
+   "raw_u32": [
+    71,
+    23,
+    25,
+    7,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 26,
+   "raw_u32": [
+    68,
+    25,
+    26,
+    7,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 27,
+   "raw_u32": [
+    69,
+    25,
+    27,
+    7,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 28,
+   "raw_u32": [
+    33,
+    18,
+    28,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 29,
+   "raw_u32": [
+    34,
+    21,
+    29,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 30,
+   "raw_u32": [
+    35,
+    21,
+    30,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 31,
+   "raw_u32": [
+    36,
+    30,
+    31,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 32,
+   "raw_u32": [
+    37,
+    30,
+    32,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 33,
+   "raw_u32": [
+    38,
+    12,
+    33,
+    3,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 34,
+   "raw_u32": [
+    39,
+    2,
+    34,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 35,
+   "raw_u32": [
+    40,
+    4,
+    35,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 36,
+   "raw_u32": [
+    41,
+    4,
+    4,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 37,
+   "raw_u32": [
+    42,
+    5,
+    37,
+    6,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 38,
+   "raw_u32": [
+    43,
+    2,
+    38,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 39,
+   "raw_u32": [
+    44,
+    13,
+    13,
+    1,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 40,
+   "raw_u32": [
+    45,
+    4,
+    4,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 41,
+   "raw_u32": [
+    46,
+    12,
+    12,
+    2,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 42,
+   "raw_u32": [
+    47,
+    12,
+    12,
+    2,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 43,
+   "raw_u32": [
+    48,
+    28,
+    43,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 44,
+   "raw_u32": [
+    49,
+    28,
+    44,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 45,
+   "raw_u32": [
+    50,
+    28,
+    45,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 46,
+   "raw_u32": [
+    51,
+    28,
+    46,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 47,
+   "raw_u32": [
+    52,
+    15,
+    15,
+    4,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 48,
+   "raw_u32": [
+    53,
+    15,
+    15,
+    4,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 49,
+   "raw_u32": [
+    54,
+    15,
+    15,
+    4,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 50,
+   "raw_u32": [
+    55,
+    15,
+    15,
+    4,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 51,
+   "raw_u32": [
+    64,
+    1,
+    51,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 52,
+   "raw_u32": [
+    65,
+    2,
+    52,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 53,
+   "raw_u32": [
+    56,
+    4,
+    4,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 54,
+   "raw_u32": [
+    57,
+    30,
+    54,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 55,
+   "raw_u32": [
+    58,
+    5,
+    55,
+    6,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 56,
+   "raw_u32": [
+    59,
+    19,
+    56,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 57,
+   "raw_u32": [
+    70,
+    54,
+    54,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 58,
+   "raw_u32": [
+    75,
+    57,
+    54,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 59,
+   "raw_u32": [
+    76,
+    57,
+    54,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 60,
+   "raw_u32": [
+    97,
+    54,
+    54,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 61,
+   "raw_u32": [
+    77,
+    1,
+    61,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 62,
+   "raw_u32": [
+    78,
+    61,
+    62,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 63,
+   "raw_u32": [
+    98,
+    62,
+    63,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 64,
+   "raw_u32": [
+    79,
+    46,
+    64,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 65,
+   "raw_u32": [
+    80,
+    43,
+    65,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 66,
+   "raw_u32": [
+    81,
+    44,
+    66,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 67,
+   "raw_u32": [
+    82,
+    1,
+    67,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 68,
+   "raw_u32": [
+    83,
+    67,
+    68,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 69,
+   "raw_u32": [
+    84,
+    67,
+    69,
+    9,
+    6,
+    1
+   ]
+  },
+  {
+   "index": 70,
+   "raw_u32": [
+    89,
+    4,
+    4,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 71,
+   "raw_u32": [
+    90,
+    37,
+    37,
+    6,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 72,
+   "raw_u32": [
+    91,
+    2,
+    72,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 73,
+   "raw_u32": [
+    94,
+    1,
+    73,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 74,
+   "raw_u32": [
+    95,
+    73,
+    74,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 75,
+   "raw_u32": [
+    96,
+    73,
+    75,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 76,
+   "raw_u32": [
+    99,
+    37,
+    37,
+    6,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 77,
+   "raw_u32": [
+    60,
+    14,
+    43,
+    9,
+    0,
+    0
+   ]
+  },
+  {
+   "index": 78,
+   "raw_u32": [
+    61,
+    22,
+    16,
+    9,
+    3,
+    0
+   ]
+  },
+  {
+   "index": 79,
+   "raw_u32": [
+    62,
+    22,
+    9,
+    9,
+    3,
+    0
+   ]
+  },
+  {
+   "index": 80,
+   "raw_u32": [
+    63,
+    6,
+    3,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 81,
+   "raw_u32": [
+    72,
+    78,
+    23,
+    9,
+    3,
+    0
+   ]
+  },
+  {
+   "index": 82,
+   "raw_u32": [
+    73,
+    79,
+    25,
+    9,
+    3,
+    0
+   ]
+  },
+  {
+   "index": 83,
+   "raw_u32": [
+    74,
+    15,
+    25,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 84,
+   "raw_u32": [
+    85,
+    55,
+    37,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 85,
+   "raw_u32": [
+    86,
+    22,
+    24,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 86,
+   "raw_u32": [
+    87,
+    85,
+    7,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 87,
+   "raw_u32": [
+    88,
+    84,
+    86,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 88,
+   "raw_u32": [
+    92,
+    80,
+    62,
+    9,
+    6,
+    0
+   ]
+  },
+  {
+   "index": 89,
+   "raw_u32": [
+    93,
+    13,
+    14,
+    9,
+    1,
+    0
+   ]
+  }
+ ]
+}
