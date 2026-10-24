@@ -35,7 +35,7 @@ export interface PageDrawList {
 }
 function style(o: ObjectInfo): RenderStyle {
   const point = o.mainKind === 1 && o.header.styleWord === 0x0221;
-  const segment = o.constraintId === 2 && o.header.styleWord === 0x0122;
+  const segment = o.mainKind === 2 && o.genera === 14 && o.header.styleWord === 0x0122;
   return {
     lineWidth: segment ? 3 : 1.5, pointRadius: point ? 4 : 3,
     pointStrokeWidth: point ? 1.25 : 0, pointStrokeColor: point ? '#000000' : null,
