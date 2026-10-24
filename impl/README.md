@@ -2,7 +2,7 @@
 
 TypeScript 单仓（npm workspaces），桌面外壳是 Tauri 2，只面向 Windows 10 及以上。洁净室规则见 [CLAUDE.md](CLAUDE.md)，范围和里程碑见仓库根目录的 [PLAN.md](../PLAN.md)。
 
-当前进度：**M1 core：.gsp 无损读写**已完成（见下文“core：.gsp 无损读写”）；render/app/desktop 仍是 M0 骨架。
+当前进度：**M1 core：.gsp 无损读写**已完成（见下文“core：.gsp 无损读写”）；**M1 只读查看器**已接入（见下文“只读查看器”）。
 
 ## 目录
 
@@ -14,8 +14,8 @@ impl/
     core/                 纯 TS 库，不依赖 DOM（lib 只有 ES2023），Node 里能跑全部测试
       src/                库代码：.gsp 记录层、无损树、读写器、视图、对象模型；scripts/ 是生成表脚本和 gsp-dump CLI
       test/               vitest 测试；test/support/ 是可复用的语料测试工具
-    render/               Canvas 2D 绘制（可用 DOM 类型），依赖 core；目前只有 drawGrid()
-    app/                  React + Vite 前端：顶部菜单栏、画布、状态栏，界面文字为中文
+    render/               Canvas 2D 绘制（可用 DOM 类型），依赖 core；纯描述（页 → 绘制列表）、视图变换、命中测试、画布绘制
+    app/                  React + Vite 前端：菜单栏、页签、画布、对象列表、状态栏，界面文字为中文
     desktop/              Tauri 2 外壳
       app-icon.png        图标源图（1024×1024），`npx tauri icon` 由它生成 src-tauri/icons/
       src-tauri/          Rust 侧：Cargo.toml、tauri.conf.json、capabilities/、icons/
@@ -93,6 +93,18 @@ node packages/core/scripts/gsp-dump.ts <file.gsp> [--summary] [--hex-limit N] [-
 - core 不带 DOM 库，`text.ts` 通过 `globalThis` 取 `TextDecoder`/`TextEncoder`，用局部结构类型而不是全局声明，避免与 DOM 库或 `@types/node` 的声明冲突；Node 24（完整 ICU）和 WebView2 都有 gbk/big5。
 - 测试文件（`test/`）沿用无扩展名导入（由 vitest 解析）。
 
+## 只读查看器（M1）
+
+`npm run dev` 或安装包里：**文件 → 打开…**（Ctrl+O）选一个 .gsp。读取失败时顶部显示中文错误（含原因和字节偏移），保留之前打开的文档。
+
+- 页签：每页一个；页名为空时显示“第 N 页”。工具区不作为页，只在状态栏计数。
+- 对象列表（右侧）：当前页每个对象一行，显示序号、约束 ID、描述（描述模板的 `^A` 等标记换成 `〈A〉`）、主类、genera、父序号、标签和自由点坐标。点列表行或画布上的对象会高亮。
+- 画布：只画两类对象。自由点（有 2201 坐标）画成按 COLORREF 着色的小圆，带标签；约束 2 的线段且两个父对象都是自由点时画成连线。其它对象（中点、圆、交点……）M1 不画，计入“暂不支持”。
+- 操作：拖动空白处平移，滚轮以光标为中心缩放，“适合窗口”按钮或打开文件时自动适合窗口（最多放大 2 倍）。
+- 状态栏：文件名、布局版本（4/5）、页数、工具区数、当前页对象数、已绘制 / 暂不支持数。
+
+绘制描述和视图的纯函数在 `packages/render`（`buildPageDrawList`、`fitView`、`zoomAt`、`hitTest`、`drawPageScene`），单测用基准样本 `samples/baseline/samples/*.gsp`。
+
 ## 语料测试怎么找到语料
 
 `packages/core/test/support/`（通过 `./support` 引入）提供：
@@ -130,7 +142,8 @@ $env:GSP_CORPUS_DIR = 'D:\somewhere\gsp-files'; npm test
 - **C 运行库**：`src-tauri/.cargo/config.toml` 让 MSVC 目标静态链接 CRT，干净的 Windows 10 不需要先装 VC++ 运行库。
 - **插件与权限**（`src-tauri/capabilities/default.json`，只对 `main` 窗口）：`core:default`、`dialog:allow-open`（只开“打开文件”，没有保存、消息框）、`fs:allow-read-file`（只开读文件，没有静态路径范围）。dialog 选中的文件会被临时加入 fs 读取范围，所以前端只能读用户在对话框里选过的文件。以后需要写文件（保存）、保存对话框、文件关联启动时读文件，再按需加权限，不要直接上 `fs:default`。
 - **CSP**：`default-src 'self'`，另允许 Tauri IPC（`ipc:` 和 `http://ipc.localhost`）。在 Tauri 窗口里加载外部脚本或连外网都会被拦。
-- 前端 `packages/app/src/platform/openGsp.ts` 里的 `openGspFile()` 把 dialog + fs 串起来（选 .gsp、读字节），目前还没有菜单项调用它。
+- 前端 `packages/app/src/platform/openGsp.ts` 里的 `openGspFile()` 把 dialog + fs 串起来（选 .gsp、读字节），由“文件 → 打开…”和 Ctrl+O 调用。
+- `capabilities/default.json` 另有 `core:window:allow-set-title`，只为把窗口标题设成 `GSP-plus - <文件名>`。
 - Rust 工具链用本机的 nightly（msvc）；`Cargo.lock` 入库，`target/` 和 `src-tauri/gen/` 不入库。构建 Tauri 需要 Visual Studio 2022 生成工具；第一次打 NSIS 包会从 GitHub 下载 NSIS，还会从 go.microsoft.com 下载 WebView2 引导程序（之后有缓存）。
 
 ## CI
