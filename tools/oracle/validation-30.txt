@@ -1,0 +1,31 @@
+# 验证用 30 个文件 (baseline 5 个 + 最小 5 个 + 4.x/5.x/分形/Tool Folder 按大小均匀抽样 + 最大文件)
+samples/baseline/samples/empty.gsp
+samples/baseline/samples/point.gsp
+samples/baseline/samples/segment.gsp
+samples/baseline/samples/midpoint.gsp
+samples/baseline/samples/midpoint-moved.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/技巧型案例/不显示方法之至尊.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/综合杂例类/相切圆2.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/技巧型案例/文本相当于超链接.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/技巧型案例/轨迹族.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/技巧型案例/渐变色线段.gsp
+original/sketchpad5/Samples/4.x实例/官长寿作品/杂例/example-37.gsp
+original/sketchpad5/Samples/4.x实例/官长寿作品/空间应用/example-47.gsp
+original/sketchpad5/Samples/4.x实例/官长寿作品/地理物理/example-35.gsp
+original/sketchpad5/Samples/4.x实例/官长寿作品/空间应用/example-52.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/经典问题集/三角形内角和定理.gsp
+original/sketchpad5/Samples/5.x实例/群师作品/综合杂例类/控制点在多边形周界上的运动 增加了相遇的控制点.gsp
+original/sketchpad5/Samples/5.x实例/向忠作品/正弦型函数图象变换.gsp
+original/sketchpad5/Samples/5.x实例/孟令岩作品/※my整体法初探.gsp
+original/sketchpad5/Samples/分形艺术/L-龙曲线2.gsp
+original/sketchpad5/Samples/分形艺术/谢氏地毯.gsp
+original/sketchpad5/Samples/分形艺术/f(z)=(z^k+c)除z_with_c=0.001.gsp
+original/sketchpad5/Samples/分形艺术/L-圆迭代.gsp
+original/sketchpad5/Samples/分形艺术/CV曲线绘图.gsp
+original/sketchpad5/Tool Folder/31 反演.gsp
+original/sketchpad5/Tool Folder/11 箭头工具.gsp
+original/sketchpad5/Tool Folder/08 迷你坐标系.gsp
+original/sketchpad5/Tool Folder/38 实体工具.gsp
+original/sketchpad5/Sample.gsp
+original/sketchpad5/Support Files/Example Tools.gsp
+original/sketchpad5/Samples/4.x实例/经典实例.gsp

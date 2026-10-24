@@ -1,0 +1,156 @@
+{
+  "schema": "gsp-m2-oracle-case-v1",
+  "source": {
+    "path": "samples/baseline/samples/segment.gsp",
+    "sha256": "1615c71d73e977fab68e932461df45c748df7a152da9f9e5974b3bf5d70e8f9e"
+  },
+  "pageIndex": 1,
+  "pageCount": 1,
+  "oracle": {
+    "emfSha256": "18129b6920c8d43a8f3e36646da74feccdea575049a04950e56ac25074863e24",
+    "htmlSha256": "723158d39b033311eaead70e9df653a6715e31d7f0cf65e901018ae63c8d366b",
+    "canvas": [
+      1190,
+      636
+    ],
+    "layer": "emf+ & live-gdi",
+    "alignment": {
+      "method": "unique_free_point_color_translation_vote",
+      "anchorCount": 2,
+      "anchorPairs": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "documentMinusEmfPx96": [
+        201.0,
+        137.0
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "objectIndex": 1,
+      "constraint": 0,
+      "kind": "point",
+      "exists": true,
+      "geometry": {
+        "x": 211.0,
+        "y": 147.0
+      },
+      "tolerancePx": 0.1,
+      "appearance": {
+        "diameterPx": 8.0,
+        "fill": "#ff0000",
+        "fillPrimitiveIndex": 1,
+        "stroke": "#000000",
+        "strokeWidthPx": 1.25,
+        "strokePrimitiveIndex": 2
+      },
+      "provenance": {
+        "source": "original_emf_primitive",
+        "primitiveIndex": 1,
+        "layer": "emf+",
+        "mapping": "unique_geometry_and_color_then_unique_object_owner",
+        "htmlStep": 1,
+        "htmlMapping": "unique_free_point_or_parent_graph",
+        "matchingPredictionUsed": true,
+        "pen": null,
+        "brush": {
+          "color": "#ff0000",
+          "alpha": 255
+        }
+      }
+    },
+    {
+      "objectIndex": 2,
+      "constraint": 0,
+      "kind": "point",
+      "exists": true,
+      "geometry": {
+        "x": 411.0,
+        "y": 281.0
+      },
+      "tolerancePx": 0.1,
+      "appearance": {
+        "diameterPx": 8.0,
+        "fill": "#ff0000",
+        "fillPrimitiveIndex": 3,
+        "stroke": "#000000",
+        "strokeWidthPx": 1.25,
+        "strokePrimitiveIndex": 4
+      },
+      "provenance": {
+        "source": "original_emf_primitive",
+        "primitiveIndex": 3,
+        "layer": "emf+",
+        "mapping": "unique_geometry_and_color_then_unique_object_owner",
+        "htmlStep": 2,
+        "htmlMapping": "unique_free_point_or_parent_graph",
+        "matchingPredictionUsed": true,
+        "pen": null,
+        "brush": {
+          "color": "#ff0000",
+          "alpha": 255
+        }
+      }
+    },
+    {
+      "objectIndex": 3,
+      "constraint": 2,
+      "kind": "segment",
+      "exists": true,
+      "geometry": {
+        "a": [
+          411.0,
+          281.0
+        ],
+        "b": [
+          211.0,
+          147.0
+        ]
+      },
+      "tolerancePx": 0.1,
+      "appearance": {
+        "stroke": "#000080",
+        "strokeWidthPx": 3.0,
+        "fill": null
+      },
+      "provenance": {
+        "source": "original_emf_primitive",
+        "primitiveIndex": 0,
+        "layer": "emf+",
+        "mapping": "unique_geometry_and_color_then_unique_object_owner",
+        "htmlStep": 3,
+        "htmlMapping": "unique_free_point_or_parent_graph",
+        "matchingPredictionUsed": true,
+        "pen": {
+          "color": "#000080",
+          "alpha": 255,
+          "width": 18.75,
+          "width_px96": 3.0
+        },
+        "brush": null
+      }
+    }
+  ],
+  "excluded": [],
+  "otherPages": [],
+  "coverage": {
+    "activePageObjects": 3,
+    "activePageAObjects": 3,
+    "eligibleWithAAncestors": 3,
+    "assertedObjects": 3,
+    "excludedAObjects": 0,
+    "styleAndLabelsAccepted": false,
+    "toolAObjects": 0,
+    "fullM2Accepted": false
+  },
+  "expectedObjectCount": 3,
+  "baselineGeometryComplete": true
+}

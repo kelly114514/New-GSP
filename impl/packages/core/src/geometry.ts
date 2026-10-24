@@ -1,0 +1,317 @@
+import { readF64, readU16 } from './bytes.ts';
+import { setFreePointCoordinates } from './edit.ts';
+import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
+import type { GspDocument } from './tree.ts';
+import { decodeFreePoint } from './views/object.ts';
+
+export type XY = [number, number];
+export interface PointGeometry { kind: 'point'; geometry: { x: number; y: number } }
+export type LinearGeometry = { [K in 'segment' | 'line' | 'ray']: {
+  kind: K;
+  geometry: { a: XY; b: XY };
+  parameterizationKnown: boolean;
+} }['segment' | 'line' | 'ray'];
+export interface CircleGeometry { kind: 'circle'; geometry: { center: XY; radius: number } }
+export interface PolygonGeometry { kind: 'polygon'; geometry: { vertices: XY[] } }
+export interface ArcGeometry {
+  kind: 'arc';
+  geometry: { center: XY; radius: number; startAngle: number; sweepAngle: number };
+}
+export type RegionGeometry = { [K in 'disk' | 'sector' | 'circular-segment']: {
+  kind: K;
+  geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number };
+} }['disk' | 'sector' | 'circular-segment'];
+export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry;
+export type GeometryStatus = 'ok' | 'not-existing' | 'unsupported' | 'unbound-input';
+export type EvaluatedObject = { objectIndex: number; constraintId: number } & (
+  | ({ exists: true; status: 'ok' } & Geometry)
+  | { exists: false; status: 'not-existing'; reason: string }
+  | { exists: null; status: 'unsupported' | 'unbound-input'; reason: string }
+);
+export interface PageGeometry { pageIndex: number; objects: EvaluatedObject[] }
+export interface GeometryDocument { schema: 'gsp-core-geometry-v1'; pages: PageGeometry[] }
+
+type Outcome = Geometry | { status: Exclude<GeometryStatus, 'ok'>; reason: string };
+const unsupported = (reason: string): Outcome => ({ status: 'unsupported', reason });
+const absent = (reason: string): Outcome => ({ status: 'not-existing', reason });
+const sub = (a: XY, b: XY): XY => [a[0] - b[0], a[1] - b[1]];
+const cross = (a: XY, b: XY): number => a[0] * b[1] - a[1] * b[0];
+const length = (a: XY): number => Math.hypot(...a);
+const at = (a: XY, d: XY, t: number): XY => [a[0] + t * d[0], a[1] + t * d[1]];
+const point = (p: XY): PointGeometry => ({ kind: 'point', geometry: { x: p[0], y: p[1] } });
+const pointXY = (p: PointGeometry): XY => [p.geometry.x, p.geometry.y];
+function isLinear(g: Geometry): g is LinearGeometry { return g.kind === 'segment' || g.kind === 'line' || g.kind === 'ray'; }
+function inLinearRange(g: LinearGeometry, t: number): boolean {
+  const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t));
+  return g.kind === 'line' || (t >= -e && (g.kind === 'ray' || t <= 1 + e));
+}
+function finiteGeometry(g: Geometry): boolean {
+  if (g.kind === 'point') return Number.isFinite(g.geometry.x) && Number.isFinite(g.geometry.y);
+  if (isLinear(g)) return [...g.geometry.a, ...g.geometry.b].every(Number.isFinite);
+  if (g.kind === 'polygon') return g.geometry.vertices.flat().every(Number.isFinite);
+  return [...g.geometry.center, g.geometry.radius, ...('startAngle' in g.geometry ? [g.geometry.startAngle, g.geometry.sweepAngle] : [])].every((v) => v === undefined || Number.isFinite(v));
+}
+
+function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byIndex: ReadonlyMap<number, ObjectInfo>): Outcome {
+  const p = parents;
+  const first = p[0];
+  const second = p[1];
+  const id = o.constraintId;
+  if (id === 0) {
+    if (o.mainKind !== 1) return unsupported('free-object-main-kind');
+    if (page.type === 'tool' && o.genera !== 4) return { status: 'unbound-input', reason: 'tool-input-not-bound' };
+    const r = o.node.records.find((r) => r.kind === 2201);
+    const xy = r === undefined ? undefined : decodeFreePoint(r.payload);
+    if (xy === undefined) return absent('missing-free-point-coordinates');
+    return point([xy.x, xy.y]);
+  }
+  if (id === 1) {
+    if (p.length !== 1 || first?.kind !== 'segment') return unsupported('midpoint-parent-must-be-segment');
+    return point(at(first.geometry.a, sub(first.geometry.b, first.geometry.a), 0.5));
+  }
+  if (id === 2 || id === 3 || id === 63 || id === 64) {
+    if (p.length !== 2 || first?.kind !== 'point' || second?.kind !== 'point') return unsupported('expected-two-point-parents');
+    const a = pointXY(first), b = pointXY(second);
+    const size = length(sub(b, a));
+    if (id === 3) return size === 0 ? unsupported('zero-radius-circle-boundary-unverified') : { kind: 'circle', geometry: { center: a, radius: size } };
+    if (size === 0) return absent('coincident-defining-points');
+    return { kind: id === 2 ? 'segment' : id === 63 ? 'line' : 'ray', geometry: { a, b }, parameterizationKnown: true };
+  }
+  if (id === 4) {
+    if (p.length !== 2 || first?.kind !== 'point' || second?.kind !== 'segment') return unsupported('circle-radius-provider-not-supported');
+    const radius = length(sub(second.geometry.b, second.geometry.a));
+    return radius === 0 ? unsupported('zero-radius-circle-boundary-unverified') : { kind: 'circle', geometry: { center: pointXY(first), radius } };
+  }
+  if (id === 5 || id === 6) {
+    if (p.length !== 2 || first?.kind !== 'point' || second === undefined || !isLinear(second)) return unsupported('expected-point-and-linear-parents');
+    let d = sub(second.geometry.b, second.geometry.a);
+    if (length(d) === 0) return absent('degenerate-direction');
+    if (id === 5) d = [-d[1], d[0]];
+    const a = pointXY(first);
+    return { kind: 'line', geometry: { a, b: at(a, d, 1) }, parameterizationKnown: false };
+  }
+  if (id === 7) {
+    if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('angle-bisector-needs-three-points');
+    const a = pointXY(p[0] as PointGeometry), b = pointXY(p[1] as PointGeometry), c = pointXY(p[2] as PointGeometry);
+    const u = sub(a, b), v = sub(c, b), ul = length(u), vl = length(v);
+    if (ul === 0 || vl === 0) return absent('zero-angle-arm');
+    if (Math.abs(cross(u, v)) <= 32 * Number.EPSILON * ul * vl) return unsupported('collinear-angle-bisector-boundary-unverified');
+    const d: XY = [u[0] / ul + v[0] / vl, u[1] / ul + v[1] / vl];
+    return { kind: 'ray', geometry: { a: b, b: at(b, d, 1) }, parameterizationKnown: false };
+  }
+  if (id === 10) {
+    if (p.length !== 1 || first?.kind !== 'circle') return unsupported('disk-needs-circle-parent');
+    return { kind: 'disk', geometry: { ...first.geometry } };
+  }
+  if (id === 93) {
+    if (p.length !== 2 || first?.kind !== 'ray' || second?.kind !== 'polygon') return unsupported('first-boundary-intersection-needs-ray-and-polygon');
+    const a = first.geometry.a, d = sub(first.geometry.b, a), vertices = second.geometry.vertices;
+    const dl = length(d);
+    if (dl === 0) return absent('degenerate-ray');
+    let earliest = Infinity;
+    for (let i = 0; i < vertices.length; i++) {
+      const b = vertices[i]!, e = sub(vertices[(i + 1) % vertices.length]!, b), el = length(e);
+      if (el === 0) continue;
+      const den = cross(d, e), offset = sub(b, a);
+      if (Math.abs(den) <= 32 * Number.EPSILON * dl * el) {
+        if (Math.abs(cross(offset, d)) <= 32 * Number.EPSILON * Math.max(1, length(offset)) * dl) {
+          const t0 = (offset[0] * d[0] + offset[1] * d[1]) / (dl * dl);
+          const t1 = t0 + (e[0] * d[0] + e[1] * d[1]) / (dl * dl);
+          if (Math.max(t0, t1) >= 0) return unsupported('ray-overlaps-polygon-edge-boundary-unverified');
+        }
+        continue;
+      }
+      const t = cross(offset, e) / den, u = cross(offset, d) / den;
+      if (t >= 0 && u >= -64 * Number.EPSILON && u <= 1 + 64 * Number.EPSILON) earliest = Math.min(earliest, t);
+    }
+    if (!Number.isFinite(earliest)) return absent('no-forward-polygon-boundary-intersection');
+    if (earliest === 0) return unsupported('ray-origin-on-polygon-boundary-unverified');
+    return point(at(a, d, earliest));
+  }
+  if (id === 98) return unsupported('unsupported-parent:sampled-curve');
+  if (id === 8) {
+    if (p.length < 3 || p.some((g) => g.kind !== 'point')) return unsupported('polygon-needs-at-least-three-point-parents');
+    return { kind: 'polygon', geometry: { vertices: p.map((g) => pointXY(g as PointGeometry)) } };
+  }
+  if (id === 9) {
+    if (p.length !== 2 || first === undefined || second === undefined || !isLinear(first) || !isLinear(second)) return unsupported('expected-two-linear-parents');
+    const a = first.geometry.a, b = second.geometry.a;
+    const d = sub(first.geometry.b, a), e = sub(second.geometry.b, b);
+    const den = cross(d, e);
+    if (Math.abs(den) <= 32 * Number.EPSILON * length(d) * length(e)) return absent('parallel-or-coincident-lines');
+    const t = cross(sub(b, a), e) / den, u = cross(sub(b, a), d) / den;
+    return inLinearRange(first, t) && inLinearRange(second, u) ? point(at(a, d, t)) : absent('intersection-outside-parent-range');
+  }
+  if (id === 11 || id === 12) {
+    if (p.length !== 2 || first === undefined || second === undefined || !isLinear(first)) return unsupported('expected-linear-and-circle-parents');
+    if (second.kind === 'arc') return unsupported('intersection-arc-parent-unsupported');
+    if (second.kind !== 'circle') return unsupported('intersection-circle-parent-required');
+    const origin = first.geometry.a, d = sub(first.geometry.b, origin);
+    const qa = d[0] * d[0] + d[1] * d[1];
+    if (qa === 0) return absent('degenerate-direction');
+    const offset = sub(origin, second.geometry.center), radius = second.geometry.radius;
+    const qb = 2 * (d[0] * offset[0] + d[1] * offset[1]);
+    const qc = offset[0] * offset[0] + offset[1] * offset[1] - radius * radius;
+    const discriminant = qb * qb - 4 * qa * qc;
+    const tolerance = 64 * Number.EPSILON * (qb * qb + Math.abs(4 * qa * qc));
+    if (discriminant < -tolerance) return absent('line-circle-no-intersection');
+    const roots = discriminant <= tolerance
+      ? [-qb / (2 * qa)]
+      : [(-qb - Math.sqrt(discriminant)) / (2 * qa), (-qb + Math.sqrt(discriminant)) / (2 * qa)];
+    for (const t of id === 11 ? roots : [...roots].reverse()) {
+      if (inLinearRange(first, t)) return point(at(origin, d, t));
+    }
+    return absent('intersection-outside-parent-range');
+  }
+  if (id === 13 || id === 14) {
+    if (p.length !== 2 || first === undefined || second === undefined) return unsupported('expected-two-circle-parents');
+    if (first.kind === 'arc' || second.kind === 'arc') return unsupported('intersection-arc-parent-unsupported');
+    if (first.kind !== 'circle' || second.kind !== 'circle') return unsupported('intersection-circle-parent-required');
+    const o1 = first.geometry.center, o2 = second.geometry.center;
+    const r1 = first.geometry.radius, r2 = second.geometry.radius;
+    const delta = sub(o2, o1), distance = length(delta);
+    if (distance === 0) return absent('concentric-circle-parents');
+    const ex = delta[0] / distance, ey = delta[1] / distance;
+    const along = (r1 * r1 - r2 * r2 + distance * distance) / (2 * distance);
+    const h2 = r1 * r1 - along * along;
+    const tolerance = 64 * Number.EPSILON * (r1 * r1 + along * along);
+    if (h2 < -tolerance) return absent('circle-circle-no-intersection');
+    const h = h2 <= tolerance ? 0 : Math.sqrt(h2);
+    const sign = id === 13 ? 1 : -1;
+    const base: XY = [o1[0] + along * ex, o1[1] + along * ey];
+    return point([base[0] + sign * h * ey, base[1] - sign * h * ex]);
+  }
+  if (id === 15) {
+    if (p.length !== 1 || first === undefined) return unsupported('path-point-needs-one-parent');
+    const record = o.node.records.find((r) => r.kind === 2003);
+    if (record === undefined) return unsupported('missing-native-path-parameter');
+    if (record.payload.length < 4 || readU16(record.payload, 0) !== 15) return unsupported('invalid-native-path-parameter');
+    const parentObject = byIndex.get(o.parents[0] ?? -1);
+    if (parentObject === undefined || readU16(record.payload, 2) !== parentObject.genera) return unsupported('native-path-genera-mismatch');
+    if (first.kind === 'circle') {
+      if (record.payload.length !== 20) return unsupported('native-circle-parameter-layout');
+      const u = readF64(record.payload, 4), v = readF64(record.payload, 12);
+      if (!Number.isFinite(u) || !Number.isFinite(v)) return absent('non-finite-circle-direction');
+      if (Math.abs(Math.hypot(u, v) - 1) > 1e-10) return unsupported('non-unit-native-circle-direction');
+      const { center, radius } = first.geometry;
+      return point([center[0] + radius * u, center[1] - radius * v]);
+    }
+    if (!isLinear(first)) return unsupported('native-path-parameter-not-supported');
+    if (!first.parameterizationKnown) return unsupported('path-direction-and-unit-unverified');
+    if (record.payload.length !== 12) return unsupported('native-linear-parameter-layout');
+    const t = readF64(record.payload, 4);
+    if (!Number.isFinite(t)) return absent('non-finite-path-parameter');
+    return inLinearRange(first, t) ? point(at(first.geometry.a, sub(first.geometry.b, first.geometry.a), t)) : absent('path-parameter-outside-range');
+  }
+  return unsupported(`constraint-${id}-not-supported`);
+}
+
+/** A page-local dependency graph. Updating a free point only invalidates its descendants. */
+export class PageGeometryEvaluator {
+  readonly page: ContainerModel;
+  private readonly byIndex = new Map<number, ObjectInfo>();
+  private readonly children = new Map<number, Set<number>>();
+  private readonly cache = new Map<number, EvaluatedObject>();
+  private readonly dirty = new Set<number>();
+  /** Objects recomputed by the most recent evaluate() call, useful for diagnostics. */
+  recomputedIndices: number[] = [];
+
+  constructor(page: ContainerModel) {
+    this.page = page;
+    for (const o of page.objects) {
+      this.byIndex.set(o.index, o);
+      this.dirty.add(o.index);
+      for (const parent of o.parents) {
+        let children = this.children.get(parent);
+        if (children === undefined) this.children.set(parent, children = new Set());
+        children.add(o.index);
+      }
+    }
+  }
+
+  invalidate(objectIndex: number): void {
+    const queue = [objectIndex];
+    for (let i = 0; i < queue.length; i++) {
+      const index = queue[i]!;
+      if (this.dirty.has(index)) continue;
+      this.dirty.add(index);
+      queue.push(...this.children.get(index) ?? []);
+    }
+  }
+
+  moveFreePoint(doc: GspDocument, objectIndex: number, x: number, y: number): PageGeometry {
+    const o = this.byIndex.get(objectIndex);
+    if (o === undefined || o.constraintId !== 0 || o.mainKind !== 1 || (this.page.type === 'tool' && o.genera !== 4)) {
+      throw new RangeError(`object ${objectIndex} is not a draggable free point`);
+    }
+    setFreePointCoordinates(doc, this.page.node, objectIndex, x, y);
+    o.freePoint = { x, y };
+    this.invalidate(objectIndex);
+    return this.evaluate();
+  }
+
+  evaluate(): PageGeometry {
+    this.recomputedIndices = [];
+    const pending = new Map<number, number>();
+    const queue: number[] = [];
+    for (const index of this.dirty) {
+      const o = this.byIndex.get(index);
+      if (o === undefined) continue;
+      const count = new Set(o.parents.filter((p) => this.dirty.has(p) && this.byIndex.has(p))).size;
+      pending.set(index, count);
+      if (count === 0) queue.push(index);
+    }
+    for (let cursor = 0; cursor < queue.length; cursor++) {
+      const index = queue[cursor]!;
+      const o = this.byIndex.get(index)!;
+      const parents: Geometry[] = [];
+      let outcome: Outcome | undefined;
+      for (const parent of o.parents) {
+        const result = this.cache.get(parent);
+        if (!this.byIndex.has(parent) || result === undefined) { outcome = absent(`missing-parent:${parent}`); continue; }
+        if (result.status !== 'ok') {
+          if (result.status === 'not-existing' || outcome === undefined) outcome = { status: result.status, reason: `parent:${parent}:${result.status}` };
+          continue;
+        }
+        parents.push(result);
+      }
+      outcome ??= construct(o, parents, this.page, this.byIndex);
+      this.store(o, outcome);
+      pending.delete(index);
+      for (const child of this.children.get(index) ?? []) {
+        const count = pending.get(child);
+        if (count === undefined) continue;
+        pending.set(child, count - 1);
+        if (count === 1) queue.push(child);
+      }
+    }
+    for (const index of pending.keys()) this.store(this.byIndex.get(index)!, absent('dependency-cycle'));
+    this.dirty.clear();
+    return { pageIndex: this.page.index + 1, objects: this.page.objects.map((o) => this.cache.get(o.index)!) };
+  }
+
+  private store(o: ObjectInfo, outcome: Outcome): void {
+    const base = { objectIndex: o.index, constraintId: o.constraintId };
+    let result: EvaluatedObject;
+    if ('status' in outcome) {
+      result = outcome.status === 'not-existing'
+        ? { ...base, ...outcome, status: 'not-existing', exists: false }
+        : { ...base, ...outcome, status: outcome.status, exists: null };
+    } else if (!finiteGeometry(outcome)) {
+      result = { ...base, status: 'not-existing', exists: false, reason: 'non-finite-geometry' };
+    } else result = { ...base, ...outcome, status: 'ok', exists: true };
+    this.cache.set(o.index, result);
+    this.recomputedIndices.push(o.index);
+  }
+}
+
+export function evaluatePageGeometry(page: ContainerModel): PageGeometry { return new PageGeometryEvaluator(page).evaluate(); }
+export function toGeometryJson(model: DocumentModel): GeometryDocument {
+  return { schema: 'gsp-core-geometry-v1', pages: model.pages.map(evaluatePageGeometry) };
+}
+
+
+
+
+
+

@@ -15,7 +15,7 @@ reference/features/resource-text.json
 reference/format/recovery-object-dispatch.json
 reference/format/compatibility-container/*.json
 # 原版对照输出（由 tools/oracle 在本机生成）
-oracle/
+/oracle/
 # 构建与依赖
 node_modules/
 dist/

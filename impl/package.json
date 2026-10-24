@@ -1,0 +1,27 @@
+{
+  "name": "gsp-plus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GSP-plus：几何画板 5 的洁净室重写（TypeScript + Canvas 2D + Tauri 2，仅 Windows 10+）",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev": "npm run dev -w @gsp-plus/desktop",
+    "build": "npm run build -w @gsp-plus/desktop",
+    "dev:web": "npm run dev -w @gsp-plus/app",
+    "build:web": "npm run build -w @gsp-plus/app",
+    "gen": "npm run gen -w @gsp-plus/core"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

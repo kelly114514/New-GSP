@@ -1,0 +1,2 @@
+# Tauri 构建时自动生成的权限 schema（每次 cargo build / tauri build 都会重新生成）
+packages/desktop/src-tauri/gen/

@@ -1,0 +1,81 @@
+{
+  "schema": "gsp-m2-oracle-case-v1",
+  "source": {
+    "path": "samples/baseline/samples/point.gsp",
+    "sha256": "d2f397dbfaa819fc60fcf152bfc0f8c8eaf4c22d730220109e87c84b1c3fb9fd"
+  },
+  "pageIndex": 1,
+  "pageCount": 1,
+  "oracle": {
+    "emfSha256": "9d0da82111f6008ba4553699bc68167c0220405874ae9cbf73a73d396fcad16f",
+    "htmlSha256": "ce08bc8dbc3ec4966ca1a5ecd677dcee7fccaa81853e4f67b0356808ff4821cc",
+    "canvas": [
+      1190,
+      636
+    ],
+    "layer": "emf+ & live-gdi",
+    "alignment": {
+      "method": "unique_free_point_color_translation_vote",
+      "anchorCount": 1,
+      "anchorPairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "documentMinusEmfPx96": [
+        201.0,
+        137.0
+      ]
+    }
+  },
+  "assertions": [
+    {
+      "objectIndex": 1,
+      "constraint": 0,
+      "kind": "point",
+      "exists": true,
+      "geometry": {
+        "x": 211.0,
+        "y": 147.0
+      },
+      "tolerancePx": 0.1,
+      "appearance": {
+        "diameterPx": 8.0,
+        "fill": "#ff0000",
+        "fillPrimitiveIndex": 0,
+        "stroke": "#000000",
+        "strokeWidthPx": 1.25,
+        "strokePrimitiveIndex": 1
+      },
+      "provenance": {
+        "source": "original_emf_primitive",
+        "primitiveIndex": 0,
+        "layer": "emf+",
+        "mapping": "unique_geometry_and_color_then_unique_object_owner",
+        "htmlStep": 1,
+        "htmlMapping": "unique_free_point_or_parent_graph",
+        "matchingPredictionUsed": true,
+        "pen": null,
+        "brush": {
+          "color": "#ff0000",
+          "alpha": 255
+        }
+      }
+    }
+  ],
+  "excluded": [],
+  "otherPages": [],
+  "coverage": {
+    "activePageObjects": 1,
+    "activePageAObjects": 1,
+    "eligibleWithAAncestors": 1,
+    "assertedObjects": 1,
+    "excludedAObjects": 0,
+    "styleAndLabelsAccepted": false,
+    "toolAObjects": 0,
+    "fullM2Accepted": false
+  },
+  "expectedObjectCount": 1,
+  "baselineGeometryComplete": true
+}

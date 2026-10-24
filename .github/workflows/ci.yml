@@ -1,0 +1,52 @@
+name: CI
+
+# impl/ 的类型检查和测试。不构建 Tauri（安装包在本机构建）。
+# CI 里没有 original/，语料测试会自动跳过；samples/baseline/ 随仓库提交，始终会跑。
+on:
+  push:
+  pull_request:
+
+jobs:
+  impl:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: impl
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: impl/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: 测试
+        run: npm test
+
+  oracle-offline:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: 安装离线工具依赖
+        run: python -m pip install pywin32
+
+      - name: 导出进程生命周期回归（不启动原版）
+        run: python tools/oracle/test_lifecycle.py
+
+      - name: EMF 解析器回归（仅离屏 GDI）
+        run: python tools/oracle/test_emf_dump.py
+
+      - name: M2 比较器与基准身份回归
+        run: python tools/check_m2.py --self-test

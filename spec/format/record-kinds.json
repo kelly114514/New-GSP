@@ -1,0 +1,2023 @@
+{
+ "generated_by": "tools/check_gsp_grammar.py --write-kinds",
+ "corpus_files": 1431,
+ "contexts_legend": {
+  "top": "文件最外层（只有 900）",
+  "doc": "900 之内",
+  "compat": "902 之内",
+  "group": "1006 之内",
+  "page": "1000 之内",
+  "tool": "1002 之内",
+  "page>object": "页里的 2000 之内",
+  "tool>object": "工具区里的 2000 之内"
+ },
+ "layout_legend": {
+  "known": "载荷字节布局全部清楚（残留字节另见 preserve_verbatim）",
+  "partial": "部分字段已解码，其余未知；整条载荷逐字节保留",
+  "opaque": "只知道位置与尺寸；整条载荷逐字节保留"
+ },
+ "kinds": [
+  {
+   "kind": 900,
+   "name": "doc_begin",
+   "pair": 901,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "top"
+   ],
+   "occurrences": 1431,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "28": 1431
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整头原样保留（[6]、[9]、[10] 等含义未明）",
+   "notes": "文档头，28 字节 = 14 个 u16，字段表见 §4。"
+  },
+  {
+   "kind": 901,
+   "name": "doc_end",
+   "pair": null,
+   "closes": 900,
+   "layout": "known",
+   "contexts": [
+    "doc"
+   ],
+   "occurrences": 1431,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "0": 1431
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "文档尾，空载荷；全文件最后一条记录，其后无字节。"
+  },
+  {
+   "kind": 902,
+   "name": "compat_begin",
+   "pair": 903,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "doc"
+   ],
+   "occurrences": 4973,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "218": 1429,
+    "354": 1406,
+    "214": 845,
+    "240": 822,
+    "180": 263,
+    "216": 110,
+    "152": 55,
+    "246": 23
+   },
+   "distinct_sizes": 12,
+   "preserve_verbatim": "每个提示串之后的补齐字节（值不定）",
+   "notes": "兼容信封：16 字节头（8 个 u16）+ 3 个“u16 长度 + 字节 + NUL + 补齐到偶数”的提示串；恰含一个 1000、1002 或 1006。提示串写错会使原版崩溃。见 §5。"
+  },
+  {
+   "kind": 903,
+   "name": "compat_end",
+   "pair": null,
+   "closes": 902,
+   "layout": "known",
+   "contexts": [
+    "compat"
+   ],
+   "occurrences": 4973,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "0": 4973
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "兼容信封结尾，空载荷。"
+  },
+  {
+   "kind": 1000,
+   "name": "page_begin",
+   "pair": 1001,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "compat"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "36": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "页开始，36 字节：+24 = 页内 2000 个数〔已验证〕，+8 = 页标识〔推测〕，+4/+6 有符号 16 位偏移〔推测〕，+10/+16/+18 含义未明。见 §7.1。"
+  },
+  {
+   "kind": 1001,
+   "name": "page_end",
+   "pair": null,
+   "closes": 1000,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "0": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "页结尾，空载荷。"
+  },
+  {
+   "kind": 1002,
+   "name": "tool_begin",
+   "pair": 1003,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "compat"
+   ],
+   "occurrences": 1108,
+   "files": 134,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "36": 1108
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "自定义工具区开始，36 字节，布局同页头，+4..+11 恒为 0，+24 = 工具内对象数〔已验证〕。见 §7.1。"
+  },
+  {
+   "kind": 1003,
+   "name": "tool_end",
+   "pair": null,
+   "closes": 1002,
+   "layout": "known",
+   "contexts": [
+    "tool"
+   ],
+   "occurrences": 1108,
+   "files": 134,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "0": 1108
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "工具区结尾，空载荷。"
+  },
+  {
+   "kind": 1004,
+   "name": "blob_begin",
+   "pair": 1005,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [],
+   "occurrences": 0,
+   "files": 0,
+   "layout_versions": [],
+   "payload_sizes": {},
+   "distinct_sizes": 0,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "〔静态证据〕原版代码有、语料没有：类型 3 信封内的文档二进制块，载荷原样保存，其后跟 1005。"
+  },
+  {
+   "kind": 1005,
+   "name": "blob_end",
+   "pair": null,
+   "closes": 1004,
+   "layout": "opaque",
+   "contexts": [],
+   "occurrences": 0,
+   "files": 0,
+   "layout_versions": [],
+   "payload_sizes": {},
+   "distinct_sizes": 0,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "〔静态证据〕原版代码有、语料没有：与 1004 成对。"
+  },
+  {
+   "kind": 1006,
+   "name": "extra_begin",
+   "pair": 1007,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "compat"
+   ],
+   "occurrences": 1410,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "0": 1410
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "文档附加信息组（仅布局 5；恰有一个，在第一个信封内），空载荷；内含 0..n 个 1300。见 §5.7。"
+  },
+  {
+   "kind": 1007,
+   "name": "extra_end",
+   "pair": null,
+   "closes": 1006,
+   "layout": "known",
+   "contexts": [
+    "group"
+   ],
+   "occurrences": 1410,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "0": 1410
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "附加信息组结尾，空载荷。"
+  },
+  {
+   "kind": 1100,
+   "name": "section_name",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page",
+    "tool"
+   ],
+   "occurrences": 1910,
+   "files": 361,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "10": 244,
+    "8": 225,
+    "14": 217,
+    "16": 209,
+    "20": 142,
+    "12": 106,
+    "22": 103,
+    "6": 98
+   },
+   "distinct_sizes": 35,
+   "preserve_verbatim": "NUL 之后的 0..1 个残留字节",
+   "notes": "页/工具名：NUL 结尾字符串，NUL 后 0 或 1 字节补齐（值不定，须保留）。见 §6、§7.3。"
+  },
+  {
+   "kind": 1201,
+   "name": "font_entry",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page",
+    "tool"
+   ],
+   "occurrences": 7030,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "10": 2985,
+    "20": 2958,
+    "12": 792,
+    "18": 96,
+    "14": 76,
+    "16": 71,
+    "8": 24,
+    "22": 17
+   },
+   "distinct_sizes": 11,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "字体条目：u16 属性字 + NUL 结尾字体名 + 0..3 字节残留（值不定，须保留）；同一容器内连续出现，1201 与 1203 同有同无。见 §7.4。"
+  },
+  {
+   "kind": 1203,
+   "name": "text_style_entry",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page",
+    "tool"
+   ],
+   "occurrences": 17682,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "20": 17682
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "文本样式条目，20 字节 = 10 个 u16；[0] = 本容器 1201 序号（0 起）〔已验证〕，[1] = 字号〔推测〕，其余未明。见 §7.4。"
+  },
+  {
+   "kind": 1204,
+   "name": "tool_given_objects",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "tool"
+   ],
+   "occurrences": 1108,
+   "files": 134,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "12": 304,
+    "16": 266,
+    "20": 137,
+    "8": 91,
+    "24": 63,
+    "28": 56,
+    "36": 38,
+    "32": 36
+   },
+   "distinct_sizes": 26,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "工具已知对象表：u32 个数 + u32[个数]；值为本工具内对象序号（1 起），是 1..个数 的排列〔已验证〕。见 §7.9。"
+  },
+  {
+   "kind": 1300,
+   "name": "embedded_image",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "group"
+   ],
+   "occurrences": 370,
+   "files": 204,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "371": 2,
+    "526": 2,
+    "2381": 2,
+    "7613": 2,
+    "9933": 2,
+    "11386": 2,
+    "16407": 2,
+    "17757": 2
+   },
+   "distinct_sizes": 356,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "嵌入图片：u32 宽、u32 高、完整 PNG（宽高与 IHDR 一致）；只出现在 1006 内。见 §5.7。"
+  },
+  {
+   "kind": 2000,
+   "name": "object_begin",
+   "pair": 2007,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page",
+    "tool"
+   ],
+   "occurrences": 400744,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "28": 360923,
+    "16": 39821
+   },
+   "distinct_sizes": 2,
+   "preserve_verbatim": "布局 5 的 +18..+19；布局 4 的 +15；以及未解码的状态码/field04/排序值/+24",
+   "notes": "对象头：布局 5 为 28 字节，布局 4 为 16 字节；字段表见 §8.1。"
+  },
+  {
+   "kind": 2002,
+   "name": "object_parents",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 370457,
+   "files": 1430,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "12": 201210,
+    "8": 72200,
+    "16": 66858,
+    "20": 9550,
+    "24": 6733,
+    "28": 2897,
+    "44": 1757,
+    "36": 1291
+   },
+   "distinct_sizes": 148,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "父对象表：u32 个数 + u32[个数]，值为同容器内对象序号（1 起，且小于本对象序号）；约束非 0 的对象必有，约束为 0 的必无〔已验证〕。见 §8.2。"
+  },
+  {
+   "kind": 2003,
+   "name": "object_constraint_extra",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 78269,
+   "files": 1402,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "12": 26984,
+    "36": 22167,
+    "60": 13549,
+    "52": 6977,
+    "24": 3681,
+    "20": 3511,
+    "8": 744,
+    "28": 578
+   },
+   "distinct_sizes": 22,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "约束附加参数；只出现在 25 种约束的对象上，多数以 u32 约束 ID 开头，其后随约束而变，内部未解码。须原样保留。见 §8.3。"
+  },
+  {
+   "kind": 2005,
+   "name": "object_label",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 114266,
+   "files": 1430,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "26": 47915,
+    "30": 28847,
+    "28": 12466,
+    "32": 6240,
+    "34": 4774,
+    "40": 4125,
+    "38": 4008,
+    "36": 1900
+   },
+   "distinct_sizes": 42,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "标签记录：7 个 u16 + 8 字节 + u16 长度 + 标签文本 + NUL + 0..1 字节补齐；文本编码同全文件。见 §8.4。"
+  },
+  {
+   "kind": 2007,
+   "name": "object_end",
+   "pair": null,
+   "closes": 2000,
+   "layout": "known",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 400744,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "0": 400744
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "空载荷",
+   "notes": "对象结尾，空载荷。"
+  },
+  {
+   "kind": 2008,
+   "name": "object_text_style_ref",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 175069,
+   "files": 1430,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 175069
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "u16：本容器内 1203 条目序号（0 起）〔已验证〕。见 §8.5。"
+  },
+  {
+   "kind": 2200,
+   "name": "object_rect_2200",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 3402,
+   "files": 704,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "8": 3402
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 0（文字）且约束为 0 的对象的位置框：4 个 i16〔推测为 左、上、右、下〕。见 §8.6。"
+  },
+  {
+   "kind": 2201,
+   "name": "free_point_xy",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 17760,
+   "files": 1428,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "16": 17760
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "自由点坐标：两个小端 IEEE-754 double（x、y）；当且仅当 约束=0 且 主类=1〔已验证〕。见 §8.6。"
+  },
+  {
+   "kind": 2210,
+   "name": "object_rect_2210",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 1983,
+   "files": 1234,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "8": 1983
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 10 且约束为 0 的对象的位置框：4 个 i16。见 §8.6。"
+  },
+  {
+   "kind": 2211,
+   "name": "object_rect_2211",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 6847,
+   "files": 909,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "8": 6847
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 11 且约束为 0 的对象的位置框：4 个 i16。见 §8.6。"
+  },
+  {
+   "kind": 2216,
+   "name": "object_picture_matrix",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 295,
+   "files": 161,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "48": 294,
+    "8": 1
+   },
+   "distinct_sizes": 2,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 16（图片）且约束为 0 的对象：布局 5 为 6 个 f64〔观察到 a,0,tx,0,d,ty 形式的二维仿射矩阵，推测〕；布局 4 样本有 1 条 8 字节变体。见 §8.6。"
+  },
+  {
+   "kind": 2300,
+   "name": "object_data_2300",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 9998,
+   "files": 947,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "24": 2007,
+    "36": 1759,
+    "32": 838,
+    "40": 828,
+    "52": 362,
+    "60": 330,
+    "56": 307,
+    "48": 303
+   },
+   "distinct_sizes": 244,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 0 的类专有数据，就是一个“文本块”：[u32=2300][u32 块长][u32=4][i16 x][i16 y][u16 n][n 字节][NUL][补齐]〔已验证〕。见 §8.7。"
+  },
+  {
+   "kind": 2306,
+   "name": "object_data_2306",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 3819,
+   "files": 773,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "40": 3626,
+    "32": 193
+   },
+   "distinct_sizes": 2,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 6 的类专有数据；布局 4 为 32 字节，布局 5 为 40 字节；含 f64、整数和栈残留，未解码。见 §8.7。"
+  },
+  {
+   "kind": 2307,
+   "name": "object_data_2307",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 25770,
+   "files": 1191,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "32": 25765,
+    "36": 4,
+    "40": 1
+   },
+   "distinct_sizes": 3,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 7 的类专有数据：开头一个文本块（同 2300），其后 10 字节未解码。见 §8.7。"
+  },
+  {
+   "kind": 2308,
+   "name": "object_data_2308",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 1772,
+   "files": 737,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "8": 1736,
+    "2": 36
+   },
+   "distinct_sizes": 2,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 8 的类专有数据；布局 5 为 8 字节，布局 4 为 2 字节。见 §8.7。"
+  },
+  {
+   "kind": 2309,
+   "name": "object_data_2309",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 3599,
+   "files": 741,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "4": 3527,
+    "2": 72
+   },
+   "distinct_sizes": 2,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 9 的类专有数据；布局 5 为 4 字节，布局 4 为 2 字节。见 §8.7。"
+  },
+  {
+   "kind": 2310,
+   "name": "object_data_2310",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 16295,
+   "files": 1341,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "24": 14704,
+    "44": 1252,
+    "48": 162,
+    "56": 158,
+    "84": 6,
+    "76": 5,
+    "80": 2,
+    "104": 2
+   },
+   "distinct_sizes": 12,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 10 的类专有数据：自描述块 [u32=2310][u32=载荷长][u32=12] 后接数据，未解码。见 §8.7。"
+  },
+  {
+   "kind": 2311,
+   "name": "object_data_2311",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 57355,
+   "files": 1250,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "98": 17656,
+    "94": 5983,
+    "106": 5268,
+    "110": 4007,
+    "102": 3876,
+    "114": 3223,
+    "100": 2733,
+    "118": 1563
+   },
+   "distinct_sizes": 118,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 11 的类专有数据：开头一个文本块（同 2300），其后是内部块 [u32=2311]… 含表达式，并带栈残留，未解码；数量最多。见 §8.7。"
+  },
+  {
+   "kind": 2314,
+   "name": "object_data_2314",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 2480,
+   "files": 694,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "24": 2480
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 14 的类专有数据，24 字节，未解码。见 §8.7。"
+  },
+  {
+   "kind": 2316,
+   "name": "object_picture_size",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 564,
+   "files": 205,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "16": 564
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 16（图片）的类专有数据：4 个 u32，观察到 (宽,高,宽,高) 形式的像素尺寸〔推测〕。见 §8.7。"
+  },
+  {
+   "kind": 2317,
+   "name": "object_data_2317",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 168,
+   "files": 101,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "28": 49,
+    "144": 35,
+    "148": 11,
+    "164": 8,
+    "140": 6,
+    "152": 6,
+    "124": 4,
+    "156": 4
+   },
+   "distinct_sizes": 40,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 17 的类专有数据：自描述块 [u32=2317][u32=载荷长][u32=16] 后接数据，未解码。见 §8.7。"
+  },
+  {
+   "kind": 2318,
+   "name": "object_data_2318",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 153,
+   "files": 63,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "12": 153
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 18 的类专有数据，12 字节（观察：u32、u32=0、COLORREF 0xFEFEFE）。见 §8.7。"
+  },
+  {
+   "kind": 2319,
+   "name": "object_data_2319",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 61,
+   "files": 6,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "16": 61
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 19 的类专有数据，16 字节（含一个 f64 的两半与若干 u16）。见 §8.7。"
+  },
+  {
+   "kind": 2399,
+   "name": "label_counter_tail",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2400,
+   "name": "label_counter_0",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2401,
+   "name": "label_counter_1",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2402,
+   "name": "label_counter_2",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2403,
+   "name": "label_counter_3",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2404,
+   "name": "label_counter_4",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2405,
+   "name": "label_counter_5",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2406,
+   "name": "label_counter_6",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2407,
+   "name": "label_counter_7",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2408,
+   "name": "label_counter_8",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2409,
+   "name": "label_counter_9",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2410,
+   "name": "label_counter_10",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2411,
+   "name": "label_counter_11",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2412,
+   "name": "label_counter_12",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2413,
+   "name": "label_counter_13",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2414,
+   "name": "label_counter_14",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2415,
+   "name": "label_counter_15",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2416,
+   "name": "label_counter_16",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2417,
+   "name": "label_counter_17",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2418,
+   "name": "label_counter_18",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "6": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 2419,
+   "name": "label_counter_19",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "6": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页内自动标签计数器行：3 个 u16（前两个有效，第三个恒为 0）〔已验证〕。2400+i 对应外部主类 ID i〔静态证据〕，2399 是末项。布局 5 有 2400..2419，布局 4 只有 2400..2417。见 §7.5。"
+  },
+  {
+   "kind": 8000,
+   "name": "object_emf",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 1,
+   "files": 1,
+   "layout_versions": [
+    4
+   ],
+   "payload_sizes": {
+    "11916": 1
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 16 对象的 EMF 图元文件字节，语料仅 1 例（布局 4）。见 §8.8。"
+  },
+  {
+   "kind": 8002,
+   "name": "object_dib",
+   "pair": null,
+   "closes": null,
+   "layout": "opaque",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 1,
+   "files": 1,
+   "layout_versions": [
+    4
+   ],
+   "payload_sizes": {
+    "49332": 1
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "主类 16 对象的位图块，语料仅 1 例（布局 4）。见 §8.8。"
+  },
+  {
+   "kind": 8004,
+   "name": "object_image_index",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page>object"
+   ],
+   "occurrences": 439,
+   "files": 204,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "2": 439
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "u16：本文档 1006 组内 1300 图片的序号（0 起）；仅主类 16 对象〔已验证〕。见 §8.8。"
+  },
+  {
+   "kind": 9000,
+   "name": "page_object_list",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 1279,
+   "files": 954,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "4": 1266,
+    "8": 8,
+    "12": 1,
+    "16": 1,
+    "20": 1,
+    "32": 1,
+    "44": 1
+   },
+   "distinct_sizes": 7,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "u32 数组，元素为页内对象序号（1 起）〔已验证〕；多数页只有一项且等于页内对象数。语义〔推测〕：存盘时的选中对象。见 §7.8。"
+  },
+  {
+   "kind": 9004,
+   "name": "build_string",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "26": 2396,
+    "24": 59
+   },
+   "distinct_sizes": 2,
+   "preserve_verbatim": "NUL 之后的 0..1 个残留字节",
+   "notes": "构建标记：NUL 结尾 ASCII，如 GSP5_w_1074K/Apr 19 2013；NUL 后 0..1 字节残留（值不定，须保留）。见 §7.6。"
+  },
+  {
+   "kind": 9005,
+   "name": "page_coord_system_ref",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 926,
+   "files": 691,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "4": 926
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "u32 对象序号，指向页的坐标系对象（语料中恒为 约束61、主类8、genera39 的对象）〔已验证〕；原版读入时登记为页的特殊对象槽〔静态证据〕。见 §7.8。"
+  },
+  {
+   "kind": 9006,
+   "name": "object_flag_9006",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page>object",
+    "tool>object"
+   ],
+   "occurrences": 17442,
+   "files": 532,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "0": 17442
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "空载荷对象标记；原版读入时清除对象内部的一个标志〔静态证据〕，具体含义未明。见 §8.8。"
+  },
+  {
+   "kind": 9007,
+   "name": "tool_description",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "tool"
+   ],
+   "occurrences": 375,
+   "files": 38,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "28": 58,
+    "36": 36,
+    "34": 34,
+    "16": 33,
+    "32": 20,
+    "42": 20,
+    "20": 15,
+    "38": 15
+   },
+   "distinct_sizes": 70,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "工具说明文字：NUL 结尾字符串，行尾为 CRLF〔已验证〕；NUL 后 0..1 字节残留。见 §7.10。"
+  },
+  {
+   "kind": 9008,
+   "name": "page_dpi",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "4": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "u32，保存时的屏幕 DPI（观察到 96、72）；原版读入时忽略〔静态证据〕。见 §7.6。"
+  },
+  {
+   "kind": 9009,
+   "name": "page_transform_entry",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 326,
+   "files": 208,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "27": 128,
+    "33": 120,
+    "36": 17,
+    "25": 10,
+    "20": 9,
+    "34": 9,
+    "31": 7,
+    "22": 4
+   },
+   "distinct_sizes": 18,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "页级自定义变换条目：u32、u32、u32=0、u32 名长 + UTF-8 名 + 恰 3 字节残留〔已验证〕；其余字段含义未明。见 §7.8。"
+  },
+  {
+   "kind": 10002,
+   "name": "page_pref_flag_a",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 1 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10003,
+   "name": "page_pref_flag_b",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 2 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10004,
+   "name": "page_pref_flag_c",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 3 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10005,
+   "name": "page_pref_flag_d",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "2": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 4 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10006,
+   "name": "page_pref_flag_e",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "2": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 5 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10007,
+   "name": "page_pref_flag_f",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "2": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 6 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10008,
+   "name": "page_pref_flag_g",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "2": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（0/1）；偏好块第 7 个布尔，含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10020,
+   "name": "page_pref_color",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 36648,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "6": 36648
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "布局 4 的最后 1 个字节",
+   "notes": "页面偏好调色板条目：u16 序号 + R,G,B + 0；布局 5 共 15 条（序号 0..14），布局 4 共 12 条。见 §7.7。"
+  },
+  {
+   "kind": 10021,
+   "name": "page_pref_10021",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好整数，u16，原版读入时钳位到 ≤16；含义未明。见 §7.7。"
+  },
+  {
+   "kind": 10022,
+   "name": "page_pref_10022",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节。见 §7.7。"
+  },
+  {
+   "kind": 10023,
+   "name": "page_pref_10023",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2396,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "2": 2396
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好布尔值，2 字节（仅布局 5）。见 §7.7。"
+  },
+  {
+   "kind": 10040,
+   "name": "page_pref_slot",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 7365,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 7365
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "u16：低字节为值，高字节为槽号；每页恰 3 条，槽号依次 0、1、2。见 §7.7。"
+  },
+  {
+   "kind": 10041,
+   "name": "page_pref_10041",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好枚举，u16 ≤ 2〔疑为单位索引，推测〕。见 §7.7。"
+  },
+  {
+   "kind": 10042,
+   "name": "page_pref_10042",
+   "pair": null,
+   "closes": null,
+   "layout": "known",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 2455,
+   "files": 1431,
+   "layout_versions": [
+    4,
+    5
+   ],
+   "payload_sizes": {
+    "2": 2455
+   },
+   "distinct_sizes": 1,
+   "preserve_verbatim": "载荷已完全解码；仍按原字节保存",
+   "notes": "页面偏好枚举，u16 ≤ 2。见 §7.7。"
+  },
+  {
+   "kind": 10044,
+   "name": "page_pref_text_style",
+   "pair": null,
+   "closes": null,
+   "layout": "partial",
+   "contexts": [
+    "page"
+   ],
+   "occurrences": 14376,
+   "files": 1410,
+   "layout_versions": [
+    5
+   ],
+   "payload_sizes": {
+    "38": 9222,
+    "48": 4309,
+    "40": 609,
+    "46": 87,
+    "36": 50,
+    "44": 37,
+    "42": 32,
+    "50": 16
+   },
+   "distinct_sizes": 11,
+   "preserve_verbatim": "整条载荷逐字节原样保留",
+   "notes": "默认文本样式行（仅布局 5，每页 6 条，序号 0..5）：u16 序号 + u16 残留 + 10 个 u16 样式字 + u16 + NUL 结尾字体名 + 残留。见 §7.7。"
+  }
+ ]
+}

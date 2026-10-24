@@ -1,0 +1,4 @@
+# Windows MSVC 目标静态链接 C 运行库：
+# 不依赖用户机器上的 VC++ Redistributable（干净的 Windows 10 可能没有）。
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

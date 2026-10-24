@@ -1,0 +1,16 @@
+{
+  "name": "@gsp-plus/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GSP-plus 的 Tauri 2 桌面外壳（仅 Windows 10+）",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4"
+  }
+}
