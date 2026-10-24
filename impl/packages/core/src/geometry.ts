@@ -1,3 +1,4 @@
+import { ARC_ANGLE_TOLERANCE, ARC_RADIUS_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
 import { readF64, readU16 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
@@ -10,16 +11,22 @@ export type LinearGeometry = { [K in 'segment' | 'line' | 'ray']: {
   kind: K;
   geometry: { a: XY; b: XY };
   parameterizationKnown: boolean;
+  /** Set when constraint 81 degenerated into the chord A-B (card 81); it intersects as a linear object. */
+  degenerateArc?: true;
 } }['segment' | 'line' | 'ray'];
 export interface CircleGeometry { kind: 'circle'; geometry: { center: XY; radius: number } }
 export interface PolygonGeometry { kind: 'polygon'; geometry: { vertices: XY[] } }
+/**
+ * Angles are math angles (see arc.ts): point = center + r(cos a, -sin a), positive sweep is counter-clockwise on screen.
+ * An arc whose three-point circle degenerates (card 81) is a LinearGeometry segment with degenerateArc set instead.
+ */
 export interface ArcGeometry {
   kind: 'arc';
-  geometry: { center: XY; radius: number; startAngle: number; sweepAngle: number };
+  geometry: { center: XY; radius: number; startAngle: number; sweepAngle: number; start: XY; end: XY };
 }
 export type RegionGeometry = { [K in 'disk' | 'sector' | 'circular-segment']: {
   kind: K;
-  geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number };
+  geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number; start?: XY; end?: XY };
 } }['disk' | 'sector' | 'circular-segment'];
 export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry;
 export type GeometryStatus = 'ok' | 'not-existing' | 'unsupported' | 'unbound-input';
@@ -31,9 +38,10 @@ export type EvaluatedObject = { objectIndex: number; constraintId: number } & (
 export interface PageGeometry { pageIndex: number; objects: EvaluatedObject[] }
 export interface GeometryDocument { schema: 'gsp-core-geometry-v1'; pages: PageGeometry[] }
 
-type Outcome = Geometry | { status: Exclude<GeometryStatus, 'ok'>; reason: string };
-const unsupported = (reason: string): Outcome => ({ status: 'unsupported', reason });
-const absent = (reason: string): Outcome => ({ status: 'not-existing', reason });
+type Failure = { status: Exclude<GeometryStatus, 'ok'>; reason: string };
+type Outcome = Geometry | Failure;
+const unsupported = (reason: string): Failure => ({ status: 'unsupported', reason });
+const absent = (reason: string): Failure => ({ status: 'not-existing', reason });
 const sub = (a: XY, b: XY): XY => [a[0] - b[0], a[1] - b[1]];
 const cross = (a: XY, b: XY): number => a[0] * b[1] - a[1] * b[0];
 const length = (a: XY): number => Math.hypot(...a);
@@ -45,11 +53,53 @@ function inLinearRange(g: LinearGeometry, t: number): boolean {
   const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t));
   return g.kind === 'line' || (t >= -e && (g.kind === 'ray' || t <= 1 + e));
 }
+function inUnitRange(t: number): boolean { const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t)); return t >= -e && t <= 1 + e; }
 function finiteGeometry(g: Geometry): boolean {
   if (g.kind === 'point') return Number.isFinite(g.geometry.x) && Number.isFinite(g.geometry.y);
   if (isLinear(g)) return [...g.geometry.a, ...g.geometry.b].every(Number.isFinite);
   if (g.kind === 'polygon') return g.geometry.vertices.flat().every(Number.isFinite);
-  return [...g.geometry.center, g.geometry.radius, ...('startAngle' in g.geometry ? [g.geometry.startAngle, g.geometry.sweepAngle] : [])].every((v) => v === undefined || Number.isFinite(v));
+  const { center, radius, start, end } = g.geometry as { center: XY; radius: number; start?: XY; end?: XY };
+  return [...center, radius, ...(start ?? []), ...(end ?? []), ...('startAngle' in g.geometry ? [g.geometry.startAngle, g.geometry.sweepAngle] : [])].every((v) => v === undefined || Number.isFinite(v));
+}
+
+/** `start`/`end` are the page-space end points, derived from the angles so the exchange format does not depend on the orientation convention. */
+function arcOf(center: XY, radius: number, startAngle: number, sweepAngle: number): ArcGeometry {
+  return { kind: 'arc', geometry: { center, radius, startAngle, sweepAngle, start: pointAtAngle(center, radius, startAngle), end: pointAtAngle(center, radius, startAngle + sweepAngle) } };
+}
+type Circular = CircleGeometry | ArcGeometry;
+function isCircular(g: Geometry): g is Circular { return g.kind === 'circle' || g.kind === 'arc'; }
+function isDegenerateArc(g: Geometry): g is LinearGeometry & { degenerateArc: true } { return isLinear(g) && g.degenerateArc === true; }
+
+/** Card 9 style crossing of two linear objects; also used when a degenerate 81 arc takes part in 11-14. */
+function intersectLinear(first: LinearGeometry, second: LinearGeometry): Outcome {
+  const a = first.geometry.a, b = second.geometry.a;
+  const d = sub(first.geometry.b, a), e = sub(second.geometry.b, b);
+  const den = cross(d, e);
+  if (Math.abs(den) <= 32 * Number.EPSILON * length(d) * length(e)) return absent('parallel-or-coincident-lines');
+  const t = cross(sub(b, a), e) / den, u = cross(sub(b, a), d) / den;
+  return inLinearRange(first, t) && inLinearRange(second, u) ? point(at(a, d, t)) : absent('intersection-outside-parent-range');
+}
+
+/**
+ * Points where the supporting line meets the supporting circle, ascending in the line parameter,
+ * restricted to the linear range and (for arcs) the directed arc range. An empty list carries the reason.
+ */
+function lineCircleCandidates(l: LinearGeometry, c: Circular): { points: XY[] } | Failure {
+  const origin = l.geometry.a, d = sub(l.geometry.b, origin);
+  const qa = d[0] * d[0] + d[1] * d[1];
+  if (qa === 0) return absent('degenerate-direction');
+  const offset = sub(origin, c.geometry.center), radius = c.geometry.radius;
+  const qb = 2 * (d[0] * offset[0] + d[1] * offset[1]);
+  const qc = offset[0] * offset[0] + offset[1] * offset[1] - radius * radius;
+  const discriminant = qb * qb - 4 * qa * qc;
+  const tolerance = 64 * Number.EPSILON * (qb * qb + Math.abs(4 * qa * qc));
+  if (discriminant < -tolerance) return absent('line-circle-no-intersection');
+  const roots = discriminant <= tolerance
+    ? [-qb / (2 * qa)]
+    : [(-qb - Math.sqrt(discriminant)) / (2 * qa), (-qb + Math.sqrt(discriminant)) / (2 * qa)];
+  const points = roots.filter((t) => inLinearRange(l, t)).map((t) => at(origin, d, t))
+    .filter((p) => c.kind !== 'arc' || inArcRange(c.geometry, p));
+  return points.length === 0 ? absent('intersection-outside-parent-range') : { points };
 }
 
 function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byIndex: ReadonlyMap<number, ObjectInfo>): Outcome {
@@ -103,6 +153,49 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
     if (p.length !== 1 || first?.kind !== 'circle') return unsupported('disk-needs-circle-parent');
     return { kind: 'disk', geometry: { ...first.geometry } };
   }
+  if (id === 79) {
+    if (p.length !== 3 || first?.kind !== 'circle' || second?.kind !== 'point' || p[2]?.kind !== 'point') return unsupported('arc-on-circle-needs-circle-and-two-points');
+    const { center, radius } = first.geometry, a = pointXY(second), b = pointXY(p[2]);
+    for (const q of [a, b]) {
+      if (Math.abs(length(sub(q, center)) - radius) > ARC_RADIUS_TOLERANCE * Math.max(1, radius)) return unsupported('arc-endpoint-off-circle-unverified');
+    }
+    const start = mathAngle(a[0] - center[0], a[1] - center[1]);
+    const sweep = directedSweep(start, mathAngle(b[0] - center[0], b[1] - center[1]));
+    if (Math.abs(sweep) <= ARC_ANGLE_TOLERANCE || Math.abs(sweep) >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return unsupported('arc-coincident-endpoints-unverified');
+    return arcOf(center, radius, start, sweep);
+  }
+  if (id === 80) {
+    if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('arc-from-center-needs-three-points');
+    const center = pointXY(p[0] as PointGeometry), a = pointXY(p[1] as PointGeometry), b = pointXY(p[2] as PointGeometry);
+    const ra = length(sub(a, center)), rb = length(sub(b, center));
+    if (ra === 0 || rb === 0) return absent('arc-center-coincides-with-direction-point');
+    if (Math.abs(ra - rb) > ARC_RADIUS_TOLERANCE * Math.max(1, ra, rb)) return unsupported('arc-unequal-radii-unverified');
+    const start = mathAngle(a[0] - center[0], a[1] - center[1]);
+    const sweep = directedSweep(start, mathAngle(b[0] - center[0], b[1] - center[1]));
+    if (Math.abs(sweep) <= ARC_ANGLE_TOLERANCE || Math.abs(sweep) >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return unsupported('arc-coincident-directions-unverified');
+    return arcOf(center, ra, start, sweep);
+  }
+  if (id === 81) {
+    if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('three-point-arc-needs-three-points');
+    const a = pointXY(p[0] as PointGeometry), m = pointXY(p[1] as PointGeometry), b = pointXY(p[2] as PointGeometry);
+    const chord = sub(b, a), chordSquared = chord[0] * chord[0] + chord[1] * chord[1];
+    if (chordSquared === 0) return absent('coincident-arc-endpoints');
+    const circle = circumcircle(a, m, b);
+    if (circle === undefined || circle.radius > ARC_SEGMENT_LIMIT || Math.abs(circle.center[0]) > ARC_SEGMENT_LIMIT || Math.abs(circle.center[1]) > ARC_SEGMENT_LIMIT) {
+      // Card 81: the collinear / huge-circle case degrades to the chord A-B; where M must sit for that is unverified.
+      const along = ((m[0] - a[0]) * chord[0] + (m[1] - a[1]) * chord[1]) / chordSquared;
+      if (along <= 0 || along >= 1) return unsupported('three-point-arc-degenerate-middle-outside-chord-unverified');
+      return { kind: 'segment', geometry: { a, b }, parameterizationKnown: false, degenerateArc: true };
+    }
+    const { start, sweep } = sweepThrough(circle.center, a, m, b);
+    return arcOf(circle.center, circle.radius, start, sweep);
+  }
+  if (id === 82 || id === 83) {
+    if (p.length !== 1 || first === undefined) return unsupported('arc-interior-needs-one-arc-parent');
+    if (isDegenerateArc(first)) return unsupported('arc-interior-of-degenerate-arc-unverified');
+    if (first.kind !== 'arc') return unsupported('arc-interior-needs-one-arc-parent');
+    return { kind: id === 82 ? 'sector' : 'circular-segment', geometry: { ...first.geometry } };
+  }
   if (id === 93) {
     if (p.length !== 2 || first?.kind !== 'ray' || second?.kind !== 'polygon') return unsupported('first-boundary-intersection-needs-ray-and-polygon');
     const a = first.geometry.a, d = sub(first.geometry.b, a), vertices = second.geometry.vertices;
@@ -135,38 +228,29 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   }
   if (id === 9) {
     if (p.length !== 2 || first === undefined || second === undefined || !isLinear(first) || !isLinear(second)) return unsupported('expected-two-linear-parents');
-    const a = first.geometry.a, b = second.geometry.a;
-    const d = sub(first.geometry.b, a), e = sub(second.geometry.b, b);
-    const den = cross(d, e);
-    if (Math.abs(den) <= 32 * Number.EPSILON * length(d) * length(e)) return absent('parallel-or-coincident-lines');
-    const t = cross(sub(b, a), e) / den, u = cross(sub(b, a), d) / den;
-    return inLinearRange(first, t) && inLinearRange(second, u) ? point(at(a, d, t)) : absent('intersection-outside-parent-range');
+    return intersectLinear(first, second);
   }
   if (id === 11 || id === 12) {
     if (p.length !== 2 || first === undefined || second === undefined || !isLinear(first)) return unsupported('expected-linear-and-circle-parents');
-    if (second.kind === 'arc') return unsupported('intersection-arc-parent-unsupported');
-    if (second.kind !== 'circle') return unsupported('intersection-circle-parent-required');
-    const origin = first.geometry.a, d = sub(first.geometry.b, origin);
-    const qa = d[0] * d[0] + d[1] * d[1];
-    if (qa === 0) return absent('degenerate-direction');
-    const offset = sub(origin, second.geometry.center), radius = second.geometry.radius;
-    const qb = 2 * (d[0] * offset[0] + d[1] * offset[1]);
-    const qc = offset[0] * offset[0] + offset[1] * offset[1] - radius * radius;
-    const discriminant = qb * qb - 4 * qa * qc;
-    const tolerance = 64 * Number.EPSILON * (qb * qb + Math.abs(4 * qa * qc));
-    if (discriminant < -tolerance) return absent('line-circle-no-intersection');
-    const roots = discriminant <= tolerance
-      ? [-qb / (2 * qa)]
-      : [(-qb - Math.sqrt(discriminant)) / (2 * qa), (-qb + Math.sqrt(discriminant)) / (2 * qa)];
-    for (const t of id === 11 ? roots : [...roots].reverse()) {
-      if (inLinearRange(first, t)) return point(at(origin, d, t));
-    }
-    return absent('intersection-outside-parent-range');
+    if (isDegenerateArc(second)) return intersectLinear(first, second);
+    if (!isCircular(second)) return unsupported('intersection-circle-parent-required');
+    const found = lineCircleCandidates(first, second);
+    if ('status' in found) return found;
+    if (second.kind === 'arc' && found.points.length > 1) return unsupported('intersection-arc-root-order-unverified');
+    return point(id === 11 ? found.points[0]! : found.points[found.points.length - 1]!);
   }
   if (id === 13 || id === 14) {
     if (p.length !== 2 || first === undefined || second === undefined) return unsupported('expected-two-circle-parents');
-    if (first.kind === 'arc' || second.kind === 'arc') return unsupported('intersection-arc-parent-unsupported');
-    if (first.kind !== 'circle' || second.kind !== 'circle') return unsupported('intersection-circle-parent-required');
+    const f = isDegenerateArc(first), s2 = isDegenerateArc(second);
+    if (f && s2) return intersectLinear(first, second);
+    if (f || s2) {
+      const line = (f ? first : second) as LinearGeometry, other = f ? second : first;
+      if (!isCircular(other)) return unsupported('intersection-circle-parent-required');
+      const found = lineCircleCandidates(line, other);
+      if ('status' in found) return found;
+      return found.points.length > 1 ? unsupported('intersection-degenerate-arc-root-order-unverified') : point(found.points[0]!);
+    }
+    if (!isCircular(first) || !isCircular(second)) return unsupported('intersection-circle-parent-required');
     const o1 = first.geometry.center, o2 = second.geometry.center;
     const r1 = first.geometry.radius, r2 = second.geometry.radius;
     const delta = sub(o2, o1), distance = length(delta);
@@ -177,9 +261,14 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
     const tolerance = 64 * Number.EPSILON * (r1 * r1 + along * along);
     if (h2 < -tolerance) return absent('circle-circle-no-intersection');
     const h = h2 <= tolerance ? 0 : Math.sqrt(h2);
-    const sign = id === 13 ? 1 : -1;
     const base: XY = [o1[0] + along * ex, o1[1] + along * ey];
-    return point([base[0] + sign * h * ey, base[1] - sign * h * ex]);
+    const candidate = (sign: number): XY => [base[0] + sign * h * ey, base[1] - sign * h * ex];
+    if (first.kind === 'circle' && second.kind === 'circle') return point(candidate(id === 13 ? 1 : -1));
+    // Arc parents: the sign rule is only known for whole circles (cards 13/14), so a second valid candidate is not guessed.
+    const inRange = (q: XY): boolean => (first.kind !== 'arc' || inArcRange(first.geometry, q)) && (second.kind !== 'arc' || inArcRange(second.geometry, q));
+    const valid = (h === 0 ? [candidate(1)] : [candidate(1), candidate(-1)]).filter(inRange);
+    if (valid.length === 0) return absent('intersection-outside-parent-range');
+    return valid.length > 1 ? unsupported('intersection-arc-root-order-unverified') : point(valid[0]!);
   }
   if (id === 15) {
     if (p.length !== 1 || first === undefined) return unsupported('path-point-needs-one-parent');
@@ -195,6 +284,25 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
       if (Math.abs(Math.hypot(u, v) - 1) > 1e-10) return unsupported('non-unit-native-circle-direction');
       const { center, radius } = first.geometry;
       return point([center[0] + radius * u, center[1] - radius * v]);
+    }
+    if (first.kind === 'arc') {
+      // Card 15/79: logical parameter is the arc-length fraction from start to end, stored as a 12-byte f64 like linear paths.
+      if (record.payload.length !== 12) return unsupported('native-arc-parameter-layout');
+      const t = readF64(record.payload, 4);
+      if (!Number.isFinite(t)) return absent('non-finite-path-parameter');
+      if (!inUnitRange(t)) return absent('path-parameter-outside-range');
+      const { center, radius, startAngle, sweepAngle } = first.geometry;
+      return point(pointAtAngle(center, radius, startAngle + t * sweepAngle));
+    }
+    if (first.kind === 'polygon') {
+      // Card 15: 20 bytes; +4 f64 local edge fraction s, +12 u16 zero-based edge index, +14..19 preserved but unread.
+      if (record.payload.length !== 20) return unsupported('native-polygon-parameter-layout');
+      const s = readF64(record.payload, 4), edge = readU16(record.payload, 12), vertices = first.geometry.vertices;
+      if (!Number.isFinite(s)) return absent('non-finite-path-parameter');
+      if (edge >= vertices.length) return unsupported('native-polygon-edge-index-out-of-range');
+      if (!inUnitRange(s)) return unsupported('native-polygon-parameter-out-of-range-unverified');
+      const v0 = vertices[edge]!, v1 = vertices[(edge + 1) % vertices.length]!;
+      return point(at(v0, sub(v1, v0), s));
     }
     if (!isLinear(first)) return unsupported('native-path-parameter-not-supported');
     if (!first.parameterizationKnown) return unsupported('path-direction-and-unit-unverified');

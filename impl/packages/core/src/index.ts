@@ -35,3 +35,4 @@ export * from './views/object.ts';
 export * from './views/strings.ts';
 export * from './writer.ts';
 export * from './geometry.ts';
+export * from './arc.ts';
