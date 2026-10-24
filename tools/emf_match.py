@@ -18,11 +18,26 @@ import sys
 
 from inspect_gsp import parse_records
 from emf_dump import parse_emf
+import m4_transforms
 
 ROOT = Path(__file__).resolve().parents[1]
 A_GROUP = set(range(16)) | {63, 64, 79, 80, 81, 82, 83, 93, 98}
+C_GROUP = set(range(16, 35)) | {75, 117, 118, 119}
 MATCH_PX = 0.075
 TOLERANCE_PX = 0.1
+
+
+# Constraints whose objects have no step in the original HTML export (arcs and their interiors, dynamic colour).
+HTML_UNREPRESENTED = {75, 79, 80, 81, 82, 83}
+
+
+def is_geometric_a(obj):
+    return obj["constraint"] in A_GROUP and (obj["constraint"] != 0 or obj["mainKind"] == 1)
+
+
+def is_asserted_group(obj):
+    """Objects the matcher may assert: the A group plus the transform types verified against original EMF."""
+    return is_geometric_a(obj) or obj["constraint"] in m4_transforms.C_VERIFIED
 
 
 def sha(data):
@@ -103,6 +118,15 @@ def native_document(path):
             "layout": header[0]}
 
 
+# HTML step name -> (number of leading object references, native constraint IDs that emit it)
+TRANSFORM_HTML = {
+    "VectorTranslation": (3, {16}), "Translation": (1, {17, 21}), "Translation/FixedAngle/MarkedDistance": (2, {24}),
+    "Translation/MarkedAngle/MarkedDistance": (3, {25}), "Rotation": (2, {27}), "Rotation/MarkedAngle": (5, {28}),
+    "Rotation/MeasuredAngle": (3, {29}), "Dilation": (2, {30}), "Dilation/SegmentRatio": (4, {31}),
+    "Dilation/3PtRatio": (5, {32}), "Dilation/MarkedRatio": (3, {33}), "Reflection": (2, {34}),
+}
+
+
 def parse_html(path):
     if path is None or not path.is_file():
         return None
@@ -111,7 +135,7 @@ def parse_html(path):
     steps = []
     # Line-anchored bounded matches: large exports must not trigger quadratic regex.
     for line in text.splitlines():
-        m = re.match(r"\s*\{(\d+)\}\s*([A-Za-z][A-Za-z0-9 _]*)\(([^\r\n]*)", line)
+        m = re.match(r"\s*\{(\d+)\}\s*([A-Za-z][A-Za-z0-9 _/]*)\(([^\r\n]*)", line)
         if not m:
             continue
         tail = m[3]
@@ -132,6 +156,14 @@ def parse_html(path):
                 step["pathParameter"] = float(values[1])
             except (ValueError, IndexError):
                 pass
+        if m[2] in TRANSFORM_HTML:
+            refs = TRANSFORM_HTML[m[2]][0]
+            tokens = args.split(",")
+            try:
+                step["parents"] = [int(x) for x in tokens[:refs]]
+                step["numbers"] = [float(x) for x in tokens[refs:]]
+            except ValueError:
+                pass
         if m[2] in ("Point", "FixedPoint"):
             try:
                 xy = [float(x) for x in args.split(",")]
@@ -143,6 +175,24 @@ def parse_html(path):
     canvas = re.search(r"<APPLET\b[^>]*\bWIDTH=(\d+)\s+HEIGHT=(\d+)", text, re.I)
     return {"sha256": sha(raw), "steps": steps,
             "canvas": [int(canvas[1]), int(canvas[2])] if canvas else None}
+
+
+def transform_numbers_agree(obj, step, objects):
+    nums = step.get("numbers")
+    if not nums:
+        return False
+    c = obj["constraint"]
+    if c == 30:
+        ratio = m4_transforms.extra_f64(obj, 4)
+        return ratio is not None and abs(nums[0] - ratio) <= 1e-4 * max(1.0, abs(ratio))
+    if c == 27:
+        angle = m4_transforms.stored_angle_degrees(obj)
+        return angle is not None and abs(nums[0] - math.radians(angle)) <= 1e-3
+    matrix = m4_transforms.matrix_for(obj, [{}], objects)
+    if matrix is None or len(nums) < 2:
+        return False
+    dx, dy = matrix[1]
+    return abs(nums[0] - dx) <= 1e-3 * max(1.0, abs(dx)) and abs(nums[1] + dy) <= 1e-3 * max(1.0, abs(dy))
 
 
 def bind_html(objects, html):
@@ -163,6 +213,9 @@ def bind_html(objects, html):
              5: {"Perpendicular"}, 6: {"Parallel"}, 7: {"Bisector"}, 8: {"Polygon"},
              9: {"Intersect"}, 11: {"Intersect1"}, 12: {"Intersect2"},
              13: {"Intersect1"}, 14: {"Intersect2"}, 15: {"Point on object"}, 63: {"Line"}, 64: {"Ray"}}
+    for name, (_, ids) in TRANSFORM_HTML.items():
+        for cid in ids:
+            types.setdefault(cid, set()).add(name)
     bindings = {}
     for obj in objects:
         i, c = obj["objectIndex"], obj["constraint"]
@@ -185,6 +238,9 @@ def bind_html(objects, html):
                     t = (math.atan2(v, u) / (2 * math.pi)) % 1
                     candidates = [s for s in candidates if math.isfinite(s.get("pathParameter", math.inf))
                                   and abs((s["pathParameter"] - t + 0.5) % 1 - 0.5) <= 0.00001]
+            elif c in (17, 21, 27, 30):
+                # HTML repeats the fixed 2003 parameters (translation px with y up, radians, ratio).
+                candidates = [s for s in candidates if transform_numbers_agree(obj, s, objects)]
         if len(candidates) == 1:
             bindings[i] = candidates[0]
     owners = Counter(s["step"] for s in bindings.values())
@@ -206,7 +262,7 @@ def within_linear(linear, parameter):
     return parameter <= 1 + slack
 
 
-def linear_circle_root(linear, circle, prefer_smaller):
+def linear_circle_root(linear, circle, prefer_smaller, arc=None):
     """Candidate intersection predicted from the cards, never an expected value.
 
     Constraints 11 and 12 differ only in which root they prefer: the smaller or the
@@ -230,13 +286,16 @@ def linear_circle_root(linear, circle, prefer_smaller):
         root = math.sqrt(discriminant)
         roots = sorted(((-qb - root) / (2 * qa), (-qb + root) / (2 * qa)))
     for t in roots if prefer_smaller else list(reversed(roots)):
-        if within_linear(linear, t):
-            return add(origin, mul(d, t))
+        point = add(origin, mul(d, t))
+        if within_linear(linear, t) and (arc is None or arc_contains(arc, point)):
+            return point
     return None
 
 
-def circle_circle_root(a, b, prefer_first):
-    """Constraint 13 prefers +h*(ey,-ex), 14 prefers -h*(ey,-ex) in page coordinates."""
+def circle_circle_root(a, b, prefer_first, arcs=(None, None)):
+    """Constraint 13 prefers +h*(ey,-ex), 14 prefers -h*(ey,-ex) in page coordinates.
+
+    When a parent is an arc the preferred root must lie on it, otherwise the other root is tried."""
     delta = sub(b["center"], a["center"])
     span = math.hypot(*delta)
     if span == 0:
@@ -249,9 +308,63 @@ def circle_circle_root(a, b, prefer_first):
     if h2 < -tolerance:
         return None
     h = 0.0 if h2 <= tolerance else math.sqrt(h2)
-    sign = 1 if prefer_first else -1
     base = add(a["center"], mul([ex, ey], along))
-    return [base[0] + sign * h * ey, base[1] - sign * h * ex]
+    for sign in ((1, -1) if prefer_first else (-1, 1)):
+        point = [base[0] + sign * h * ey, base[1] - sign * h * ex]
+        if all(arc is None or arc_contains(arc, point) for arc in arcs):
+            return point
+    return None
+
+
+def gdi_angle(center, point):
+    """Angle of point seen from center, degrees, clockwise-positive on the page (y down)."""
+    return math.degrees(math.atan2(point[1] - center[1], point[0] - center[0]))
+
+
+def make_arc(center, radius, first, second, ccw_sweep):
+    """Arc geometry in the exchange convention (see spec/acceptance/README.md).
+
+    startAngle: visual-counterclockwise angle of the first endpoint, degrees (= -gdi_angle).
+    sweepAngle: signed degrees running from the first to the second endpoint, positive = visually CCW."""
+    start = -gdi_angle(center, first)
+    a = [center[0] + radius * math.cos(math.radians(start)), center[1] - radius * math.sin(math.radians(start))]
+    end = start + ccw_sweep
+    b = [center[0] + radius * math.cos(math.radians(end)), center[1] - radius * math.sin(math.radians(end))]
+    return {"kind": "arc", "center": list(center), "radius": radius, "startAngle": start, "sweepAngle": ccw_sweep, "a": a, "b": b}
+
+
+def ccw_between(center, first, second):
+    """Visual-counterclockwise sweep in (0,360] from the direction of `first` to the direction of `second`."""
+    value = (gdi_angle(center, first) - gdi_angle(center, second)) % 360.0
+    return value
+
+
+def circumcircle(a, b, c):
+    ax, ay = a
+    bx, by = b
+    cx, cy = c
+    d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
+    if d == 0:
+        return None
+    ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / d
+    uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / d
+    return [ux, uy], math.hypot(ax - ux, ay - uy)
+
+
+def arc_interval(arc):
+    """Covered interval [lo, hi] of visual-CCW angles in degrees, hi-lo = |sweep|."""
+    s, w = arc["startAngle"], arc["sweepAngle"]
+    return (s, s + w) if w >= 0 else (s + w, s)
+
+
+def arc_contains(arc, point, tolerance_deg=1e-6):
+    """True when the direction of `point` from the arc's centre lies in the covered interval."""
+    lo, hi = arc_interval(arc)
+    phi = -gdi_angle(arc["center"], point)
+    span = hi - lo
+    if span >= 360 - tolerance_deg:
+        return True
+    return ((phi - lo + tolerance_deg) % 360.0) <= span + 2 * tolerance_deg
 
 
 def predict(objects, html_bindings=None):
@@ -265,13 +378,17 @@ def predict(objects, html_bindings=None):
     html_bindings = html_bindings or {}
     for obj in objects:
         i, c, parents = obj["objectIndex"], obj["constraint"], obj["parents"]
-        eligible[i] = c in A_GROUP and (c != 0 or obj["mainKind"] == 1) and all(eligible.get(p, False) for p in parents)
+        eligible[i] = ((c in A_GROUP and (c != 0 or obj["mainKind"] == 1)) or c in m4_transforms.C_VERIFIED)             and all(eligible.get(p, False) for p in (parents[:1] if c == 75 else parents))
         ps = [out.get(p) for p in parents]
         g = None
         if not eligible[i]:
             continue
         if c == 0 and "savedPoint" in obj:
             g = {"kind": "point", "point": obj["savedPoint"]}
+        elif c in m4_transforms.C_VERIFIED and ps and ps[0] is not None and (all(ps) or c == 75):
+            matrix = m4_transforms.matrix_for(obj, ps, objects)
+            if matrix is not None:
+                g = m4_transforms.apply_matrix(matrix, ps[0])
         elif all(ps):
             points = [p["point"] for p in ps if p["kind"] == "point"]
             lines = [p for p in ps if p["kind"] in ("segment", "line", "ray")]
@@ -288,7 +405,15 @@ def predict(objects, html_bindings=None):
                 d = sub(lines[0]["b"], lines[0]["a"])
                 if c == 5:
                     d = [-d[1], d[0]]
-                g = {"kind": "line", "a": points[0], "b": add(points[0], d)}
+                # Native base points: P -/+ half the base vector, so that P is t = 0.5 (cards 5 and 6).
+                g = {"kind": "line", "a": sub(points[0], mul(d, 0.5)), "b": add(points[0], mul(d, 0.5))}
+            elif c == 7 and len(points) == 3 and len(ps) == 3:
+                u, v = sub(points[0], points[1]), sub(points[2], points[1])
+                nu, nv = math.hypot(*u), math.hypot(*v)
+                if nu > 0 and nv > 0:
+                    direction = add(mul(u, 1 / nu), mul(v, 1 / nv))
+                    if math.hypot(*direction) > 1e-12:
+                        g = {"kind": "ray", "a": points[1], "b": add(points[1], direction)}
             elif c == 8 and len(points) == len(ps) and len(points) >= 3:
                 g = {"kind": "polygon", "vertices": points}
             elif c == 9 and len(lines) == 2 and len(ps) == 2:
@@ -302,18 +427,19 @@ def predict(objects, html_bindings=None):
                         return line["kind"] == "line" or parameter >= 0 and (line["kind"] == "ray" or parameter <= 1)
                     if within(a, t) and within(b, u):
                         g = {"kind": "point", "point": add(a["a"], mul(d, t))}
-            elif c in (11, 12) and len(ps) == 2 and ps[0]["kind"] in ("segment", "line", "ray") and ps[1]["kind"] == "circle":
-                root = linear_circle_root(ps[0], ps[1], prefer_smaller=c == 11)
+            elif c in (11, 12) and len(ps) == 2 and ps[0]["kind"] in ("segment", "line", "ray") and ps[1]["kind"] in ("circle", "arc"):
+                root = linear_circle_root(ps[0], ps[1], prefer_smaller=c == 11, arc=ps[1] if ps[1]["kind"] == "arc" else None)
                 if root is not None:
                     g = {"kind": "point", "point": root}
-            elif c in (13, 14) and len(ps) == 2 and ps[0]["kind"] == "circle" and ps[1]["kind"] == "circle":
-                root = circle_circle_root(ps[0], ps[1], prefer_first=c == 13)
+            elif c in (13, 14) and len(ps) == 2 and all(q["kind"] in ("circle", "arc") for q in ps):
+                root = circle_circle_root(ps[0], ps[1], prefer_first=c == 13,
+                                          arcs=tuple(q if q["kind"] == "arc" else None for q in ps))
                 if root is not None:
                     g = {"kind": "point", "point": root}
             elif c == 15 and len(ps) == 1 and len(lines) == 1:
                 extra = obj.get("constraintExtra", b"")
                 parent = objects[parents[0] - 1]
-                if len(extra) == 12 and parent["constraint"] in (2, 63, 64):
+                if len(extra) == 12 and parent["mainKind"] == 2:
                     t, = struct.unpack_from("<d", extra, 4)
                     if math.isfinite(t):
                         g = {"kind": "point", "point": add(lines[0]["a"], mul(sub(lines[0]["b"], lines[0]["a"]), t))}
@@ -324,17 +450,97 @@ def predict(objects, html_bindings=None):
                     if math.isfinite(u) and math.isfinite(v) and abs(u * u + v * v - 1) <= 1e-9:
                         circle = circles[0]
                         g = {"kind": "point", "point": add(circle["center"], [circle["radius"] * u, -circle["radius"] * v])}
+            elif c == 15 and len(ps) == 1 and ps[0]["kind"] == "arc":
+                extra = obj.get("constraintExtra", b"")
+                if len(extra) == 12:
+                    t, = struct.unpack_from("<d", extra, 4)
+                    arc = ps[0]
+                    if math.isfinite(t):
+                        phi = math.radians(arc["startAngle"] + t * arc["sweepAngle"])
+                        g = {"kind": "point", "point": [arc["center"][0] + arc["radius"] * math.cos(phi),
+                                                         arc["center"][1] - arc["radius"] * math.sin(phi)]}
+            elif c == 15 and len(ps) == 1 and ps[0]["kind"] == "polygon":
+                extra = obj.get("constraintExtra", b"")
+                if len(extra) == 20:
+                    s_, = struct.unpack_from("<d", extra, 4)
+                    i_, = struct.unpack_from("<H", extra, 12)
+                    vs = ps[0]["vertices"]
+                    if math.isfinite(s_) and i_ < len(vs):
+                        v0, v1 = vs[i_], vs[(i_ + 1) % len(vs)]
+                        g = {"kind": "point", "point": add(v0, mul(sub(v1, v0), s_))}
             elif c == 10 and len(circles) == 1 and len(ps) == 1:
                 g = {**circles[0], "kind": "disk"}
+            elif c == 79 and len(ps) == 3 and ps[0]["kind"] == "circle" and ps[1]["kind"] == "point" and ps[2]["kind"] == "point":
+                circle, first, second = ps[0], ps[1]["point"], ps[2]["point"]
+                sweep = ccw_between(circle["center"], first, second)
+                if sweep > 0 and distance(first, circle["center"]) > 0 and distance(second, circle["center"]) > 0:
+                    g = make_arc(circle["center"], circle["radius"], first, second, sweep)
+            elif c == 80 and len(points) == 3 and len(ps) == 3:
+                center, first, second = points
+                radius = distance(center, first)
+                sweep = ccw_between(center, first, second)
+                if radius > 0 and distance(center, second) > 0 and sweep > 0:
+                    g = make_arc(center, radius, first, second, sweep)
+            elif c == 81 and len(points) == 3 and len(ps) == 3:
+                first, middle, second = points
+                circle = circumcircle(first, middle, second)
+                if circle is not None:
+                    center, radius = circle
+                    sweep = ccw_between(center, first, second)
+                    if sweep > 0:
+                        through = ccw_between(center, first, middle)
+                        g = make_arc(center, radius, first, second, sweep if 0 < through < sweep else sweep - 360.0)
+            elif c in (82, 83) and len(ps) == 1 and ps[0]["kind"] == "arc":
+                g = {**ps[0], "kind": "sector" if c == 82 else "circular-segment"}
         if g is not None:
             out[i] = g
     return out, eligible
+
+
+def bezier_region(p):
+    """A filled path made of one M and only cubic segments approximating a circular arc.
+
+    Returns a circular-segment measurement (centre, radius, covered visual-CCW interval) or None.
+    GDI+ builds such arcs from <=90 degree cubic pieces whose end points lie on the circle; the
+    centre is the intersection of the end-point normals of the first piece (exact for an arc)."""
+    subs = p.get("subpaths", [])
+    pts = p.get("px96", [])
+    if len(subs) != 1 or not subs[0].get("ops") or subs[0]["ops"][0][0] != "M":
+        return None
+    if any(op[0] not in ("M", "B") for op in subs[0]["ops"]) or len(pts) % 3 != 1 or len(pts) < 4:
+        return None
+    p0, p1, p2, p3 = pts[0], pts[1], pts[2], pts[3]
+    t0, t3 = sub(p1, p0), sub(p3, p2)
+    det = t0[0] * t3[1] - t0[1] * t3[0]
+    if abs(det) < 1e-9:
+        return None
+    # centre c: (c-p0).t0 = 0 and (c-p3).t3 = 0
+    r0 = p0[0] * t0[0] + p0[1] * t0[1]
+    r3 = p3[0] * t3[0] + p3[1] * t3[1]
+    center = [(r0 * t3[1] - r3 * t0[1]) / det, (t0[0] * r3 - t3[0] * r0) / det]
+    radius = distance(center, p0)
+    ends = [pts[0]] + [pts[i] for i in range(3, len(pts), 3)]
+    dedup = [ends[0]]
+    for q in ends[1:]:
+        if distance(q, dedup[-1]) > 1e-6:
+            dedup.append(q)
+    if radius <= 0 or any(abs(distance(center, q) - radius) > 0.02 + 1e-4 * radius for q in dedup) or len(dedup) < 2:
+        return None
+    angles = [-gdi_angle(center, q) for q in dedup]
+    total, unwrapped = 0.0, [angles[0]]
+    for a_, b_ in zip(angles, angles[1:]):
+        total += (b_ - a_ + 180.0) % 360.0 - 180.0
+        unwrapped.append(angles[0] + total)
+    lo, hi = min(unwrapped), max(unwrapped)
+    return {"kind": "circular-segment", "center": center, "radius": radius, "startAngle": lo, "sweepAngle": hi - lo}
 
 
 def measured_primitives(emf):
     out = []
     for i, p in enumerate(emf["primitives"]):
         pts = p.get("px96", [])
+        if any(v is None for q in pts for v in q):
+            continue  # undefined coordinates (clipped / non-finite) never become measurements
         d = {"primitiveIndex": i, "layer": p.get("layer"), "pen": p.get("pen"), "brush": p.get("brush")}
         if p["kind"] == "ellipse" and len(pts) == 2:
             w, h = abs(pts[1][0] - pts[0][0]), abs(pts[1][1] - pts[0][1])
@@ -344,6 +550,14 @@ def measured_primitives(emf):
                     out.append({**d, "kind": "point", "point": center, "diameter": (w + h) / 2})
                 if w > 18:
                     out.append({**d, "kind": "disk" if p.get("fill") else "circle", "center": center, "radius": (w + h) / 4})
+        elif p["kind"] in ("arc", "pie") and len(pts) == 2 and p.get("sweep") is not None and p.get("start") is not None:
+            w, h = abs(pts[1][0] - pts[0][0]), abs(pts[1][1] - pts[0][1])
+            if abs(w - h) <= 0.01 and w > 0 and (p["kind"] == "arc" or p.get("fill")):
+                # EMF+ angles are clockwise-positive on the page; store the visual-CCW covered interval.
+                out.append({**d, "kind": "arc" if p["kind"] == "arc" else "sector", "center": mul(add(*pts), 0.5), "radius": (w + h) / 4,
+                            "startAngle": -(p["start"] + p["sweep"]), "sweepAngle": p["sweep"]})
+        elif p["kind"] == "path" and p.get("mode") == "fill" and bezier_region(p) is not None:
+            out.append({**d, **bezier_region(p)})
         elif p["kind"] in ("path", "line", "polyline", "polygon"):
             if p["kind"] == "path":
                 subs = p.get("subpaths", [])
@@ -434,10 +648,34 @@ def match_error(g, p):
                    max(distance(g["a"], p["b"]), distance(g["b"], p["a"])))
     if kind == "line" and p["kind"] == "edge":
         return max(line_distance(p["a"], g["a"], g["b"]), line_distance(p["b"], g["a"], g["b"]))
+    if kind in ("arc", "sector", "circular-segment") and p["kind"] == kind:
+        return arc_error(g, p)
     # Ray origin/order still awaits the independently reviewed object card.
     if kind == "polygon" and p["kind"] == "polygon":
         return polygon_error(g["vertices"], p["vertices"])
     return math.inf
+
+
+def arc_endpoints(arc):
+    """Points at the interval's low end, middle and high end (the middle tells an arc from its complement)."""
+    lo, hi = arc_interval(arc)
+    c, r = arc["center"], arc["radius"]
+
+    def at(angle):
+        return [c[0] + r * math.cos(math.radians(angle)), c[1] - r * math.sin(math.radians(angle))]
+
+    return at(lo), at(hi), at((lo + hi) / 2), hi - lo
+
+
+def arc_error(g, p):
+    """Largest of: centre, radius and the interval's end/middle points (px). Compares covered sets:
+    the middle point makes an arc and its complement (same end points, even for two half circles) differ."""
+    base = max(distance(g["center"], p["center"]), abs(g["radius"] - p["radius"]))
+    glo, ghi, gmid, gspan = arc_endpoints(g)
+    plo, phi, pmid, pspan = arc_endpoints(p)
+    if gspan >= 359.999 or pspan >= 359.999:
+        return base if gspan >= 359.999 and pspan >= 359.999 else math.inf
+    return max(base, distance(glo, plo), distance(ghi, phi), distance(gmid, pmid))
 
 
 def geometry_of(p, kind):
@@ -449,6 +687,12 @@ def geometry_of(p, kind):
         return {"center": p["center"], "radius": p["radius"]}
     if kind == "polygon":
         return {"vertices": p["vertices"]}
+    if kind in ("arc", "sector", "circular-segment"):
+        # Exchange convention (spec/acceptance/README.md): radians, startAngle = angle of `start`, sweepAngle > 0 here.
+        lo, hi = arc_interval(p)
+        a, b, _, _ = arc_endpoints(p)
+        return {"center": p["center"], "radius": p["radius"], "startAngle": math.radians(lo), "sweepAngle": math.radians(hi - lo),
+                "start": a, "end": b}
     raise ValueError(kind)
 
 
@@ -490,22 +734,42 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
     offset, alignment = fit_offset(objects, measured) if emf else (None, {"reason": emf_unavailable_reason or "no_emf"})
     assertions, excluded, candidates = [], [], {}
     in_document = [translated(p, offset) for p in measured] if offset is not None else []
+    identified_cache = {}
+
+    def identified(index):
+        """Object identity is certain: unique HTML graph step, or an HTML-less type whose visible parents are identified."""
+        if index in identified_cache:
+            return identified_cache[index]
+        o = objects[index - 1]
+        if index in html_bindings:
+            result = True
+        elif o["constraint"] in HTML_UNREPRESENTED and o["state"] == 0:
+            relevant = o["parents"][:1] if o["constraint"] == 75 else o["parents"]
+            result = all(identified(p) for p in relevant)
+        else:
+            result = False
+        identified_cache[index] = result
+        return result
+
     for obj in objects:
         i, c = obj["objectIndex"], obj["constraint"]
-        if c not in A_GROUP or c == 0 and obj["mainKind"] != 1:
+        if not is_asserted_group(obj) and not (c in C_GROUP and c not in m4_transforms.C_VERIFIED):
             continue
         reason = None
-        if not eligible.get(i):
-            reason = "ancestor_outside_A_group"
+        if c in C_GROUP and c not in m4_transforms.C_VERIFIED:
+            reason = "transform_type_not_yet_verified"
+        elif not eligible.get(i):
+            reason = "ancestor_outside_predicted_groups"
         elif i in html_bindings and html_bindings[i]["hidden"]:
             reason = "hidden_html_no_emf_expectation"
-        elif obj["state"] == 4:
-            reason = "hidden_state_4_no_emf_expectation"
+        elif obj["state"] != 0 and i not in html_bindings:
+            # Visibility evidence: for 13,132 HTML-bound objects state 0 <=> visible, states 1..4 <=> hidden.
+            reason = "hidden_state_no_emf_expectation"
         elif i not in hints:
             reason = "geometry_matcher_not_yet_implemented"
         elif offset is None:
             reason = alignment["reason"]
-        elif i not in html_bindings:
+        elif not identified(i):
             reason = "native_html_mapping_not_unique"
         else:
             g = hints[i]
@@ -531,15 +795,19 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
                            "appearance": rounded(appearance_of(next(q for q in measured if q["primitiveIndex"] == p["primitiveIndex"]), emf)),
                            "provenance": {"source": "original_emf_primitive", "primitiveIndex": p["primitiveIndex"],
                                           "layer": p["layer"], "mapping": "unique_geometry_and_color_then_unique_object_owner",
-                                          "htmlStep": html_bindings[i]["step"], "htmlMapping": "unique_free_point_or_parent_graph",
+                                          "htmlStep": html_bindings[i]["step"] if i in html_bindings else None,
+                                          "htmlMapping": "unique_free_point_or_parent_graph" if i in html_bindings
+                                          else "type_has_no_html_step_visible_state_0_and_identified_parents",
                                           "matchingPredictionUsed": True, "pen": p["pen"], "brush": p["brush"]}})
     try:
         rel = source.resolve().relative_to(ROOT).as_posix()
     except ValueError:
         rel = str(source.resolve())
-    a_count = sum(o["constraint"] in A_GROUP and (o["constraint"] != 0 or o["mainKind"] == 1) for o in objects)
+    a_count = sum(is_geometric_a(o) for o in objects)
+    c_count = sum(o["constraint"] in C_GROUP for o in objects)
     other_pages = [{"pageIndex": p["pageIndex"], "objects": len(p["objects"]),
-                    "AObjects": sum(o["constraint"] in A_GROUP and (o["constraint"] != 0 or o["mainKind"] == 1) for o in p["objects"]),
+                    "AObjects": sum(is_geometric_a(o) for o in p["objects"]),
+                    "CObjects": sum(o["constraint"] in C_GROUP for o in p["objects"]),
                     "reason": "non_current_page_no_export"} for p in doc["pages"] if p is not page]
     return {"schema": "gsp-m2-oracle-case-v1", "source": {"path": rel, "sha256": doc["sha256"]},
             "pageIndex": page["pageIndex"], "pageCount": len(doc["pages"]),
@@ -547,8 +815,15 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
                        "canvas": html["canvas"] if html else None, "layer": emf["primitives_layer"] if emf else None,
                        "alignment": alignment}, "assertions": assertions, "excluded": excluded, "otherPages": other_pages,
             "coverage": {"activePageObjects": len(objects), "activePageAObjects": a_count,
-                         "eligibleWithAAncestors": sum(eligible.values()), "assertedObjects": len(assertions),
-                         "excludedAObjects": len(excluded), "styleAndLabelsAccepted": False,
+                         "activePageCObjects": c_count,
+                         "eligibleWithAAncestors": sum(v and is_geometric_a(objects[k - 1]) for k, v in eligible.items()),
+                         "eligibleCObjects": sum(v and objects[k - 1]["constraint"] in C_GROUP for k, v in eligible.items()),
+                         "assertedObjects": len(assertions),
+                         "assertedAObjects": sum(is_geometric_a(objects[a["objectIndex"] - 1]) for a in assertions),
+                         "assertedCObjects": sum(a["constraint"] in C_GROUP for a in assertions),
+                         "excludedAObjects": sum(is_geometric_a(objects[x["objectIndex"] - 1]) for x in excluded),
+                         "excludedCObjects": sum(x["constraint"] in C_GROUP for x in excluded),
+                         "styleAndLabelsAccepted": False,
                          "toolAObjects": sum(o["constraint"] in A_GROUP and (o["constraint"] != 0 or o["mainKind"] == 1)
                                              for tool in doc["tools"] for o in tool["objects"]),
                          "fullM2Accepted": False}}
@@ -610,6 +885,9 @@ def corpus_inventory():
                 other += a
         tool = sum(o["constraint"] in A_GROUP and (o["constraint"] != 0 or o["mainKind"] == 1)
                    for section in doc["tools"] for o in section["objects"])
+        counts["currentPageCObjects"] += sum(o["constraint"] in C_GROUP for o in doc["pages"][doc["activePageIndex"] - 1]["objects"])
+        counts["nonCurrentPageCObjects"] += sum(o["constraint"] in C_GROUP for pg in doc["pages"] if pg["pageIndex"] != doc["activePageIndex"]
+                                                for o in pg["objects"])
         counts["currentPageGeometricAObjects"] += current
         counts["nonCurrentPageGeometricAObjects"] += other
         counts["toolGeometricAObjects"] += tool
@@ -645,7 +923,8 @@ def build_batch(manifests, output, max_emf_bytes):
         except (OSError, ValueError, IndexError, struct.error) as exc:
             failures.append({"source": rel, "reason": str(exc)})
     totals = {key: sum(x["coverage"][key] for x in index)
-              for key in ("activePageObjects", "activePageAObjects", "eligibleWithAAncestors", "assertedObjects", "excludedAObjects", "toolAObjects")}
+              for key in ("activePageObjects", "activePageAObjects", "eligibleWithAAncestors", "assertedObjects", "assertedAObjects",
+                          "assertedCObjects", "excludedAObjects", "toolAObjects", "activePageCObjects", "eligibleCObjects", "excludedCObjects")}
     reasons = Counter()
     constraints = Counter()
     for item in index:
