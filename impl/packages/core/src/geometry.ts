@@ -142,6 +142,45 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
     const t = cross(sub(b, a), e) / den, u = cross(sub(b, a), d) / den;
     return inLinearRange(first, t) && inLinearRange(second, u) ? point(at(a, d, t)) : absent('intersection-outside-parent-range');
   }
+  if (id === 11 || id === 12) {
+    if (p.length !== 2 || first === undefined || second === undefined || !isLinear(first)) return unsupported('expected-linear-and-circle-parents');
+    if (second.kind === 'arc') return unsupported('intersection-arc-parent-unsupported');
+    if (second.kind !== 'circle') return unsupported('intersection-circle-parent-required');
+    const origin = first.geometry.a, d = sub(first.geometry.b, origin);
+    const qa = d[0] * d[0] + d[1] * d[1];
+    if (qa === 0) return absent('degenerate-direction');
+    const offset = sub(origin, second.geometry.center), radius = second.geometry.radius;
+    const qb = 2 * (d[0] * offset[0] + d[1] * offset[1]);
+    const qc = offset[0] * offset[0] + offset[1] * offset[1] - radius * radius;
+    const discriminant = qb * qb - 4 * qa * qc;
+    const tolerance = 64 * Number.EPSILON * (qb * qb + Math.abs(4 * qa * qc));
+    if (discriminant < -tolerance) return absent('line-circle-no-intersection');
+    const roots = discriminant <= tolerance
+      ? [-qb / (2 * qa)]
+      : [(-qb - Math.sqrt(discriminant)) / (2 * qa), (-qb + Math.sqrt(discriminant)) / (2 * qa)];
+    for (const t of id === 11 ? roots : [...roots].reverse()) {
+      if (inLinearRange(first, t)) return point(at(origin, d, t));
+    }
+    return absent('intersection-outside-parent-range');
+  }
+  if (id === 13 || id === 14) {
+    if (p.length !== 2 || first === undefined || second === undefined) return unsupported('expected-two-circle-parents');
+    if (first.kind === 'arc' || second.kind === 'arc') return unsupported('intersection-arc-parent-unsupported');
+    if (first.kind !== 'circle' || second.kind !== 'circle') return unsupported('intersection-circle-parent-required');
+    const o1 = first.geometry.center, o2 = second.geometry.center;
+    const r1 = first.geometry.radius, r2 = second.geometry.radius;
+    const delta = sub(o2, o1), distance = length(delta);
+    if (distance === 0) return absent('concentric-circle-parents');
+    const ex = delta[0] / distance, ey = delta[1] / distance;
+    const along = (r1 * r1 - r2 * r2 + distance * distance) / (2 * distance);
+    const h2 = r1 * r1 - along * along;
+    const tolerance = 64 * Number.EPSILON * (r1 * r1 + along * along);
+    if (h2 < -tolerance) return absent('circle-circle-no-intersection');
+    const h = h2 <= tolerance ? 0 : Math.sqrt(h2);
+    const sign = id === 13 ? 1 : -1;
+    const base: XY = [o1[0] + along * ex, o1[1] + along * ey];
+    return point([base[0] + sign * h * ey, base[1] - sign * h * ex]);
+  }
   if (id === 15) {
     if (p.length !== 1 || first === undefined) return unsupported('path-point-needs-one-parent');
     const record = o.node.records.find((r) => r.kind === 2003);

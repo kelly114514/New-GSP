@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { PageGeometryEvaluator, evaluatePageGeometry, parseGsp, readDocumentModel, toGeometryJson, writeGsp } from '../src/index';
-import type { ContainerModel, ObjectInfo } from '../src/index';
+import type { ContainerModel, EvaluatedObject, ObjectInfo } from '../src/index';
 import { baselineSamplesDir, readBytes } from './support';
 function baseline(name = 'midpoint.gsp') { return readDocumentModel(parseGsp(readBytes(join(baselineSamplesDir, name)))); }
 function pointObject(index: number, x: number, y: number): ObjectInfo {
@@ -67,6 +67,131 @@ describe('M2 geometry and dependency propagation', () => {
     const result = evaluatePageGeometry(page(pointObject(1, 0, 0), pointObject(2, 1, 0), pointObject(3, 0, 1), pointObject(4, 1, 1 + 1e-10), object(5, 63, [1, 2]), object(6, 63, [3, 4]), object(7, 9, [5, 6]))).objects[6]!;
     expect(result).toMatchObject({ exists: true, kind: 'point' });
     if (result.status === 'ok' && result.kind === 'point') expect(Math.abs(result.geometry.x)).toBeGreaterThan(1e9);
+  });
+});
+
+describe('line-circle intersections: constraints 11 and 12', () => {
+  function circle(index: number, center: number, rim: number): ObjectInfo { return object(index, 3, [center, rim]); }
+  function assertPoint(result: EvaluatedObject | undefined, x: number, y: number): void {
+    expect(result).toMatchObject({ status: 'ok', exists: true, kind: 'point' });
+    if (result?.status === 'ok' && result.kind === 'point') {
+      expect(result.geometry.x).toBeCloseTo(x, 9);
+      expect(result.geometry.y).toBeCloseTo(y, 9);
+    }
+  }
+  it('picks the root with the smaller or larger parent parameter, not a coordinate order', () => {
+    const results = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 2, 0), object(3, 2, [1, 2]),
+      pointObject(4, 1, 0), pointObject(5, 1.5, 0), circle(6, 4, 5),
+      object(7, 11, [3, 6]), object(8, 12, [3, 6]),
+    )).objects;
+    assertPoint(results[6], 0.5, 0);
+    assertPoint(results[7], 1.5, 0);
+  });
+  it('falls back to the other root when the preferred one leaves the segment range', () => {
+    const results = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 1, 0), object(3, 2, [1, 2]),
+      pointObject(4, 2, 0), pointObject(5, 3.5, 0), circle(6, 4, 5),
+      object(7, 11, [3, 6]), object(8, 12, [3, 6]),
+    )).objects;
+    assertPoint(results[6], 0.5, 0);
+    assertPoint(results[7], 0.5, 0);
+  });
+  it('treats a tangent hit as one root and a separated circle as nonexistent', () => {
+    const tangent = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 2, 0), object(3, 2, [1, 2]),
+      pointObject(4, 1, 1), pointObject(5, 2, 1), circle(6, 4, 5),
+      object(7, 11, [3, 6]), object(8, 12, [3, 6]),
+    )).objects;
+    assertPoint(tangent[6], 1, 0);
+    assertPoint(tangent[7], 1, 0);
+    const separated = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 2, 0), object(3, 2, [1, 2]),
+      pointObject(4, 1, 5), pointObject(5, 2, 5), circle(6, 4, 5),
+      object(7, 11, [3, 6]), object(8, 12, [3, 6]),
+    )).objects;
+    expect(separated[6]).toMatchObject({ status: 'not-existing', reason: 'line-circle-no-intersection' });
+    expect(separated[7]).toMatchObject({ status: 'not-existing' });
+  });
+  it('reports a nonexistent intersection when both roots are outside every parent range', () => {
+    const results = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 1, 0), object(3, 2, [1, 2]),
+      pointObject(4, 5, 0), pointObject(5, 6, 0), circle(6, 4, 5),
+      object(7, 11, [3, 6]), object(8, 12, [3, 6]),
+    )).objects;
+    expect(results[6]).toMatchObject({ status: 'not-existing', reason: 'intersection-outside-parent-range' });
+    expect(results[7]).toMatchObject({ status: 'not-existing', reason: 'intersection-outside-parent-range' });
+  });
+  it('requires a linear first parent and a circle second parent', () => {
+    const results = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 1, 0), object(3, 2, [1, 2]),
+      pointObject(4, 5, 0), pointObject(5, 6, 0), object(6, 3, [4, 5]), object(7, 10, [6]),
+      object(8, 11, [3, 7]), object(9, 12, [7, 3]),
+    )).objects;
+    expect(results[7]).toMatchObject({ status: 'unsupported', reason: 'intersection-circle-parent-required' });
+    expect(results[8]).toMatchObject({ status: 'unsupported', reason: 'expected-linear-and-circle-parents' });
+  });
+});
+
+describe('circle-circle intersections: constraints 13 and 14', () => {
+  function circle(index: number, cx: number, cy: number, radius: number): ObjectInfo[] {
+    return [pointObject(index, cx, cy), pointObject(index + 1, cx + radius, cy), object(index + 2, 3, [index, index + 1])];
+  }
+  function assertPoint(result: EvaluatedObject | undefined, x: number, y: number): void {
+    expect(result).toMatchObject({ status: 'ok', exists: true, kind: 'point' });
+    if (result?.status === 'ok' && result.kind === 'point') {
+      expect(result.geometry.x).toBeCloseTo(x, 9);
+      expect(result.geometry.y).toBeCloseTo(y, 9);
+    }
+  }
+  it('places branch one and branch two on opposite sides of the O1 to O2 direction', () => {
+    const results = evaluatePageGeometry(page(
+      ...circle(1, 0, 0, 5), ...circle(4, 6, 0, 5),
+      object(7, 13, [3, 6]), object(8, 14, [3, 6]),
+    )).objects;
+    assertPoint(results[6], 3, -4);
+    assertPoint(results[7], 3, 4);
+  });
+  it('keeps the parent order, so swapping the parents swaps the branch points', () => {
+    const results = evaluatePageGeometry(page(
+      ...circle(1, 0, 0, 5), ...circle(4, 6, 0, 5),
+      object(7, 13, [6, 3]), object(8, 14, [6, 3]),
+    )).objects;
+    assertPoint(results[6], 3, 4);
+    assertPoint(results[7], 3, -4);
+  });
+  it('collapses both branches at a tangency and reports separated, contained and concentric parents as nonexistent', () => {
+    const tangent = evaluatePageGeometry(page(
+      ...circle(1, 0, 0, 5), ...circle(4, 8, 0, 3),
+      object(7, 13, [3, 6]), object(8, 14, [3, 6]),
+    )).objects;
+    assertPoint(tangent[6], 5, 0);
+    assertPoint(tangent[7], 5, 0);
+    const separated = evaluatePageGeometry(page(
+      ...circle(1, 0, 0, 5), ...circle(4, 20, 0, 5),
+      object(7, 13, [3, 6]),
+    )).objects;
+    expect(separated[6]).toMatchObject({ status: 'not-existing', reason: 'circle-circle-no-intersection' });
+    const contained = evaluatePageGeometry(page(
+      ...circle(1, 0, 0, 5), ...circle(4, 1, 0, 2),
+      object(7, 13, [3, 6]),
+    )).objects;
+    expect(contained[6]).toMatchObject({ status: 'not-existing', reason: 'circle-circle-no-intersection' });
+    const concentric = evaluatePageGeometry(page(
+      ...circle(1, 0, 0, 5), ...circle(4, 0, 0, 3),
+      object(7, 13, [3, 6]), object(8, 14, [3, 6]),
+      ...circle(9, 0, 0, 5), object(12, 13, [3, 11]),
+    )).objects;
+    expect(concentric[6]).toMatchObject({ status: 'not-existing', reason: 'concentric-circle-parents' });
+    expect(concentric[7]).toMatchObject({ status: 'not-existing', reason: 'concentric-circle-parents' });
+    expect(concentric[11]).toMatchObject({ status: 'not-existing', reason: 'concentric-circle-parents' });
+  });
+  it('requires two circle parents and does not reorder them by object index', () => {
+    const results = evaluatePageGeometry(page(
+      pointObject(1, 0, 0), pointObject(2, 5, 0), object(3, 3, [1, 2]), object(4, 10, [3]),
+      object(5, 13, [3, 4]),
+    )).objects;
+    expect(results[4]).toMatchObject({ status: 'unsupported', reason: 'intersection-circle-parent-required' });
   });
 });
 
