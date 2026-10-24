@@ -1,0 +1,24 @@
+{
+  "schema": "gsp-m2-oracle-index-v1",
+  "cases": [
+    {
+      "case": "baseline-empty.json"
+    },
+    {
+      "case": "baseline-point.json"
+    },
+    {
+      "case": "baseline-segment.json"
+    },
+    {
+      "case": "baseline-midpoint.json"
+    },
+    {
+      "case": "baseline-midpoint-moved.json"
+    },
+    {
+      "case": "baseline-midpoint-drag.json"
+    }
+  ],
+  "fullM2Accepted": false
+}
