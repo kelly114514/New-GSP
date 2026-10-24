@@ -53,6 +53,10 @@ ORIGINAL_DIR = REPO / "original" / "sketchpad5"
 RUNTIME = REPO / "oracle" / "runtime"
 STATE = REPO / "oracle" / "state"
 WORK = REPO / "oracle" / "work"
+
+# 每个 job 结束时清掉临时输入副本会累计删除调用；在删除被外部策略限额的环境里，
+# 长时间批处理会因此中途被拦住。--keep-work-files 让 work/in 的副本留到本轮结束。
+KEEP_WORK_FILES = False
 EXE_NAME = "GSP5chs.exe"
 EXE_SHA256 = "bf22c09822ad2da66f8e3655e5a9cbd6c8e494feaf78690cf118f9261887c7b3"
 
@@ -914,6 +918,8 @@ def run_job(sess, src, rel, want, out_dir, timeout, job_no=0, shots=None):
     jobdir = WORK
     for sub in ("in", "out"):
         (jobdir / sub).mkdir(parents=True, exist_ok=True)
+        if sub == "in" and KEEP_WORK_FILES:
+            continue
         for f in (jobdir / sub).iterdir():
             try:
                 f.unlink() if f.is_file() else shutil.rmtree(f, ignore_errors=True)
@@ -1012,6 +1018,8 @@ def run_job(sess, src, rel, want, out_dir, timeout, job_no=0, shots=None):
             entry["stop_required"] = True
             entry.setdefault("notes", []).append("本轮停止：会话不可安全继续；不会自动重启原版")
     for sub in ("in", "out"):
+        if sub == "in" and KEEP_WORK_FILES:
+            continue
         for f in (jobdir / sub).glob("*"):
             try:
                 f.unlink()
@@ -1266,6 +1274,8 @@ def build_parser():
         p.add_argument("--show", choices=["min", "normal"], default="min", help="原版窗口启动状态 (默认最小化, 不抢焦点)")
         p.add_argument("--root", help="输入相对路径的基准目录 (默认仓库根)")
         p.add_argument("--screenshots", action="store_true", help="失败时保存窗口截图到 <out-dir>/_fail (需要 Pillow)")
+        p.add_argument("--keep-work-files", action="store_true",
+                       help="保留 oracle/work/in 里的临时输入副本 (默认每个文件用完即删); 删除受限的环境里建议开启")
         p.add_argument("-v", "--verbose", action="store_true")
 
     p = sub.add_parser("setup")
@@ -1292,6 +1302,8 @@ def build_parser():
 
 def main(argv=None):
     a = build_parser().parse_args(argv)
+    global KEEP_WORK_FILES
+    KEEP_WORK_FILES = bool(getattr(a, "keep_work_files", False))
     if str(WORK).encode("ascii", "ignore").decode() != str(WORK):
         log("警告: work 目录含非 ASCII 字符 (%s), ANSI 对话框可能写不进路径" % WORK)
     try:

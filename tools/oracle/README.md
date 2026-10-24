@@ -7,7 +7,7 @@
 
 原版是用户自己的授权副本。程序只从 `oracle/runtime/` 的副本运行（启动前校验 SHA-256 `bf22c098…c7b3`）；输入 `.gsp` 先复制到 `oracle/work/in/` 再打开，原件不会被改动。
 
-> 注意：仓库 `.gitignore` 里的 `oracle/`（无前导斜杠）会连 `tools/oracle/` 一起忽略，提交前需改成 `/oracle/`。
+> 注意：`.gitignore` 用 `/oracle/`（带前导斜杠）只忽略本机导出目录，`tools/oracle/` 照常入库。改成不带斜杠的 `oracle/` 会把本目录一起忽略。
 
 ## 1. 环境
 
@@ -48,7 +48,9 @@ python tools\emf_dump.py X.emf --digest                                         
 python tools\oracle\test_emf_dump.py                                                         # 解析器自测（现场用 GDI 画一个 EMF 再核对）
 ```
 
-常用选项：`--timeout S` 单文件总超时（默认 90）；`--retries N` 仅在原版干净拒绝文件、会话仍安全时重试（默认 0）；`--resume` 跳过 manifest 里已成功且输出还在、输入哈希未变的文件（原版明确不生成 EMF 的空页也能跳过），失败/超时的会列入本轮（`--skip-failed` 连它们也跳过）；`--max-files N` 本轮最多处理 N 个文件后停止（默认 0，不限制；旧选项 `--recycle` 是此选项的别名，不再重启）；`--show min|normal`（见第 5 节，**默认最小化，请勿随意改**）；`--screenshots` 失败时存窗口截图到 `<out-dir>/_fail/`。
+常用选项：`--timeout S` 单文件总超时（默认 90）；`--retries N` 仅在原版干净拒绝文件、会话仍安全时重试（默认 0）；`--resume` 跳过 manifest 里已成功且输出还在、输入哈希未变的文件（原版明确不生成 EMF 的空页也能跳过），失败/超时的会列入本轮（`--skip-failed` 连它们也跳过）；`--max-files N` 本轮最多处理 N 个文件后停止（默认 0，不限制；旧选项 `--recycle` 是此选项的别名，不再重启）；`--show min|normal`（见第 5 节，**默认最小化，请勿随意改**）；`--screenshots` 失败时存窗口截图到 `<out-dir>/_fail/`；`--keep-work-files` 保留 `oracle/work/in/` 的临时输入副本（见下）。
+
+**`--keep-work-files` 用在删除受限的环境**：每个文件处理完会删掉 `work/in` 的输入副本，长批次累计上千次删除。宿主要是按每条命令/每轮给删除配额（运行时报 `SAFE_DELETE_BULK_CONFIRM_REQUIRED`），批次会在约第 45–50 个文件处被强制中断。开启本选项后 `work/in` 的副本不删（同名文件后写覆盖前写，不影响结果），本轮跑完手动清一次即可。`work/out` 的清空保留，因为要靠它判断原版是否真的写出了文件。
 
 输出目录镜像输入的相对路径（相对仓库根，或 `--root`）：`<out-dir>/<相对目录>/<主名>.emf|.htm`，另有 `manifest.jsonl`。
 
