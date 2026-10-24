@@ -1,4 +1,4 @@
-import type { ContainerModel, ObjectInfo } from '@gsp-plus/core';
+import type { ContainerModel, ObjectInfo, PageGeometry, GeometryStatus } from '@gsp-plus/core';
 
 /** 对象列表里的一行。 */
 export interface ObjectRow {
@@ -17,6 +17,8 @@ export interface ObjectRow {
   point: { x: number; y: number } | undefined;
   /** 当前是否在画布上画出。 */
   drawn: boolean;
+  geometryStatus: GeometryStatus;
+  reason: string | undefined;
 }
 
 /**
@@ -41,9 +43,11 @@ export function describeObject(o: ObjectInfo): string {
 }
 
 /** 一页的对象列表行，按对象序号升序。 */
-export function objectRows(page: ContainerModel, drawn: ReadonlySet<number>): ObjectRow[] {
+export function objectRows(page: ContainerModel, drawn: ReadonlySet<number>, evaluation?: PageGeometry): ObjectRow[] {
+  const results = new Map(evaluation?.objects.map((o) => [o.objectIndex, o]));
   return page.objects.map((o) => {
     const label = o.label?.text;
+    const result = results.get(o.index);
     return {
       index: o.index,
       constraintId: o.constraintId,
@@ -54,6 +58,8 @@ export function objectRows(page: ContainerModel, drawn: ReadonlySet<number>): Ob
       label: label !== undefined && label.length > 0 ? label : undefined,
       point: o.freePoint === undefined ? undefined : { x: o.freePoint.x, y: o.freePoint.y },
       drawn: drawn.has(o.index),
+      geometryStatus: result?.status ?? (drawn.has(o.index) ? 'ok' : 'unsupported'),
+      reason: result !== undefined && result.status !== 'ok' ? result.reason : undefined,
     };
   });
 }
@@ -68,3 +74,5 @@ export function pageTabTitle(page: ContainerModel, pageIndex: number): string {
 export function formatCoordinate(value: number): string {
   return String(Math.round(value * 1000) / 1000);
 }
+
+

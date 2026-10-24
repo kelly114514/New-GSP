@@ -11,6 +11,8 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
     "test": "vitest run",
     "gen": "node scripts/gen-tables.ts",
-    "dump": "node scripts/gsp-dump.ts"
+    "dump": "node scripts/gsp-dump.ts",
+    "geometry:dump": "node scripts/geometry-dump.ts"
   }
 }
+

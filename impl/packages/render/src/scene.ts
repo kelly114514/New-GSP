@@ -1,136 +1,78 @@
-/**
- * 页面绘制描述（纯数据，不依赖 DOM）：把一个页的对象模型转成“要画什么”的列表。
- *
- * M1 只能画两类东西，不需要几何计算：
- * - 自由点（对象带 2201 坐标）：按保存的坐标画一个点；
- * - 线段（约束 ID 2）且两个父对象都是自由点：直接连接两点的保存坐标。
- * 其它对象（中点、圆、交点……）在 M1 不绘制，只计入“暂不支持”。
- */
+import { evaluatePageGeometry } from '@gsp-plus/core';
+import type { ContainerModel, Geometry, PageGeometry, ObjectInfo } from '@gsp-plus/core';
 
-import type { ContainerModel, ObjectInfo } from '@gsp-plus/core';
-
-/** 线段的约束外部 ID（spec/objects/catalog.json）。 */
 export const SEGMENT_CONSTRAINT_ID = 2;
-
-/** 把 2000 对象头里的 COLORREF（0x00BBGGRR）转成 CSS 颜色。 */
 export function colorRefToCss(colorRef: number): string {
-  const r = colorRef & 0xff;
-  const g = (colorRef >>> 8) & 0xff;
-  const b = (colorRef >>> 16) & 0xff;
-  return `rgb(${r}, ${g}, ${b})`;
+  return `rgb(${colorRef & 255}, ${(colorRef >>> 8) & 255}, ${(colorRef >>> 16) & 255})`;
 }
-
-/** 世界坐标（文件里保存的坐标，y 向下）的包围盒。 */
-export interface Bounds {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
+export interface Bounds { minX: number; minY: number; maxX: number; maxY: number }
+export interface RenderStyle {
+  lineWidth: number;
+  pointRadius: number;
+  pointStrokeWidth: number;
+  pointStrokeColor: string | null;
+  /** Native style/label fields remain preserved; unverified fields use viewer defaults. */
+  nativeStyleVerified: boolean;
 }
-
-export interface PointItem {
-  kind: 'point';
-  /** 对象序号（页内，从 1 起）。 */
+export type DrawItem = Geometry & {
   index: number;
-  x: number;
-  y: number;
-  /** CSS 颜色。 */
   color: string;
-  /** 标签文字；没有或为空为 undefined。 */
   label: string | undefined;
-}
-
-export interface SegmentItem {
-  kind: 'segment';
-  /** 对象序号（页内，从 1 起）。 */
-  index: number;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
-}
-
-export type DrawItem = PointItem | SegmentItem;
-
+  draggable: boolean;
+  style: RenderStyle;
+};
+export type PointItem = Extract<DrawItem, { kind: 'point' }>;
+export type SegmentItem = DrawItem & { kind: 'segment' };
 export interface PageDrawList {
-  /** 按对象次序排列的绘制项。 */
+  source: ContainerModel['node'];
   items: DrawItem[];
-  /** 所有点的包围盒；页上没有点时为 null。 */
   bounds: Bounds | null;
-  /** 页上的对象总数。 */
   objectCount: number;
-  /** 已画出的对象序号。 */
   drawnIndices: ReadonlySet<number>;
-  /** 暂不支持（未画出）的对象序号，升序。 */
   unsupportedIndices: number[];
+  nonexistentIndices: number[];
+  evaluation: PageGeometry;
 }
-
-function hasFreePoint(o: ObjectInfo | undefined): o is ObjectInfo & { freePoint: NonNullable<ObjectInfo['freePoint']> } {
-  return o !== undefined && o.freePoint !== undefined;
+function style(o: ObjectInfo): RenderStyle {
+  const point = o.mainKind === 1 && o.header.styleWord === 0x0221;
+  const segment = o.constraintId === 2 && o.header.styleWord === 0x0122;
+  return {
+    lineWidth: segment ? 3 : 1.5, pointRadius: point ? 4 : 3,
+    pointStrokeWidth: point ? 1.25 : 0, pointStrokeColor: point ? '#000000' : null,
+    nativeStyleVerified: point || segment,
+  };
 }
-
-/** 把一个页的对象模型转成绘制列表。 */
-export function buildPageDrawList(page: ContainerModel): PageDrawList {
-  const byIndex = new Map<number, ObjectInfo>();
-  for (const o of page.objects) byIndex.set(o.index, o);
-
+export function buildPageDrawList(page: ContainerModel, evaluation: PageGeometry = evaluatePageGeometry(page)): PageDrawList {
+  const byIndex = new Map(page.objects.map((o) => [o.index, o]));
   const items: DrawItem[] = [];
-  const drawn = new Set<number>();
   let bounds: Bounds | null = null;
-
-  for (const o of page.objects) {
-    if (o.freePoint !== undefined) {
-      const label = o.label?.text;
-      items.push({
-        kind: 'point',
-        index: o.index,
-        x: o.freePoint.x,
-        y: o.freePoint.y,
-        color: colorRefToCss(o.header.colorRef),
-        label: label !== undefined && label.length > 0 ? label : undefined,
-      });
-      drawn.add(o.index);
-      bounds = extendBounds(bounds, o.freePoint.x, o.freePoint.y);
-      continue;
-    }
-    if (o.constraintId === SEGMENT_CONSTRAINT_ID && o.parents.length === 2) {
-      const a = byIndex.get(o.parents[0] ?? -1);
-      const b = byIndex.get(o.parents[1] ?? -1);
-      if (hasFreePoint(a) && hasFreePoint(b)) {
-        items.push({
-          kind: 'segment',
-          index: o.index,
-          x1: a.freePoint.x,
-          y1: a.freePoint.y,
-          x2: b.freePoint.x,
-          y2: b.freePoint.y,
-          color: colorRefToCss(o.header.colorRef),
-        });
-        drawn.add(o.index);
-      }
+  const extend = (x: number, y: number) => {
+    bounds = bounds === null ? { minX: x, minY: y, maxX: x, maxY: y } : {
+      minX: Math.min(bounds.minX, x), minY: Math.min(bounds.minY, y), maxX: Math.max(bounds.maxX, x), maxY: Math.max(bounds.maxY, y),
+    };
+  };
+  for (const result of evaluation.objects) {
+    if (result.status !== 'ok') continue;
+    const o = byIndex.get(result.objectIndex);
+    if (o === undefined) continue;
+    const text = o.label?.text;
+    const item: DrawItem = { ...result, index: result.objectIndex, color: colorRefToCss(o.header.colorRef), label: text || undefined, draggable: o.constraintId === 0 && o.mainKind === 1 && page.type === 'page', style: style(o) };
+    items.push(item);
+    if (item.kind === 'point') extend(item.geometry.x, item.geometry.y);
+    else if (item.kind === 'segment' || item.kind === 'line' || item.kind === 'ray') {
+      extend(...item.geometry.a); extend(...item.geometry.b);
+    } else if (item.kind === 'polygon') item.geometry.vertices.forEach((p) => extend(...p));
+    else {
+      const { center, radius } = item.geometry;
+      extend(center[0] - radius, center[1] - radius); extend(center[0] + radius, center[1] + radius);
     }
   }
-
-  const unsupportedIndices = page.objects
-    .map((o) => o.index)
-    .filter((index) => !drawn.has(index));
-
   return {
-    items,
-    bounds,
-    objectCount: page.objects.length,
-    drawnIndices: drawn,
-    unsupportedIndices,
+    source: page.node, items, bounds, objectCount: page.objects.length, evaluation,
+    drawnIndices: new Set(items.map((i) => i.index)),
+    unsupportedIndices: evaluation.objects.filter((o) => o.status === 'unsupported' || o.status === 'unbound-input').map((o) => o.objectIndex),
+    nonexistentIndices: evaluation.objects.filter((o) => o.status === 'not-existing').map((o) => o.objectIndex),
   };
 }
 
-function extendBounds(b: Bounds | null, x: number, y: number): Bounds {
-  if (b === null) return { minX: x, minY: y, maxX: x, maxY: y };
-  return {
-    minX: Math.min(b.minX, x),
-    minY: Math.min(b.minY, y),
-    maxX: Math.max(b.maxX, x),
-    maxY: Math.max(b.maxY, y),
-  };
-}
+

@@ -1,4 +1,5 @@
 import { buildPageDrawList } from '@gsp-plus/render';
+import { PageGeometryEvaluator } from '@gsp-plus/core';
 import type { DocumentModel } from '@gsp-plus/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CanvasView } from './components/CanvasView';
@@ -30,10 +31,18 @@ export function App() {
   const [message, setMessage] = useState('就绪');
   const busyRef = useRef(false);
 
+  const [revision, setRevision] = useState(0);
   const page = doc?.model.pages[pageIndex];
-  const scene = useMemo(() => (page === undefined ? null : buildPageDrawList(page)), [page]);
+  const evaluator = useMemo(() => page === undefined ? null : new PageGeometryEvaluator(page), [page]);
+  const scene = useMemo(() => page === undefined || evaluator === null ? null : buildPageDrawList(page, evaluator.evaluate()), [page, evaluator, revision]);
+  const moveFreePoint = (index: number, x: number, y: number) => {
+    if (doc === null || evaluator === null) return;
+    evaluator.moveFreePoint(doc.model.doc, index, x, y);
+    setRevision((r) => r + 1);
+    setMessage('已移动自由点');
+  };
   const rows = useMemo(
-    () => (page === undefined || scene === null ? [] : objectRows(page, scene.drawnIndices)),
+    () => (page === undefined || scene === null ? [] : objectRows(page, scene.drawnIndices, scene.evaluation)),
     [page, scene],
   );
   const titles = useMemo(
@@ -123,6 +132,7 @@ export function App() {
               scene={scene}
               selectedIndex={selected}
               onSelect={setSelected}
+              onMoveFreePoint={moveFreePoint}
               emptyText={emptyText}
             />
           </div>
@@ -147,3 +157,5 @@ export function App() {
     </div>
   );
 }
+
+

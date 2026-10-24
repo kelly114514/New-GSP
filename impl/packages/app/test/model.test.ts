@@ -83,7 +83,7 @@ describe('对象列表行（基准样本）', () => {
     });
   });
 
-  it('midpoint.gsp：中点一行标为未绘制，描述来自约束 1 的模板', () => {
+  it('midpoint.gsp：中点一行标为已绘制，描述来自约束 1 的模板', () => {
     const page = readDocumentFrom('midpoint.gsp').pages[0]!;
     const rows = objectRows(page, buildPageDrawList(page).drawnIndices);
     expect(rows[3]).toMatchObject({
@@ -91,7 +91,7 @@ describe('对象列表行（基准样本）', () => {
       constraintId: 1,
       description: '〈A〉 是〈B〉 的中点。',
       parents: [3],
-      drawn: false,
+      drawn: true,
     });
   });
 
@@ -108,3 +108,4 @@ function readDocumentFrom(name: string) {
   if (!result.ok) throw new Error(result.message);
   return result.model;
 }
+

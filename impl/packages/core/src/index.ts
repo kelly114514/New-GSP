@@ -34,3 +34,4 @@ export * from './views/image.ts';
 export * from './views/object.ts';
 export * from './views/strings.ts';
 export * from './writer.ts';
+export * from './geometry.ts';

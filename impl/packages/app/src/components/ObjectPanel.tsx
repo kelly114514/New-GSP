@@ -57,10 +57,10 @@ export function ObjectPanel({ rows, selected, onSelect, emptyText }: ObjectPanel
                 <div className="objects__title">
                   <span className="objects__index">#{row.index}</span>
                   <span className="objects__constraint">约束 {row.constraintId}</span>
-                  <span className={row.drawn ? 'tag tag--ok' : 'tag'}>{row.drawn ? '已绘制' : '暂不支持'}</span>
+                  <span className={row.drawn ? 'tag tag--ok' : 'tag'}>{row.drawn ? '已绘制' : row.geometryStatus === 'not-existing' ? '不存在' : row.geometryStatus === 'unbound-input' ? '输入未绑定' : '暂不支持'}</span>
                 </div>
                 <div className="objects__desc">{row.description}</div>
-                <div className="objects__meta">{meta.join(' · ')}</div>
+                <div className="objects__meta" title={row.reason}>{meta.join(' · ')}</div>
               </li>
             );
           })}
@@ -69,3 +69,4 @@ export function ObjectPanel({ rows, selected, onSelect, emptyText }: ObjectPanel
     </aside>
   );
 }
+
