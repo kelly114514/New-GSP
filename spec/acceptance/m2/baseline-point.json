@@ -40,11 +40,21 @@
         "y": 147.0
       },
       "tolerancePx": 0.1,
+      "appearance": {
+        "diameterPx": 8.0,
+        "fill": "#ff0000",
+        "fillPrimitiveIndex": 0,
+        "stroke": "#000000",
+        "strokeWidthPx": 1.25,
+        "strokePrimitiveIndex": 1
+      },
       "provenance": {
         "source": "original_emf_primitive",
         "primitiveIndex": 0,
         "layer": "emf+",
         "mapping": "unique_geometry_and_color_then_unique_object_owner",
+        "htmlStep": 1,
+        "htmlMapping": "unique_free_point_or_parent_graph",
         "matchingPredictionUsed": true,
         "pen": null,
         "brush": {
@@ -63,6 +73,7 @@
     "assertedObjects": 1,
     "excludedAObjects": 0,
     "styleAndLabelsAccepted": false,
+    "toolAObjects": 0,
     "fullM2Accepted": false
   },
   "expectedObjectCount": 1,

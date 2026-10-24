@@ -79,7 +79,7 @@ def geometry_error(kind, expected, actual):
 
 
 def compare(case, actual):
-    if actual.get("schema") != "gsp-core-geometry-v1":
+    if not isinstance(actual, dict) or actual.get("schema") != "gsp-core-geometry-v1":
         raise ValueError("actual schema must be gsp-core-geometry-v1")
     pages = [p for p in actual.get("pages", []) if p.get("pageIndex") == case["pageIndex"]]
     if len(pages) != 1:
