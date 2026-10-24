@@ -58,3 +58,4 @@ jobs:
         run: |
           python tools/test_emf_match.py
           python tools/test_m5_measures.py
+          python tools/test_m5_numeric_hints.py

@@ -7,11 +7,12 @@
 import { lookupConstraint } from './constraints.ts';
 import type { ConstraintDescriptor } from './constraints.ts';
 import { GspDecodeError } from './errors.ts';
-import { textEncodingForLayout } from './text.ts';
+import { decodeText, textEncodingForLayout } from './text.ts';
 import type { TextEncoding } from './text.ts';
+import type { PageNumericPreferences } from './numeric/units.ts';
 import { groupOf, isObjectNode, objectNodesOf, pagesOf, toolsOf } from './tree.ts';
 import type { ContainerNode, GspDocument, ObjectNode } from './tree.ts';
-import { decodeContainerHeader, decodeFontEntry, decodeTextStyleEntry } from './views/container.ts';
+import { decodeContainerHeader, decodeFontEntry, decodeTextStyleEntry, decodeU16Value, decodeU32Value } from './views/container.ts';
 import type { ContainerHeader, FontEntry, TextStyleEntry } from './views/container.ts';
 import { docHeaderOf } from './views/docHeader.ts';
 import type { DocHeader } from './views/docHeader.ts';
@@ -64,7 +65,11 @@ export interface ContainerModel {
   /** 页名 / 工具名（1100）；没有为 undefined。 */
   name: DecodedNulString | undefined;
   fonts: FontEntry[];
+  /** 1201 字体名（按容器编码解码，去掉 NUL 与残留字节）。 */
+  fontNames: string[];
   textStyles: TextStyleEntry[];
+  /** 页面数值偏好 10041/10042/9008；缺失或越界为 undefined。 */
+  numericPreferences: PageNumericPreferences;
   objects: ObjectInfo[];
 }
 
@@ -175,7 +180,11 @@ export function readContainerModel(
   const where = `${type} ${index}`;
   let name: DecodedNulString | undefined;
   const fonts: FontEntry[] = [];
+  const fontNames: string[] = [];
   const textStyles: TextStyleEntry[] = [];
+  let distanceUnit: 0 | 1 | 2 | undefined;
+  let angleUnit: 0 | 1 | 2 | undefined;
+  let dpi: number | undefined;
   for (const item of node.items) {
     if (isObjectNode(item)) continue;
     switch (item.kind) {
@@ -186,6 +195,7 @@ export function readContainerModel(
         const f = decodeFontEntry(item.payload);
         if (f === undefined) bad(where, `kind 1201 payload of ${item.payload.length} bytes is malformed`);
         fonts.push(f);
+        fontNames.push(decodeText(f.name.raw, encoding));
         break;
       }
       case 1203: {
@@ -194,6 +204,19 @@ export function readContainerModel(
         textStyles.push(s);
         break;
       }
+      case 10041: {
+        const v = decodeU16Value(item.payload);
+        if (v !== undefined && v < 3) distanceUnit = v as 0 | 1 | 2;
+        break;
+      }
+      case 10042: {
+        const v = decodeU16Value(item.payload);
+        if (v !== undefined && v < 3) angleUnit = v as 0 | 1 | 2;
+        break;
+      }
+      case 9008:
+        dpi = decodeU32Value(item.payload);
+        break;
       default:
         break;
     }
@@ -212,9 +235,22 @@ export function readContainerModel(
     header: decodeContainerHeader(node.begin.payload),
     name,
     fonts,
+    fontNames,
     textStyles,
+    numericPreferences: { distanceUnit, angleUnit, dpi },
     objects,
   };
+}
+
+/**
+ * 对象文字样式指向的字体名：2008 → 本容器 1203[fontIndex] → 1201 表。
+ * 缺失或序号越界返回 undefined（调用方按“非 Symbol”处理）。
+ */
+export function fontNameOf(page: ContainerModel, object: ObjectInfo): string | undefined {
+  if (object.styleRef === undefined) return undefined;
+  const style = page.textStyles[object.styleRef];
+  if (style === undefined) return undefined;
+  return page.fontNames[style.fontIndex];
 }
 
 /** 展开整份文档：页、工具区、嵌入图片。 */
