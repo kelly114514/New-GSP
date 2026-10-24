@@ -32,6 +32,9 @@
 | arc | `{center:[x,y], radius, startAngle, sweepAngle, start?:[x,y], end?:[x,y]}` | 圆心、半径、弧覆盖的区间（见下）；`start`/`end` 可选 |
 | sector | 同 arc | 扇形内部（约束 82）：圆心、半径和父弧覆盖的区间 |
 | circular-segment | 同 arc | 弓形内部（约束 83）：圆心、半径和父弧覆盖的区间（弦隐含） |
+| measure | `{displayValue, displayNumber?, displayUnitText, internal?}` | 数值对象（度量 36–47、计算 48、参数 0/主类11）：见 [m5-measures.md](m5-measures.md) 的数值输出协议 |
+
+数值对象不带几何，`kind` 固定为 `measure`、`exists` 为 `true`；`displayValue` 是显示单位里的读数，`internal.magnitude` 是未舍入内部值（比较器不读）。`measure` 的期望值来自原版 EMF 文字，容忍为末位的半个单位；`displayNumber` 缺省时只验区间与单位。`status` 为 `unsupported`/`not-existing` 的数值对象不输出 `measurement`，由验收报告按 `reason` 分类。
 
 **弧类字段约定。** `startAngle`、`sweepAngle` 是弧度，数学角：`angle = atan2(−dy, dx)`（页面坐标 y 向下），页面点是 `center + radius·(cos a, −sin a)`；`sweepAngle>0` 表示页面上看起来逆时针，带符号，`|sweepAngle|` 在 (0, 2π) 内（整圆与零弧的表示〔未知〕，比较器把 `≥359.999°` 当作整圆）。`startAngle` 是弧**第一端点**（A）的角，`sweepAngle` 从第一端点扫到第二端点（79/80 恒为正，81 可正可负）。可选的 `start`、`end` 是两端点的页面坐标。比较器（`check_m2.py`）把预期与实际都归一成「逆时针覆盖区间 [lo, hi]」，比较圆心、半径、区间两端点和**区间中点**（中点把一条弧与它的补弧区分开，两个半圆的端点相同但中点相反），所以实现输出 `sweepAngle` 为负的等价描述也会通过；方向写反（取了补弧）会失败。`start`/`end` 若提供，必须是区间的两端点（顺序不限）。预期值由原版 EMF 图元归一成 `sweepAngle>0` 的逆时针区间（原版的 `DrawArc`/`FillPie` 起始角是页面顺时针为正，已转换）。弓形在原版里是只含弧的填充路径（隐式闭合），预期的 `center/radius/区间` 由路径首段端点的法线精确求出。退化的 81（共线或超大半径）若实现按线段输出，`kind` 取 `segment`，可附 `degenerateArc`、`parameterizationKnown` 标志，比较器忽略这两个标志；原版对该分支的实际行为〔未知〕，目前没有预期值。
 
