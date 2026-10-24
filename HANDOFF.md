@@ -6,7 +6,7 @@
 
 | 项 | 状态 |
 |---|---|
-| 仓库 | github.com/kelly114514/New-GSP，**公开**。工作分支 `s0-m1`，PR #1 已开，CI 全过，**是否合并进 `main` 仍未决** |
+| 仓库 | github.com/kelly114514/New-GSP，**公开**。PR #1 已于 2026-10-24 合并进 `main`（26 个提交，CI 全绿），`s0-m1` 与 `main` 同点。下一轮从 `main` 开新分支 |
 | S0 | 对象目录 `spec/objects/catalog.json`；对照工具 `tools/oracle/`、`tools/emf_dump.py` |
 | S1 | 格式规格 `spec/format/gsp-format.md` v1（本轮补了 §5.9 信封校验、§6.1.1 编码选择） |
 | M0 | `impl/` TypeScript 单仓 + Tauri 2，CI 跑类型检查和测试 |
