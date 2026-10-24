@@ -36,8 +36,6 @@ export function directedSweep(start: number, end: number): number {
 
 /** Angular tolerance (radians) for "same direction" and for arc range membership. */
 export const ARC_ANGLE_TOLERANCE = 1e-9;
-/** Relative tolerance for "this point lies on the circle" / "two radii are equal". */
-export const ARC_RADIUS_TOLERANCE = 1e-6;
 /** Card 81: a three-point arc whose radius or centre coordinate exceeds this many page units becomes a segment. */
 export const ARC_SEGMENT_LIMIT = 30000;
 

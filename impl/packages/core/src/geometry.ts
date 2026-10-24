@@ -1,9 +1,10 @@
-import { ARC_ANGLE_TOLERANCE, ARC_RADIUS_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
+import { ARC_ANGLE_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
 import { readF64, readU16, readU32 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
 import { evaluateMeasure, isMeasureObject } from './measure.ts';
 import type { MeasureGeometry } from './measure.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
+import { isNumericParameterTransform, numericParameterTransform } from './transform-numeric.ts';
 import { isContainerNode, isEnvelopeNode } from './tree.ts';
 import type { GspDocument } from './tree.ts';
 import { decodeFreePoint } from './views/object.ts';
@@ -129,12 +130,18 @@ function centeredMatrix(center: XY, xx: number, xy: number, yx: number, yy: numb
 }
 function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   const id = o.constraintId;
-  if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id)) return undefined;
+  if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id) && !isNumericParameterTransform(id)) return undefined;
   const source = p[0];
   if (source === undefined) return unsupported('transform-needs-source');
   if (source.kind === 'measure') return unsupported('transform-source-not-geometric');
+  if (id === 75) return transformGeometry(source, identity()); // Card 75: geometry only; the colour formula is unspecified (questions.md Q10.1).
+  if (isNumericParameterTransform(id)) {
+    // Cards 18-20/23-26/29/31/33: the displacement/angle/ratio comes from a numeric parent, so the
+    // matrix depends on measured values; the shape transform itself stays shared with 16-34.
+    const outcome = numericParameterTransform(id, p, o.node.records.find((r) => r.kind === 2003)?.payload);
+    return outcome.ok ? transformGeometry(source, outcome.matrix) : { status: outcome.status, reason: outcome.reason };
+  }
   let m = identity();
-  if (id === 75) return transformGeometry(source, m); // Card 75: M4 copies geometry; numeric color evaluation is deferred.
   const expectedParents = id === 16 ? 3 : id === 17 || id === 21 ? 1 : id === 28 || id === 32 ? 5 : 2;
   if (p.length !== expectedParents) return unsupported('transform-parent-count');
   const fixedSize = id === 17 ? 52 : id === 21 ? 60 : id === 27 ? 36 : id === 30 ? 12 : undefined;
@@ -195,8 +202,6 @@ function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   if (![m.xx, m.xy, m.yx, m.yy, m.tx, m.ty, m.scale].every(Number.isFinite)) return absent('non-finite-transform-parameter');
   return transformGeometry(source, m);
 }
-
-function needsUnimplementedMeasure(id: number): boolean { return [18, 19, 20, 23, 24, 25, 26, 29, 31, 33].includes(id); }
 
 function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byIndex: ReadonlyMap<number, ObjectInfo>): Outcome {
   const p = parents;
@@ -259,25 +264,28 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   }
   if (id === 79) {
     if (p.length !== 3 || first?.kind !== 'circle' || second?.kind !== 'point' || p[2]?.kind !== 'point') return unsupported('arc-on-circle-needs-circle-and-two-points');
-    const { center, radius } = first.geometry, a = pointXY(second), b = pointXY(p[2]);
-    for (const q of [a, b]) {
-      if (Math.abs(length(sub(q, center)) - radius) > ARC_RADIUS_TOLERANCE * Math.max(1, radius)) return unsupported('arc-endpoint-off-circle-unverified');
-    }
+    // Card 79: the centre comes from the parent circle but the radius is |OA| — equal to the parent
+    // radius only while A sits on the circle; B contributes the end direction alone.
+    const { center } = first.geometry, a = pointXY(second), b = pointXY(p[2]);
+    const radius = length(sub(a, center));
+    if (radius === 0) return absent('arc-start-point-coincides-with-circle-center');
+    const endOffset = sub(b, center);
+    if (length(endOffset) === 0) return absent('arc-end-point-coincides-with-circle-center');
     const start = mathAngle(a[0] - center[0], a[1] - center[1]);
-    const sweep = directedSweep(start, mathAngle(b[0] - center[0], b[1] - center[1]));
+    const sweep = directedSweep(start, mathAngle(endOffset[0], endOffset[1]));
     if (Math.abs(sweep) <= ARC_ANGLE_TOLERANCE || Math.abs(sweep) >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return unsupported('arc-coincident-endpoints-unverified');
     return arcOf(center, radius, start, sweep);
   }
   if (id === 80) {
     if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('arc-from-center-needs-three-points');
+    // Card 80: radius is |OA|; B only supplies the end direction, so |OA| != |OB| is allowed.
     const center = pointXY(p[0] as PointGeometry), a = pointXY(p[1] as PointGeometry), b = pointXY(p[2] as PointGeometry);
-    const ra = length(sub(a, center)), rb = length(sub(b, center));
-    if (ra === 0 || rb === 0) return absent('arc-center-coincides-with-direction-point');
-    if (Math.abs(ra - rb) > ARC_RADIUS_TOLERANCE * Math.max(1, ra, rb)) return unsupported('arc-unequal-radii-unverified');
+    const radius = length(sub(a, center));
+    if (radius === 0 || length(sub(b, center)) === 0) return absent('arc-center-coincides-with-direction-point');
     const start = mathAngle(a[0] - center[0], a[1] - center[1]);
     const sweep = directedSweep(start, mathAngle(b[0] - center[0], b[1] - center[1]));
     if (Math.abs(sweep) <= ARC_ANGLE_TOLERANCE || Math.abs(sweep) >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return unsupported('arc-coincident-directions-unverified');
-    return arcOf(center, ra, start, sweep);
+    return arcOf(center, radius, start, sweep);
   }
   if (id === 81) {
     if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('three-point-arc-needs-three-points');
@@ -491,9 +499,6 @@ export class PageGeometryEvaluator {
         }
         parents.push(result);
       }
-      // Give deferred measured transforms a stable root cause even when their numeric parents are unsupported.
-      const parentStatus = outcome !== undefined && 'status' in outcome ? outcome.status : undefined;
-      if (needsUnimplementedMeasure(o.constraintId) && parentStatus !== 'not-existing' && parentStatus !== 'unbound-input') outcome = unsupported('parameter-from-unimplemented-measure');
       outcome ??= construct(o, parents, this.page, this.byIndex);
       this.store(o, outcome);
       pending.delete(index);

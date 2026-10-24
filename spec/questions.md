@@ -47,10 +47,10 @@ Q1–Q3 的答复已移入 [格式规格 §6.1.1、§5.9](format/gsp-format.md)�
 
 | 约束 | 条件 | 当前结果 |
 |---|---|---|
-| 79 | A 或 B 不在圆周上（相对容差 1e-6） | `unsupported: arc-endpoint-off-circle-unverified` |
+| 79 | A 或 B 不在圆周上 | 已实现（M5，卡片 79 的合成输入证据）：半径取 `\|OA\|`，B 只给终方向；A 与圆心重合时 `not-existing: arc-start-point-coincides-with-circle-center` |
 | 79 | A=B（整圆还是零弧） | `unsupported: arc-coincident-endpoints-unverified` |
 | 80 | O=A 或 O=B | `not-existing: arc-center-coincides-with-direction-point`（卡片说“无定义”） |
-| 80 | |OA|≠|OB| | `unsupported: arc-unequal-radii-unverified` |
+| 80 | `\|OA\|`≠`\|OB\|` | 已实现（M5，卡片 80 的合成输入证据）：半径取 `\|OA\|`，B 只给方向 |
 | 80 | A、B 同方向 | `unsupported: arc-coincident-directions-unverified` |
 | 81 | A=B | `not-existing: coincident-arc-endpoints` |
 | 81 | 共线或半径/圆心坐标超过 30,000，M 在弦内（沿 A→B 的投影严格在 0 与 1 之间） | 线段 A→B，`degenerateArc:true` |
@@ -117,3 +117,19 @@ Q1–Q3 的答复已移入 [格式规格 §6.1.1、§5.9](format/gsp-format.md)�
 - **Q9.6**：36 排除 `degenerateArc` 父（报 `36-parent-must-be-segment`）。81 共线退化弧作线段长度未验证，保持未支持。
 - **Q9.7**：`0x1005` 只出现在 `Tool Folder/20 虚线工具.gsp`（页 1 无断言），保持 `expression-unsupported:0x1005`。
 - **Q9.8 新增（实现已按证据改）**：原版舍入结果为 0 时**不输出负号**。证据：`IFS-摇曳的蕨叶.gsp` 对象 67（约束 48，digits=2）内部值 −0.004001，原版显示 `0.00`；同一值在 digits=5 仍应是 `-0.00400`（无样本，按"只丢零的符号"实现）。半值边界一律给出 `displayNumber`，语料 3 条（0.635→`0.63`、5.715→`5.72`×2）逐字一致，证明按 double 精确值 half-away-from-zero。
+
+## Q10（W2 提问）
+
+**Q10.1 卡片 75 的数值颜色没有公式，也没有输出位置。** 卡片 75 只定结构（`+4 mode`、`+8 lo`、`+16 hi`），并且明写「lo、hi 的语义（各通道范围还是一个范围）和 mode 的完整含义〔未知〕」；mode→配色方案也只有大半个码表（18→Spectrum、32/34→Grayscale、50/48→RGB，64/66/33〔未知〕）。内核交换格式 `gsp-core-geometry-v1` 里同样没有颜色字段——颜色现在只由对象头 `+12..14` 的 RGB（最近一次求值结果）承载，不是几何。本批 75 因此仍只做「几何 = `parents[0]` 的几何」：不写、也不猜颜色值；数值父求不出来时 75 的几何照旧有效（与 `check_m2` 的口径一致）。
+
+- 需要：(a) 每种 mode 把 `[lo,hi]` 映射到具体颜色的公式，特别是 50/48 RGB 下 lo/hi 是每通道一对还是一个公共区间、数值越界时夹紧还是循环；(b) 颜色放在哪里——core 输出新增字段（如 `color:{r,g,b}`）还是只写回对象头、由渲染层读。若要新增字段，请给字段名与取值范围，我补实现。
+- 卡住：只有 75 的颜色验收；几何同源不受影响。
+
+**Q10.2 数值父的「单位随该父」与页面显示单位的关系。** 18/19/20 的父是长度量、23/26/29 的父是角度量，卡片都写「单位随该父（度或弧度）」。实现一律取 `measurement.internal.magnitude`（角度弧度、长度页面 px），因此与页面偏好无关——厘米/度页面上 `37.7953 px/cm` 的换算由 `measure.ts` 完成，本层不再二次换算。但 `internal.dimension` 是量纲，不是「参数自己的单位」：
+
+- 量纲为 `number`（genera 51）的父被用作 23/26/29 的角度时，`magnitude` 就是那个裸数，实现按弧度解释；同样地，量纲为 `number` 的长度父在 18/19/20 里被当作 px。
+- 原版对这类「量纲不匹配的数值父」是按页面显示单位解释，还是直接不接受构造？现有语料里这些变换的父都能求成 measure，自己回答不了。
+- 需要：一次原版实验（度页面下用无量纲参数 90 做 29 的旋转角，看像转 90° 还是 90 rad），或明确「量纲不匹配按 unsupported 处理」。本批不受影响：没有这类对象的几何断言；真出现时我按上面的口径报告，而不会另造一个值。
+- 另一处未验证：24/26 的距离父可以是负的（语料里 40 个 48 参数算出来是负值），18/19/20 的位移父同理。实现按卡片公式带符号使用，所以负距离等于反方向位移；原版是否会对距离取绝对值没有证据。
+
+**Q10.3 79/80 的半径规则按卡片证据实现，与 Q6 答复的一处旧口径冲突。** 卡片 79/80 的 2026-10-24 原版合成输入（A 离圆时半径 210）与 Q6 答复里「79 的 A/B 偏离圆周、80 的 `|OA|≠|OB|` 保持 unsupported 是对的」相冲突；按卡片证据实现：79 取 `|OA|`、B 只给终方向，80 取 `|OA|`、B 只给方向，`arc-endpoint-off-circle-unverified` 与 `arc-unequal-radii-unverified` 已删除（上表两行已同步）。全语料 408 个 79 对象里 `|OA|` 与父圆半径最大只差 1.08e−12，所以改动对现有语料几何没有可见影响。仍然不做：A=B 同方向的存在性、81 的精确分界、弦外点、零扫角后代。

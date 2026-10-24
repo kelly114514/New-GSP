@@ -77,9 +77,29 @@ describe('constraint 79: arc on an existing circle', () => {
     close(g.start, [0, -R]);
     close(g.end, [R, 0]);
   });
-  it('keeps unverified boundaries distinct: endpoint off the circle, A = B', () => {
-    expect(evalAt([...circle, pt(4, R, 0), pt(5, 0, -R - 1), obj(6, 79, [3, 4, 5], 67)], 6)).toMatchObject({ status: 'unsupported', reason: 'arc-endpoint-off-circle-unverified' });
+  it('takes the radius from |OA| so B only supplies the end direction (card 79 synthesis)', () => {
+    // 原版合成输入：O=(300,300)、父圆半径 150。A=(450,300) 时半径 150；A 改成 (510,300) 后半径 210，扫角都还是 90°。
+    const big = (ax: number) => [pt(1, 300, 300), pt(2, 450, 300), obj(3, 3, [1, 2]), pt(4, ax, 300), pt(5, 300, 90), obj(6, 79, [3, 4, 5], 67)];
+    const onCircle = arcOf(evalAt(big(450), 6));
+    close(onCircle.center, [300, 300]);
+    expect(onCircle.radius).toBeCloseTo(150, 9);
+    expect(onCircle.sweepAngle).toBeCloseTo(Math.PI / 2, 9);
+    const offCircle = arcOf(evalAt(big(510), 6));
+    close(offCircle.center, [300, 300]);
+    expect(offCircle.radius).toBeCloseTo(210, 9);
+    expect(offCircle.sweepAngle).toBeCloseTo(Math.PI / 2, 9);
+    close(offCircle.start, [510, 300]);
+    // B 离圆时只给方向：B=(0,-6) 与 B=(0,-5) 得到同一条弧。
+    const far = arcOf(evalAt([...circle, pt(4, R, 0), pt(5, 0, -6), obj(6, 79, [3, 4, 5], 67)], 6));
+    close(far.start, [R, 0]);
+    close(far.end, [0, -R]);
+    expect(far.radius).toBeCloseTo(R, 9);
+    expect(far.sweepAngle).toBeCloseTo(Math.PI / 2, 9);
+  });
+  it('keeps the unverified boundaries distinct: A = B and a direction at the centre', () => {
     expect(evalAt([...circle, pt(4, R, 0), pt(5, R, 0), obj(6, 79, [3, 4, 5], 67)], 6)).toMatchObject({ status: 'unsupported', reason: 'arc-coincident-endpoints-unverified' });
+    expect(evalAt([...circle, pt(4, 0, 0), pt(5, 0, -R), obj(6, 79, [3, 4, 5], 67)], 6)).toMatchObject({ status: 'not-existing', reason: 'arc-start-point-coincides-with-circle-center' });
+    expect(evalAt([...circle, pt(4, R, 0), pt(5, 0, 0), obj(6, 79, [3, 4, 5], 67)], 6)).toMatchObject({ status: 'not-existing', reason: 'arc-end-point-coincides-with-circle-center' });
   });
   it('needs a circle then two points, and is nonexistent when a parent is', () => {
     expect(evalAt([...circle, pt(4, R, 0), pt(5, 0, -R), obj(6, 79, [4, 4, 5], 67)], 6)).toMatchObject({ status: 'unsupported', reason: 'arc-on-circle-needs-circle-and-two-points' });
@@ -88,7 +108,7 @@ describe('constraint 79: arc on an existing circle', () => {
 });
 
 describe('constraint 80: centre and two direction points', () => {
-  it('uses the common distance as the radius and runs counter-clockwise', () => {
+  it('uses |OA| as the radius and runs counter-clockwise', () => {
     const g = arcOf(evalAt([pt(1, 10, 10), pt(2, 13, 6), pt(3, 6, 13), obj(4, 80, [1, 2, 3], 67)], 4));
     close(g.center, [10, 10]);
     expect(g.radius).toBeCloseTo(5, 9);
@@ -103,9 +123,25 @@ describe('constraint 80: centre and two direction points', () => {
     expect(a.sweepAngle + b.sweepAngle).toBeCloseTo(2 * Math.PI, 9);
     close(a.end, b.start);
   });
+  it('uses |OA| as the radius and lets B be closer or farther (card 80 synthesis)', () => {
+    // 原版合成输入：O=(300,300)、A=(450,300) 时半径 150，B 从 (300,150) 移到 (300,90) 半径不变；
+    // A 再改成 (510,300)、B=(300,150) 时半径 210，扫角都还是 90°。
+    const arc = (ax: number, by: number) => arcOf(evalAt([pt(1, 300, 300), pt(2, ax, 300), pt(3, 300, by), obj(4, 80, [1, 2, 3], 67)], 4));
+    for (const by of [150, 90]) {
+      expect(arc(450, by).radius).toBeCloseTo(150, 9);
+      expect(arc(450, by).sweepAngle).toBeCloseTo(Math.PI / 2, 9);
+    }
+    const wide = arc(510, 150);
+    close(wide.center, [300, 300]);
+    expect(wide.radius).toBeCloseTo(210, 9);
+    expect(wide.sweepAngle).toBeCloseTo(Math.PI / 2, 9);
+    close(wide.start, [510, 300]);
+    // B 只提供方向：终边端点落在半径 210 的圆上，不是 B 自己的位置。
+    close(wide.end, [300, 300 - 210]);
+  });
   it('rejects only what the card leaves undefined, with distinct reasons', () => {
     expect(evalAt([pt(1, 0, 0), pt(2, 0, 0), pt(3, 0, -R), obj(4, 80, [1, 2, 3], 67)], 4)).toMatchObject({ status: 'not-existing', reason: 'arc-center-coincides-with-direction-point' });
-    expect(evalAt([pt(1, 0, 0), pt(2, R, 0), pt(3, 0, -R - 1), obj(4, 80, [1, 2, 3], 67)], 4)).toMatchObject({ status: 'unsupported', reason: 'arc-unequal-radii-unverified' });
+    expect(evalAt([pt(1, 0, 0), pt(2, R, 0), pt(3, 0, 0), obj(4, 80, [1, 2, 3], 67)], 4)).toMatchObject({ status: 'not-existing', reason: 'arc-center-coincides-with-direction-point' });
     expect(evalAt([pt(1, 0, 0), pt(2, R, 0), pt(3, R, 0), obj(4, 80, [1, 2, 3], 67)], 4)).toMatchObject({ status: 'unsupported', reason: 'arc-coincident-directions-unverified' });
   });
 });
