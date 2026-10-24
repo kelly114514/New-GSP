@@ -29,6 +29,7 @@
 ```
 
 - `internal.magnitude` 是**未舍入的内部值**，基准单位固定：`length` 页面 px、`angle` 弧度、`area` 页面 px²、`number` 无量纲。它是本批新增的调试字段，比较器不读；没有它就无法判断舍入边界，也无法与变换参数对齐。
+- `internal.displayRaw` 是同一值的**显示单位未舍入读数**（`magnitude` 除以单位换算系数）。验收用它判断一条断言是否落在半值边界（`raw·10^digits` 的小数部分与 0.5 相差 ≤1e-9）。
 - `displayValue` 是**显示单位里的读数**：实现按 `digits` 舍入后再换算回来，必须与 `displayNumber` 自洽（`parse(displayNumber) === displayValue`，`digits=0` 时 `displayNumber` 无小数点）。
 - `displayNumber` **可以省略**，但省略时比较器只验区间；本批要求：只有当一个值落在舍入边界（十进制 `digits` 位上恰为 `x.5` 的 ±1e-6 个末位单位以内）时才省略，并在报告里单独计数。这类值不能算作“舍入规则已验证”。
 - 单位文字由**页面偏好**、**量纲**和**对象字体**共同决定，逐字一致（表见下节）。面积的上标布局本批仍不验收。
