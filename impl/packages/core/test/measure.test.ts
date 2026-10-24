@@ -454,15 +454,34 @@ describe('48 calculations and numeric free objects', () => {
     expect(reading.internal.displayRaw).toBeCloseTo((95 / (96 / 2.54)) * 100, 9);
   });
 
-  it('takes the dimension from genera but the value from the expression and records a mismatch', () => {
-    const objects = [calcObject(1, [2, 4, CM], [], { genera: 51 })];
-    const reading = measureAt(objects, 1);
+  it('reports a calculation whose genera disagrees with the expression dimension as unsupported', () => {
+    // 24 厘米的表达式是 length，genera 51 是 number：不输出读数，也不改单位。
+    expect(failureAt([calcObject(1, [2, 4, CM], [], { genera: 51 })], 1)).toEqual({ status: 'unsupported', reason: 'dimension-mismatch-unverified' });
+    // 反方向：纯数字表达式 + genera 48。
+    expect(failureAt([calcObject(1, [2, 4], [], { genera: 48 })], 1).reason).toBe('dimension-mismatch-unverified');
+    // 一致时照常出读数，并记录 genera 量纲。
+    const reading = measureAt([calcObject(1, [2, 4, CM], [], { genera: 48 })], 1);
     expect(reading.displayValue).toBe(24);
-    expect(reading.displayUnitText).toBe('');
-    expect(reading.internal.dimension).toBe('number');
-    expect(reading.internal.dimensionMismatch).toBe(true);
-    expect(reading.internal.expressionDimension).toBe('length');
-    expect(reading.internal.generaDimension).toBe('number');
+    expect(reading.displayUnitText).toBe('厘米');
+    expect(reading.internal.dimension).toBe('length');
+    expect(reading.internal.generaDimension).toBe('length');
+  });
+
+  it('reports a calculation whose genera is outside 48–51 as unsupported', () => {
+    for (const genera of [4, 47, 52, 57]) {
+      expect(failureAt([calcObject(1, [2, 4], [], { genera })], 1).reason).toBe('dimension-mismatch-unverified');
+    }
+  });
+
+  it('round keeps its operand dimension like trunc and abs', () => {
+    const cm = (name: number) => calcObject(1, [name, 2, 4, 0x000a, 6, CM, RPAREN], [], { genera: 48 });
+    for (const fn of [0x2006, 0x200b, 0x200c]) { // abs / round / trunc
+      const reading = measureAt([cm(fn)], 1);
+      expect(reading.internal.dimension).toBe('length');
+      expect(reading.displayUnitText).toBe('厘米');
+    }
+    // round 的结果是 length，genera 51 就和它冲突。
+    expect(failureAt([calcObject(1, [0x200b, 2, 4, 0x000a, 6, CM, RPAREN], [], { genera: 51 })], 1).reason).toBe('dimension-mismatch-unverified');
   });
 
   it('evaluates numeric free objects (constraint 0, main kind 11) in page units', () => {

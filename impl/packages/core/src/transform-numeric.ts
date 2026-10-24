@@ -11,6 +11,7 @@
  */
 import { readF64, readU32 } from './bytes.ts';
 import type { Geometry, PointGeometry, XY } from './geometry.ts';
+import type { Dimension } from './numeric/units.ts';
 
 export interface NumericSimilarity {
   xx: number;
@@ -60,9 +61,11 @@ const scaling = (center: XY, k: number): NumericSimilarity => ({
 });
 
 /** 数值父的基准单位值。父已由依赖图保证求值成功，这里只做类型与有限性判断。 */
-function numberAt(parents: readonly Geometry[], slot: number): number | Failure {
+function numberAt(parents: readonly Geometry[], slot: number, dimension: Dimension): number | Failure {
   const parent = parents[slot];
   if (parent === undefined || parent.kind !== 'measure') return unsupported(`numeric-parameter-parent:${slot}`);
+  // 量纲必须符合卡片；无单位数当距离、角度量当距离等原版行为未核实（Q10.2）。
+  if (parent.measurement.internal.dimension !== dimension) return unsupported('numeric-parameter-dimension-unverified');
   const value = parent.measurement.internal.magnitude;
   return Number.isFinite(value) ? value : absent('non-finite-numeric-parameter');
 }
@@ -90,14 +93,14 @@ export function numericParameterTransform(
   if (id === 18) {
     // 水平位移固定（+4，正向右），垂直位移取父 1（长度量，px，正向上）。
     const dx = readF64(native!, 4);
-    const dy = numberAt(parents, 1);
+    const dy = numberAt(parents, 1, 'length');
     if (typeof dy !== 'number') return dy;
     if (!Number.isFinite(dx)) return absent('non-finite-transform-parameter');
     return ok(translation(dx, -dy));
   }
   if (id === 19) {
     // 垂直位移固定（+4，正向上），水平位移取父 1（px，正向右）。
-    const dx = numberAt(parents, 1);
+    const dx = numberAt(parents, 1, 'length');
     if (typeof dx !== 'number') return dx;
     const dy = readF64(native!, 4);
     if (!Number.isFinite(dy)) return absent('non-finite-transform-parameter');
@@ -105,16 +108,16 @@ export function numericParameterTransform(
   }
   if (id === 20) {
     // 父 1 水平、父 2 垂直（手册：先选定的距离是水平）。
-    const dx = numberAt(parents, 1);
+    const dx = numberAt(parents, 1, 'length');
     if (typeof dx !== 'number') return dx;
-    const dy = numberAt(parents, 2);
+    const dy = numberAt(parents, 2, 'length');
     if (typeof dy !== 'number') return dy;
     return ok(translation(dx, -dy));
   }
   if (id === 23) {
     // 固定距离（+4 px）+ 父 1 的方向角（弧度）。
     const distance = readF64(native!, 4);
-    const angle = numberAt(parents, 1);
+    const angle = numberAt(parents, 1, 'angle');
     if (typeof angle !== 'number') return angle;
     if (!Number.isFinite(distance)) return absent('non-finite-transform-parameter');
     return ok(translation(distance * Math.cos(angle), -distance * Math.sin(angle)));
@@ -122,7 +125,7 @@ export function numericParameterTransform(
   if (id === 24) {
     // 固定角度（+4 = −sin θ、+12 = cos θ，同 21）+ 父 1 的距离。
     const a = readF64(native!, 4), b = readF64(native!, 12);
-    const distance = numberAt(parents, 1);
+    const distance = numberAt(parents, 1, 'length');
     if (typeof distance !== 'number') return distance;
     if (!Number.isFinite(a) || !Number.isFinite(b)) return absent('non-finite-transform-parameter');
     if (Math.abs(Math.hypot(a, b) - 1) > 1e-8) return unsupported('invalid-native-transform-direction');
@@ -137,7 +140,7 @@ export function numericParameterTransform(
     if ('ok' in c) return c;
     if ('ok' in d) return d;
     if ('ok' in e) return e;
-    const distance = numberAt(parents, 4);
+    const distance = numberAt(parents, 4, 'length');
     if (typeof distance !== 'number') return distance;
     const ux = c.geometry.x - d.geometry.x, uy = c.geometry.y - d.geometry.y;
     const vx = e.geometry.x - d.geometry.x, vy = e.geometry.y - d.geometry.y;
@@ -150,9 +153,9 @@ export function numericParameterTransform(
   }
   if (id === 26) {
     // 父 1 方向角（弧度）、父 2 距离（px）。
-    const angle = numberAt(parents, 1);
+    const angle = numberAt(parents, 1, 'angle');
     if (typeof angle !== 'number') return angle;
-    const distance = numberAt(parents, 2);
+    const distance = numberAt(parents, 2, 'length');
     if (typeof distance !== 'number') return distance;
     return ok(translation(distance * Math.cos(angle), -distance * Math.sin(angle)));
   }
@@ -160,7 +163,7 @@ export function numericParameterTransform(
     // 父 1 中心、父 2 角度（弧度），旋转方向同 27。
     const center = pointAt(parents, 1, 'transform-center-must-be-point');
     if ('ok' in center) return center;
-    const angle = numberAt(parents, 2);
+    const angle = numberAt(parents, 2, 'angle');
     if (typeof angle !== 'number') return angle;
     return ok(rotation(pointXY(center), Math.cos(angle), Math.sin(angle)));
   }
@@ -180,7 +183,7 @@ export function numericParameterTransform(
     // 父 1 中心、父 2 比值（无量纲，可为负）。
     const center = pointAt(parents, 1, 'transform-center-must-be-point');
     if ('ok' in center) return center;
-    const ratio = numberAt(parents, 2);
+    const ratio = numberAt(parents, 2, 'number');
     if (typeof ratio !== 'number') return ratio;
     if (ratio === 0) return unsupported('zero-scale-existence-unverified');
     return ok(scaling(pointXY(center), ratio));

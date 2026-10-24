@@ -305,7 +305,7 @@ function applyFunction(name: (typeof FUNCTION_NAMES)[number], argument: NumericV
       if (x <= 0) undefinedValue('log-domain');
       return { value: Math.log10(x), dimension: 'number' };
     case 'sgn': return { value: Math.sign(x), dimension: 'number' };
-    case 'round': return { value: Math.floor(x + 0.5), dimension: 'number' };
+    case 'round': return { value: Math.floor(x + 0.5), dimension: argument.dimension };
     case 'trunc': return { value: Math.trunc(x), dimension: argument.dimension };
   }
 }

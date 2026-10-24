@@ -32,12 +32,8 @@ export interface NumericReading {
     magnitude: number;
     /** 同一值的显示单位未舍入读数（`magnitude` 除以单位换算系数）；子计算与边界判断都用它。 */
     displayRaw: number;
-    /** 约束 48 的对象头 genera 对应的量纲；仅诊断用。 */
+    /** 约束 48 的对象头 genera 对应的量纲（与表达式推得的量纲一致时才有读数）；仅诊断用。 */
     generaDimension?: Dimension;
-    /** genera 与表达式算出的量纲不一致；不得据此改值。 */
-    dimensionMismatch?: boolean;
-    /** 仅在不一致时给出表达式自己的量纲。 */
-    expressionDimension?: Dimension;
   };
 }
 
@@ -240,13 +236,12 @@ function evaluateCalc(o: ObjectInfo, parents: readonly Geometry[], page: Contain
   if (!Array.isArray(values)) return values;
   const result = evaluateExpression(decoded.tokens, { parents: values, page: page.numericPreferences });
   if (!result.ok) return unsupported(result.reason);
-  // 卡片 48：量纲由对象头 genera 定；表达式只决定值。不一致只记录诊断。
+  // 卡片 48：genera 与表达式推得的量纲必须一致才出读数；任一不成立都不猜单位（Q9.1）。
   const generaDimension = GENERA_DIMENSIONS.get(o.genera);
-  const dimensionMismatch = generaDimension !== undefined && generaDimension !== result.dimension;
-  return makeReading(result.value, generaDimension ?? result.dimension, decoded.digits, page, o, {
-    ...(generaDimension === undefined ? {} : { generaDimension }),
-    ...(dimensionMismatch ? { dimensionMismatch: true, expressionDimension: result.dimension } : {}),
-  });
+  if (generaDimension === undefined || generaDimension !== result.dimension) {
+    return unsupported('dimension-mismatch-unverified');
+  }
+  return makeReading(result.value, generaDimension, decoded.digits, page, o, { generaDimension });
 }
 
 function evaluateNumericFreeObject(o: ObjectInfo, page: ContainerModel): MeasureOutcome {

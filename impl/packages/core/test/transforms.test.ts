@@ -210,6 +210,31 @@ describe('transform boundaries and dependency updates', () => {
     const ratio = measure(132, 47, [112, 105], 51);
     pointClose(find(page(...sources, ...parameters, ratio, object(300, 33, [1, 100, 132])), 300), [-10, -22.5]);
   });
+  it('rejects a numeric parent whose dimension is not the one the card requires', () => {
+    const unitless = freeNumber(150, [3], 51), length = calc(151, [1, 0, 0x0201], [], 48), angle = calc(152, [9, 0, 0x0101], [], 49);
+    const wrong = 'numeric-parameter-dimension-unverified';
+    const run = (id: number, parents: number[], payload?: Uint8Array) =>
+      find(page(...sources, ...parameters, unitless, length, angle, object(300, id, parents, 4, payload)), 300);
+    // 24 / 18 / 19 / 20 / 25 / 26 的距离槽：无单位或角度量都不行。
+    expect(run(24, [1, 150], parameter(24, [[4, -1], [12, 0]]))).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(24, [1, 152], parameter(24, [[4, -1], [12, 0]]))).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(18, [1, 150], parameter(18, [[4, 5]]))).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(19, [1, 152], parameter(19, [[4, 7]]))).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(20, [1, 151, 150])).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(25, [1, 102, 101, 104, 150])).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(26, [1, 152, 150])).toMatchObject({ status: 'unsupported', reason: wrong });
+    // 角度槽：23 / 26 / 29 不接受无单位数或长度。
+    expect(run(23, [1, 150], parameter(23, [[4, 8]]))).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(26, [1, 151, 151])).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(29, [1, 100, 150])).toMatchObject({ status: 'unsupported', reason: wrong });
+    expect(run(29, [1, 100, 151])).toMatchObject({ status: 'unsupported', reason: wrong });
+    // 33 的比值必须是无量纲：长度不行。
+    expect(run(33, [1, 100, 151])).toMatchObject({ status: 'unsupported', reason: wrong });
+    // 正确量纲照常出几何。
+    pointClose(run(24, [1, 151], parameter(24, [[4, -1], [12, 0]])), [2, 3 - 960 / 2.54]);
+    pointClose(run(29, [1, 100, 152]), [-7, 28]);
+    pointClose(run(33, [1, 100, 150]), [-14, -31]);
+  });
   it('keeps the unverified zero-scale boundary for numeric ratios', () => {
     expect(find(page(...sources, ...parameters, freeNumber(140, [0], 51), object(300, 33, [1, 100, 140])), 300))
       .toMatchObject({ status: 'unsupported', reason: 'zero-scale-existence-unverified' });
