@@ -345,7 +345,7 @@ class IdleTracker:
 # --------------------------------------------------------------------------- 应用会话
 
 class Session:
-    """持有一个原版进程; 负责启动/重启/关闭、弹窗处理、命令发送。"""
+    """持有本轮启动的一个原版进程；负责关闭、弹窗处理、命令发送。"""
 
     def __init__(self, show="min", screenshots=None, verbose=False):
         self.proc = None
@@ -377,20 +377,17 @@ class Session:
         except Exception:
             f.unlink(missing_ok=True)
             return None
-        if pid_alive(pid) and proc_creation(pid) == d.get("creation") and (proc_image(pid) or "").lower() == str(RUNTIME / EXE_NAME).lower():
-            terminate_pid(pid)
-            time.sleep(0.5)
-            f.unlink(missing_ok=True)
-            return pid
+        if pid_alive(pid) and (proc_image(pid) or "").lower() == str(RUNTIME / EXE_NAME).lower():
+            # A previous run does not confer ownership on this session. In
+            # particular, a missing creation timestamp must never authorize a kill.
+            raise OracleError("上次运行的原版进程仍在 (PID %d); 本轮不会结束非本轮启动的进程" % pid)
         f.unlink(missing_ok=True)
         return None
 
     def start(self, timeout=40):
         exe = ensure_runtime()
         STATE.mkdir(parents=True, exist_ok=True)
-        stale = self.kill_stale()
-        if stale:
-            log("  [session] 已结束上次遗留的进程 PID %d" % stale)
+        self.kill_stale()
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         si.wShowWindow = 7 if self.show == "min" else 1   # SW_SHOWMINNOACTIVE / SW_SHOWNORMAL
@@ -454,13 +451,6 @@ class Session:
                 pass
             self.proc = None
             self.main = None
-
-    def restart(self, why=""):
-        self.restarts += 1
-        log("  [session] 重启原版 (%s)" % why)
-        self.stop(graceful=False)
-        time.sleep(0.5)
-        return self.start()
 
     # ---- 窗口信息
     def title(self):
@@ -1001,7 +991,7 @@ def run_job(sess, src, rel, want, out_dir, timeout, job_no=0, shots=None):
     entry["status"] = status
     entry["error"] = err
     entry["seconds"] = round(time.time() - t_start, 2)
-    # 失败: 现场取证 + 重启
+    # 失败: 现场取证；不自动重启。无法恢复的会话由 batch 安全停止。
     if status != "ok":
         if shots and sess.alive():
             try:
@@ -1017,12 +1007,10 @@ def run_job(sess, src, rel, want, out_dir, timeout, job_no=0, shots=None):
                 clean = sess.alive() and responsive(sess.main, 1000) and sess.clean_extra_docs() and not sess.visible_dialogs()
             except Exception:
                 clean = False
-        entry["restarted"] = not clean
+        entry["restarted"] = False
         if not clean:
-            try:
-                sess.restart("%s: %s" % (status, (err or "")[:60]))
-            except Exception as e:  # noqa
-                entry["restart_error"] = str(e)
+            entry["stop_required"] = True
+            entry.setdefault("notes", []).append("本轮停止：会话不可安全继续；不会自动重启原版")
     for sub in ("in", "out"):
         for f in (jobdir / sub).glob("*"):
             try:
@@ -1114,7 +1102,7 @@ class RunLock:
         self.f.unlink(missing_ok=True)
 
 
-def run_batch(files, out_dir, want, timeout, resume, root, show, retries, skip_failed, shots, verbose, recycle=150):
+def run_batch(files, out_dir, want, timeout, resume, root, show, retries, skip_failed, shots, verbose, recycle=0):
     out_dir = Path(out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     mf = out_dir / "manifest.jsonl"
@@ -1128,7 +1116,10 @@ def run_batch(files, out_dir, want, timeout, resume, root, show, retries, skip_f
         rel = rel_of(f, root)
         e = done.get(rel)
         if e and resume:
-            ok_outputs = all(Path(v["path"]).exists() for v in e.get("outputs", {}).values())
+            ok_outputs = all(
+                not v.get("produced", True) or (v.get("path") and Path(v["path"]).is_file())
+                for v in e.get("outputs", {}).values()
+            )
             wanted_present = all(k in e.get("outputs", {}) for k in want)
             if e.get("status") == "ok" and ok_outputs and wanted_present and e.get("input_sha256") == sha256_file(f):
                 continue
@@ -1147,15 +1138,14 @@ def run_batch(files, out_dir, want, timeout, resume, root, show, retries, skip_f
             since_start = 0
             for i, (f, rel) in enumerate(todo, 1):
                 if recycle and since_start >= recycle:
-                    sess.restart("每 %d 个文件定期重启, 防止原版资源累积" % recycle)
-                    sess.restarts -= 1  # 定期重启不算故障重启
-                    since_start = 0
+                    log("已处理 %d 个文件，按 --max-files 停止；不会自动重启原版" % recycle)
+                    break
                 since_start += 1
                 entry = None
                 for attempt in range(1, retries + 2):
                     entry = run_job(sess, f, rel, want, out_dir, timeout, job_no=i, shots=shots)
                     entry["attempts"] = attempt
-                    if entry["status"] == "ok":
+                    if entry["status"] == "ok" or entry.get("stop_required") or not sess.alive():
                         break
                     since_start = 0
                     log("  [%s] 第 %d 次尝试: %s" % (entry["status"], attempt, entry["error"]))
@@ -1165,6 +1155,9 @@ def run_batch(files, out_dir, want, timeout, resume, root, show, retries, skip_f
                 log("[%d/%d] %-7s %6.1fs %s dialogs=%d  %s%s" % (
                     i, len(todo), entry["status"], entry["seconds"], sizes, len(entry["dialogs"]), rel,
                     ("  !! " + entry["error"]) if entry.get("error") else ""))
+                if entry.get("stop_required") or not sess.alive():
+                    log("会话已停止或不可安全继续，保留断点；请检查后手动续跑")
+                    break
     finally:
         sess.stop()
     log("批处理用时 %.1fs (%.2fs/文件)" % (time.time() - t_all, (time.time() - t_all) / max(len(todo), 1)))
@@ -1269,7 +1262,7 @@ def build_parser():
         p.add_argument("--emf", action="store_true", help="导出 EMF (两者都不指定则都导出)")
         p.add_argument("--html", action="store_true", help="导出 HTML (JavaSketchpad 构造描述)")
         p.add_argument("--timeout", type=float, default=90, help="单文件总超时秒数 (默认 90)")
-        p.add_argument("--retries", type=int, default=1, help="失败后重试次数 (默认 1, 每次失败都会重启原版)")
+        p.add_argument("--retries", type=int, default=0, help="仅在原版安全拒绝文件后重试 (默认 0，绝不自动重启)")
         p.add_argument("--show", choices=["min", "normal"], default="min", help="原版窗口启动状态 (默认最小化, 不抢焦点)")
         p.add_argument("--root", help="输入相对路径的基准目录 (默认仓库根)")
         p.add_argument("--screenshots", action="store_true", help="失败时保存窗口截图到 <out-dir>/_fail (需要 Pillow)")
@@ -1290,7 +1283,8 @@ def build_parser():
     p.add_argument("--out-dir", required=True)
     p.add_argument("--resume", action="store_true", help="跳过 manifest 里已成功的文件; 失败/超时的会重试")
     p.add_argument("--skip-failed", action="store_true", help="与 --resume 合用: 连失败/超时的也跳过")
-    p.add_argument("--recycle", type=int, default=150, help="每处理 N 个文件主动重启一次原版 (0=不重启, 默认 150)")
+    p.add_argument("--max-files", "--recycle", dest="recycle", type=int, default=0,
+                   help="本轮最多处理 N 个文件后停止 (0=不限制；旧名 --recycle 不再触发重启)")
     common(p)
     p.set_defaults(fn=cmd_batch)
     return ap

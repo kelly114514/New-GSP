@@ -3,6 +3,8 @@
 `gsp_oracle.py` 打开 `.gsp`，让**原版** `GSP5chs.exe`（5.06 中文版）把当前页另存为 **EMF** 和 **HTML（JavaSketchpad 构造描述）**，再关闭文档，并为每个文件写一行 `manifest.jsonl`。
 `tools/emf_dump.py` 把 EMF 解成图元列表，作为几何验收的比较对象。
 
+**启动须经用户同意。** 每次运行只启动一次原版；进程退出、超时或会话不可安全恢复时记录断点并停止，不自动重启。2026-10-23 本轮续跑已获用户授权。下文第 6 节的自动重启故障注入是旧版的历史测试，不代表当前策略。
+
 原版是用户自己的授权副本。程序只从 `oracle/runtime/` 的副本运行（启动前校验 SHA-256 `bf22c098…c7b3`）；输入 `.gsp` 先复制到 `oracle/work/in/` 再打开，原件不会被改动。
 
 > 注意：仓库 `.gitignore` 里的 `oracle/`（无前导斜杠）会连 `tools/oracle/` 一起忽略，提交前需改成 `/oracle/`。
@@ -21,7 +23,7 @@ tools\oracle\.venv\Scripts\python.exe tools\oracle\gsp_oracle.py setup          
 - 依赖只有 `pywin32`；`Pillow` 只用于失败时截图（`--screenshots`）。没有用 pywinauto / UI Automation：原版是 32 位 MFC 程序，64 位 Python 的 pywinauto 在跨位数读控件上有限制，纯消息自动化更稳。
 - `oracle/work` 路径必须是 ASCII（原版文件对话框是 ANSI 的，路径经 GBK 转码）。
 - 同一时刻只能有一个 `gsp_oracle` 在跑（`oracle/state/oracle.lock`，它们共用一个原版实例）。
-- 脚本只操作自己启动的那个 `GSP5chs.exe`（PID 记在 `oracle/state/pid.json`，下次启动时若发现是上次崩溃遗留的，只结束它）。不碰其它程序，也不发送键盘/鼠标输入。
+- 脚本只操作、关闭本轮自己启动的 `GSP5chs.exe`。若 `oracle/state/pid.json` 指向仍在运行的旧原版进程，本轮报错停止，不接管或结束它。不碰其它程序，也不发送键盘/鼠标输入。
 
 ## 2. 用法
 
@@ -46,7 +48,7 @@ python tools\emf_dump.py X.emf --digest                                         
 python tools\oracle\test_emf_dump.py                                                         # 解析器自测（现场用 GDI 画一个 EMF 再核对）
 ```
 
-常用选项：`--timeout S` 单文件总超时（默认 90）；`--retries N` 失败/超时后重试次数（默认 1，每次失败都重启原版）；`--resume` 跳过 manifest 里已成功且输出还在、输入哈希未变的文件，失败/超时的会重试（`--skip-failed` 连它们也跳过）；`--recycle N` 每 N 个文件主动重启原版一次（默认 150）；`--show min|normal`（见第 5 节，**默认最小化，请勿随意改**）；`--screenshots` 失败时存窗口截图到 `<out-dir>/_fail/`。
+常用选项：`--timeout S` 单文件总超时（默认 90）；`--retries N` 仅在原版干净拒绝文件、会话仍安全时重试（默认 0）；`--resume` 跳过 manifest 里已成功且输出还在、输入哈希未变的文件（原版明确不生成 EMF 的空页也能跳过），失败/超时的会列入本轮（`--skip-failed` 连它们也跳过）；`--max-files N` 本轮最多处理 N 个文件后停止（默认 0，不限制；旧选项 `--recycle` 是此选项的别名，不再重启）；`--show min|normal`（见第 5 节，**默认最小化，请勿随意改**）；`--screenshots` 失败时存窗口截图到 `<out-dir>/_fail/`。
 
 输出目录镜像输入的相对路径（相对仓库根，或 `--root`）：`<out-dir>/<相对目录>/<主名>.emf|.htm`，另有 `manifest.jsonl`。
 
@@ -83,7 +85,13 @@ python tools\oracle\test_emf_dump.py                                            
 
 ### 失败、挂起与重启
 
-整体失败策略：任何超时、进程消失、弹窗卡死、输出校验失败（EMF 头签名/`nBytes`/`nRecords`/EOF；HTML 缺 `<APPLET>`/`Construction`）→ 记 `failed`/`timeout`（可选截图）→ **结束并重新启动原版**（只结束自己的 PID）→ 重试 `--retries` 次。原版“干净地拒绝文件”（打开失败弹窗）不重启。批处理每 150 个文件主动重启一次，防止资源累积。实测（见第 6 节）：进程被外部结束后自动恢复；`--timeout 6` 下重文件超时后自动重启、后续文件正常；`--resume` 只补跑未完成的。
+整体失败策略：任何超时、进程消失、弹窗卡死、输出校验失败（EMF 头签名/`nBytes`/`nRecords`/EOF；HTML 缺 `<APPLET>`/`Construction`）→ 记 `failed`/`timeout`（可选截图）→ 记 `stop_required` 并停止本轮，关闭本轮自己的进程，**不自动重启**。原版“干净地拒绝文件”（打开失败弹窗）且文档已清理、会话仍响应时可以继续下一个文件。检查失败原因后，用 `--resume` 人工续跑；再次启动仍须有用户授权。
+
+离线安全回归（不启动或结束任何原版进程）：
+
+```powershell
+tools/oracle/.venv/Scripts/python.exe tools/oracle/test_lifecycle.py
+```
 
 ## 4. 输出的性质（要点）
 
@@ -116,7 +124,7 @@ EMF 的页面大小和 HTML 的 `WIDTH/HEIGHT` 取决于文档窗口的画布大
 
 - **结果**：ok 30 / failed 0 / timeout 0；过程中无重启。EMF 产生 26 个（共 37 MB）；4 个按“不产生 EMF”处理（`empty.gsp` 和 `Tool Folder` 的 `08 迷你坐标系`、`11 箭头工具`、`31 反演`）；HTML 30 个全部产生且通过校验。
 - **每文件耗时（含导出两种格式、校验、摘要）**：中位 3.5 s，平均 4.8 s，最大 18.7 s（总计 145 s）。分阶段中位数：打开 1.5 s、EMF 0.6 s、HTML 0.6 s、关闭 0.65 s。普通文件稳定在 3.0–3.5 s；慢的是 `Sample.gsp`（自动播放动画，13–18 s）、`L-圆迭代`（24.8 MB EMF，约 18 s）、`L-龙曲线2`（9.7 MB EMF，约 8 s）。只导 EMF 或只导 HTML 可省约 0.6 s。
-- **全量 1431 个的估算**：按“普通 3.2 s + 分形/大文件更慢”，约 1.5–2.5 小时；磁盘约几个 GB（分形 EMF 很大）。建议分批（`--resume` 可随时中断续跑）并加 `--recycle`。
+- **全量 1431 个的估算**：按“普通 3.2 s + 分形/大文件更慢”，约 1.5–2.5 小时；磁盘约几个 GB（分形 EMF 很大）。可用 `--max-files` 分批，`--resume` 续跑。
 - **稳定性**：同一最小化模式重复两遍，HTML 逐字节相同；EMF 字节不同但 `canon_sha256` 相同（25/26，唯一不同的是自动播放动画的 `Sample.gsp`，停止动画后复测一致）。窗口为正常状态时 HTML 画布尺寸 25/30 不同、EMF 图元 4/24 不同（第 5 节）。
 - **故障注入**：用 `taskkill` 杀掉原版进程 → 下个文件检测到并重启，重试成功；`--timeout 6` 下 24.8 MB 的重文件超时，自动重启，后续文件正常，再 `--resume` 只补跑这一个；损坏/空文件 2.3–3.3 s 内判 `failed` 并给出弹窗原文。
 
@@ -128,6 +136,6 @@ EMF 的页面大小和 HTML 的 `WIDTH/HEIGHT` 取决于文档窗口的画布大
 - 自动播放动画的文档：导出的是停止后的某一帧；manifest 有 `busy_after_open` 和 `notes`。
 - 原版会在注册表 `HKCU\Software\KCP Technologies, Inc.` 记录设置（最近文件等），并把进程当前目录切到 `oracle/work/in`；这是原版自身行为，无法避免。除此之外 `oracle/runtime/` 里没有新增文件。
 - 文件名必须能无损过 GBK（ANSI 对话框）；语料中全部满足。不满足的会改名为 `input_<hash>.gsp`，HTML 标题随之变化。
-- 如果原版真的崩溃，Windows 的“已停止工作”对话框（WerFault，别的进程）不会被处理，需要手动关；脚本本身会检测到进程消失并重启。
+- 如果原版真的崩溃，Windows 的“已停止工作”对话框（WerFault，别的进程）不会被处理，需要手动关；脚本本身会检测到进程消失并停止本轮。
 - 大文件：分形目录的 EMF 可达数十 MB（`L-圆迭代` 24.8 MB，86.6 万条记录）；全量跑要预留磁盘。`emf_dump.py` 解析 86 万条记录约 6 秒、内存可观，`--digest` 比较省。
 - 打开失败（损坏文件）、`status=failed`：现场信息在 `dialogs` 和 `error` 里。
