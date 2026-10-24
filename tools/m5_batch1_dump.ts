@@ -5,7 +5,7 @@
  * 用法：node tools/m5_batch1_dump.ts <index.json> <outDir>
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { PageGeometryEvaluator, parseGsp, readDocumentModel, toGeometryJson } from '../impl/packages/core/src/index.ts';
 
 interface Operation { type: string; pageIndex: number; objectIndex: number; to: [number, number] }
@@ -16,13 +16,12 @@ if (indexPath === undefined || outDir === undefined) {
   process.exitCode = 2;
 } else {
   const index = JSON.parse(readFileSync(indexPath, 'utf8')) as { cases: { case: string; source: { path: string }; operation?: Operation }[] };
-  const root = dirname(dirname(indexPath));
   let done = 0;
   let failed = 0;
   for (const item of index.cases) {
     const target = join(outDir, item.case);
     mkdirSync(outDir, { recursive: true });
-    const source = join(root, item.source.path);
+    const source = resolve(item.source.path);
     try {
       const model = readDocumentModel(parseGsp(new Uint8Array(readFileSync(source))));
       if (item.operation !== undefined) {
