@@ -196,10 +196,68 @@ def bind_html(objects, html):
     return bindings
 
 
+def within_linear(linear, parameter):
+    """Native range check for a parameter on a segment, ray or line."""
+    slack = 64 * sys.float_info.epsilon * max(1.0, abs(parameter))
+    if linear["kind"] == "line":
+        return True
+    if linear["kind"] == "ray":
+        return parameter >= -slack
+    return parameter <= 1 + slack
+
+
+def linear_circle_root(linear, circle, prefer_smaller):
+    """Candidate intersection predicted from the cards, never an expected value.
+
+    Constraints 11 and 12 differ only in which root they prefer: the smaller or the
+    larger parameter along the line basis. A preferred root outside the parent range
+    falls back to the other one.
+    """
+    origin, d = linear["a"], sub(linear["b"], linear["a"])
+    qa = d[0] * d[0] + d[1] * d[1]
+    if qa == 0:
+        return None
+    offset = sub(origin, circle["center"])
+    qb = 2 * (d[0] * offset[0] + d[1] * offset[1])
+    qc = offset[0] * offset[0] + offset[1] * offset[1] - circle["radius"] ** 2
+    discriminant = qb * qb - 4 * qa * qc
+    tolerance = 64 * sys.float_info.epsilon * (qb * qb + abs(4 * qa * qc))
+    if discriminant < -tolerance:
+        return None
+    if discriminant <= tolerance:
+        roots = [-qb / (2 * qa)]
+    else:
+        root = math.sqrt(discriminant)
+        roots = sorted(((-qb - root) / (2 * qa), (-qb + root) / (2 * qa)))
+    for t in roots if prefer_smaller else list(reversed(roots)):
+        if within_linear(linear, t):
+            return add(origin, mul(d, t))
+    return None
+
+
+def circle_circle_root(a, b, prefer_first):
+    """Constraint 13 prefers +h*(ey,-ex), 14 prefers -h*(ey,-ex) in page coordinates."""
+    delta = sub(b["center"], a["center"])
+    span = math.hypot(*delta)
+    if span == 0:
+        return None
+    ex, ey = delta[0] / span, delta[1] / span
+    r1, r2 = a["radius"], b["radius"]
+    along = (r1 * r1 - r2 * r2 + span * span) / (2 * span)
+    h2 = r1 * r1 - along * along
+    tolerance = 64 * sys.float_info.epsilon * (r1 * r1 + along * along)
+    if h2 < -tolerance:
+        return None
+    h = 0.0 if h2 <= tolerance else math.sqrt(h2)
+    sign = 1 if prefer_first else -1
+    base = add(a["center"], mul([ex, ey], along))
+    return [base[0] + sign * h * ey, base[1] - sign * h * ex]
+
+
 def predict(objects, html_bindings=None):
     """Conservative geometric search hints, NOT oracle assertions.
 
-    Ambiguous orientation, path parameters, intersections and arcs are deliberately
+    Ambiguous orientation, path parameters, arcs and arc-bounded regions are deliberately
     deferred. Every emitted assertion is read back from an original EMF primitive.
     """
     out = {}
@@ -244,6 +302,14 @@ def predict(objects, html_bindings=None):
                         return line["kind"] == "line" or parameter >= 0 and (line["kind"] == "ray" or parameter <= 1)
                     if within(a, t) and within(b, u):
                         g = {"kind": "point", "point": add(a["a"], mul(d, t))}
+            elif c in (11, 12) and len(ps) == 2 and ps[0]["kind"] in ("segment", "line", "ray") and ps[1]["kind"] == "circle":
+                root = linear_circle_root(ps[0], ps[1], prefer_smaller=c == 11)
+                if root is not None:
+                    g = {"kind": "point", "point": root}
+            elif c in (13, 14) and len(ps) == 2 and ps[0]["kind"] == "circle" and ps[1]["kind"] == "circle":
+                root = circle_circle_root(ps[0], ps[1], prefer_first=c == 13)
+                if root is not None:
+                    g = {"kind": "point", "point": root}
             elif c == 15 and len(ps) == 1 and len(lines) == 1:
                 extra = obj.get("constraintExtra", b"")
                 parent = objects[parents[0] - 1]

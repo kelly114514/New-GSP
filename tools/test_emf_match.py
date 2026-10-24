@@ -6,6 +6,42 @@ import tempfile
 import unittest
 
 from emf_match import fit_offset, bind_html, parse_html, read_manifests
+from emf_match import circle_circle_root, linear_circle_root
+
+
+class IntersectionPredictionTests(unittest.TestCase):
+    """The root rules must match cards 11-14, otherwise a prediction picks the wrong primitive."""
+
+    def test_line_circle_prefers_smaller_or_larger_parameter(self):
+        line = {"kind": "line", "a": [0, 0], "b": [10, 0]}
+        circle = {"kind": "circle", "center": [5, 0], "radius": 3}
+        small = linear_circle_root(line, circle, prefer_smaller=True)
+        large = linear_circle_root(line, circle, prefer_smaller=False)
+        self.assertAlmostEqual(small[0], 2, places=9)
+        self.assertAlmostEqual(large[0], 8, places=9)
+
+    def test_line_circle_falls_back_when_preferred_root_leaves_the_parent(self):
+        # 线段只覆盖 t∈[0,1]：t≈1.1 的根在范围外，12 必须回退到另一个根。
+        segment = {"kind": "segment", "a": [0, 0], "b": [10, 0]}
+        circle = {"kind": "circle", "center": [8, 0], "radius": 3}
+        self.assertAlmostEqual(linear_circle_root(segment, circle, prefer_smaller=True)[0], 5, places=9)
+        self.assertAlmostEqual(linear_circle_root(segment, circle, prefer_smaller=False)[0], 5, places=9)
+        # 射线朝 +x，两交点都在起点后方：没有候选，不能硬取一个。
+        behind = {"kind": "ray", "a": [0, 0], "b": [1, 0]}
+        self.assertIsNone(linear_circle_root(behind, {"kind": "circle", "center": [-5, 0], "radius": 3}, True))
+        self.assertIsNone(linear_circle_root(behind, {"kind": "circle", "center": [-5, 0], "radius": 3}, False))
+
+    def test_circle_circle_branches_are_mirror_images(self):
+        first = {"kind": "circle", "center": [0, 0], "radius": 5}
+        second = {"kind": "circle", "center": [6, 0], "radius": 5}
+        upper = circle_circle_root(first, second, prefer_first=True)
+        lower = circle_circle_root(first, second, prefer_first=False)
+        self.assertAlmostEqual(upper[0], 3, places=9)
+        self.assertAlmostEqual(upper[1], -4, places=9)
+        self.assertAlmostEqual(lower[0], 3, places=9)
+        self.assertAlmostEqual(lower[1], 4, places=9)
+        self.assertIsNone(circle_circle_root(first, {"kind": "circle", "center": [0, 0], "radius": 1}, True))
+        self.assertIsNone(circle_circle_root(first, {"kind": "circle", "center": [20, 0], "radius": 1}, True))
 
 
 class MatcherTests(unittest.TestCase):
