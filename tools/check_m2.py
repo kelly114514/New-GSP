@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -119,6 +120,31 @@ def geometry_error(kind, expected, actual):
     return math.inf
 
 
+def unsupported_ancestor_roots(obj, objects):
+    """Only explicit core dependency reasons count. Missing objects/geometry never imply blocking.
+    A cyclic, broken or contradictory reason chain is a core error and stays failed.
+    """
+    def pure_unsupported(item):
+        return bool(item and item.get("status") == "unsupported" and item.get("exists") is None
+                    and "geometry" not in item and "measurement" not in item)
+    if not pure_unsupported(obj):
+        return []
+    seen, roots = set(), []
+    current = obj
+    while True:
+        match = re.fullmatch(r"parent:(\d+):unsupported", current.get("reason", ""))
+        if not match:
+            return roots if current is not obj else []
+        idx = int(match[1])
+        if idx in seen or idx == obj["objectIndex"]:
+            return []
+        seen.add(idx)
+        current = objects.get(idx)
+        if not pure_unsupported(current):
+            return []
+        roots = [{"objectIndex": idx, "constraintId": current.get("constraintId"), "reason": current.get("reason")}]
+
+
 def compare(case, actual):
     if not isinstance(actual, dict) or actual.get("schema") != "gsp-core-geometry-v1":
         raise ValueError("actual schema must be gsp-core-geometry-v1")
@@ -135,17 +161,48 @@ def compare(case, actual):
                         "expected": case["expectedObjectCount"], "actual": len(items)})
     for assertion in case["assertions"]:
         obj = objects.get(assertion["objectIndex"])
-        error = math.inf
-        if obj and obj.get("exists") is True and obj.get("kind") == assertion["kind"]:
-            error = geometry_error(assertion["kind"], assertion["geometry"], obj.get("geometry"))
-        results.append({"objectIndex": assertion["objectIndex"], "kind": assertion["kind"],
-                        "passed": error <= assertion["tolerancePx"], "errorPx": error if math.isfinite(error) else None,
-                        "reason": None if math.isfinite(error) else "missing_wrong_kind_nonexistent_or_invalid_geometry"})
+        result = {"objectIndex": assertion["objectIndex"], "kind": assertion["kind"], "passed": False}
+        if assertion["kind"] == "measure":
+            expected = assertion["measurement"]
+            measured = (obj or {}).get("measurement", {})
+            value = measured.get("displayValue")
+            valid = (obj and obj.get("exists") is True and obj.get("kind") == "measure"
+                     and isinstance(value, (float, int)) and not isinstance(value, bool) and math.isfinite(value))
+            error = abs(value - expected["displayValue"]) if valid else math.inf
+            result.update(errorValue=error if math.isfinite(error) else None,
+                          passed=bool(valid and error <= expected["roundingTolerance"]
+                                      and measured.get("displayUnitText") == expected["displayUnitText"]
+                                      and ("displayNumber" not in measured or measured["displayNumber"] == expected["displayNumber"])))
+        else:
+            error = math.inf
+            if obj and obj.get("exists") is True and obj.get("kind") == assertion["kind"]:
+                error = geometry_error(assertion["kind"], assertion["geometry"], obj.get("geometry"))
+            result.update(passed=error <= assertion["tolerancePx"], errorPx=error if math.isfinite(error) else None)
+        if result["passed"]:
+            result.update(category="passed", reason=None)
+        else:
+            roots = unsupported_ancestor_roots(obj, objects)
+            declared_unsupported_only = bool(obj and obj.get("status") == "unsupported" and obj.get("exists") is None
+                                             and "geometry" not in obj and "measurement" not in obj)
+            # A produced finite but wrong result is always a regression, even with an unsupported ancestor.
+            if not math.isfinite(error) and roots and declared_unsupported_only:
+                result.update(category="blocked_by_unimplemented_ancestor", reason=(obj or {}).get("reason"),
+                              unsupportedAncestors=roots)
+            elif not math.isfinite(error) and declared_unsupported_only and not obj.get("reason", "").startswith("parent:"):
+                result.update(category="unimplemented_self", reason=obj.get("reason"))
+            else:
+                result.update(category="incorrect_result" if math.isfinite(error) else "missing_or_invalid_result",
+                              reason="value_mismatch" if math.isfinite(error) else "missing_wrong_kind_nonexistent_or_invalid_geometry")
+        results.append(result)
     excluded = case.get("coverage", {}).get("excludedAObjects", len(case.get("excluded", [])))
     other = sum(p.get("AObjects", 0) for p in case.get("otherPages", []))
     return {"source": case["source"]["path"], "pageIndex": case["pageIndex"], "operation": case.get("operation"),
-            "passed": sum(r["passed"] for r in results), "failed": sum(not r["passed"] for r in results),
+            "passed": sum(r["passed"] for r in results),
+            "failed": sum(not r["passed"] and r.get("category") != "blocked_by_unimplemented_ancestor" for r in results),
+            "blocked_by_unimplemented_ancestor": sum(r.get("category") == "blocked_by_unimplemented_ancestor" for r in results),
+            "categories": dict(Counter(r.get("category", "passed" if r["passed"] else "incorrect_result") for r in results)),
             "assertedObjects": len(case["assertions"]), "uncoveredAObjects": excluded + other,
+            "uncoveredActivePageAObjects": excluded,
             "styleAndLabelsCovered": False, "fullM2Accepted": False, "results": results}
 
 
@@ -225,8 +282,10 @@ def main():
         index = json.loads(args.index.read_text(encoding="utf-8"))
         paths = [args.index.parent / x["case"] for x in index["cases"]]
     results = []
+    case_rows = []
     for path in paths:
         case = json.loads(path.read_text(encoding="utf-8"))
+        case_rows.append(case)
         try:
             if args.runner:
                 actual = run_case(case, args.runner, args.timeout)
@@ -240,9 +299,23 @@ def main():
         except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
             results.append({"source": case["source"]["path"], "passed": 0, "failed": 1,
                             "uncoveredAObjects": case["coverage"]["activePageAObjects"], "error": str(exc)})
+    # A page supplied by a different case is exported, not an uncovered other-page gap.
+    def scenario_key(case):
+        return (case["source"]["path"], case["source"].get("sha256"), json.dumps(case.get("operation"), sort_keys=True))
+    exported = {(scenario_key(c), c["pageIndex"]) for c in case_rows}
+    other_gaps = {}
+    for c in case_rows:
+        for pg in c.get("otherPages", []):
+            key = (scenario_key(c), pg["pageIndex"])
+            if key not in exported:
+                other_gaps[key] = pg.get("AObjects", 0)
+    active_gaps = sum(r.get("uncoveredActivePageAObjects", r["uncoveredAObjects"]) for r in results)
     report = {"schema": "gsp-m2-acceptance-report-v1", "cases": len(results),
               "passedChecks": sum(r["passed"] for r in results), "failedChecks": sum(r["failed"] for r in results),
-              "uncoveredAObjects": sum(r["uncoveredAObjects"] for r in results),
+              "uncoveredAObjects": active_gaps + sum(other_gaps.values()),
+              "nonExportedPageAObjects": sum(other_gaps.values()),
+              "blocked_by_unimplemented_ancestor": sum(r.get("blocked_by_unimplemented_ancestor", 0) for r in results),
+              "categories": dict(sum((Counter(r.get("categories", {})) for r in results), Counter())),
               "fullM2Accepted": False, "results": results}
     content = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.report:
@@ -251,7 +324,7 @@ def main():
     print(json.dumps({k: v for k, v in report.items() if k != "results"}, ensure_ascii=False))
     if report["failedChecks"]:
         sys.exit(1)
-    if args.require_full and (report["uncoveredAObjects"] or not report["fullM2Accepted"]):
+    if args.require_full and (report["uncoveredAObjects"] or report["blocked_by_unimplemented_ancestor"] or not report["fullM2Accepted"]):
         sys.exit(2)
 
 

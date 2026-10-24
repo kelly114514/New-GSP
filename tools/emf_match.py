@@ -19,6 +19,7 @@ import sys
 from inspect_gsp import parse_records
 from emf_dump import parse_emf
 import m4_transforms
+import m5_measures
 
 ROOT = Path(__file__).resolve().parents[1]
 A_GROUP = set(range(16)) | {63, 64, 79, 80, 81, 82, 83, 93, 98}
@@ -100,6 +101,11 @@ def native_document(path):
             page["objects"].append(obj)
         elif k == 2007:
             obj = None
+        elif page is not None and k in (9008, 10021, 10022, 10023, 10040, 10041, 10042):
+            if k == 10040:
+                page.setdefault("precisionSlots", {})[p[1]] = p[0]
+            else:
+                page["dpi" if k == 9008 else "preference" + str(k)] = int.from_bytes(p, "little")
         elif obj is not None:
             if k == 2002:
                 n, = struct.unpack_from("<I", p)
@@ -108,10 +114,14 @@ def native_document(path):
                 obj["savedPoint"] = list(struct.unpack("<dd", p))
             elif k == 2003:
                 obj["constraintExtra"] = p
+            elif k in (2307, 2311):
+                obj["measureRecord"] = p
+                obj["measureRecordKind"] = k
             elif k == 2005 and len(p) >= 6:
                 obj["labelFlags"] = list(struct.unpack_from("<3H", p))
                 if len(p) >= 24:
                     obj["labelByteLength"], = struct.unpack_from("<H", p, 22)
+                    obj["labelText"] = p[24:24 + obj["labelByteLength"]].decode("utf-8" if header[0] == 5 else "gbk", errors="replace").rstrip("\0")
     if header is None:
         raise ValueError("missing document header")
     return {"sha256": sha(data), "pages": pages, "tools": tools, "activePageIndex": header[8] + 1,
@@ -119,6 +129,10 @@ def native_document(path):
 
 
 # HTML step name -> (number of leading object references, native constraint IDs that emit it)
+MEASURE_HTML = {"Length": (1, {36}), "Distance": (2, {37}), "Angle": (3, {41}),
+                "Area": (1, {42}), "Radius": (1, {46}), "Ratio/Segments": (2, {47}),
+                "Ratio/Points": (3, {47}), "CoordinateDistance": (3, {86}), "Abscissa": (2, {65}), "Ordinate": (2, {66})}
+
 TRANSFORM_HTML = {
     "VectorTranslation": (3, {16}), "Translation": (1, {17, 21}), "Translation/FixedAngle/MarkedDistance": (2, {24}),
     "Translation/MarkedAngle/MarkedDistance": (3, {25}), "Rotation": (2, {27}), "Rotation/MarkedAngle": (5, {28}),
@@ -171,6 +185,22 @@ def parse_html(path):
                     step["point"] = xy
             except ValueError:
                 pass
+        if m[2] in MEASURE_HTML:
+            refs = MEASURE_HTML[m[2]][0]
+            try:
+                step["parents"] = [int(x) for x in args.split(",")[:refs]]
+            except ValueError:
+                pass
+        elif m[2] == "Calculate":
+            # Native/HTML expression cross-check; quote escaping is two single quotes.
+            quoted = r"'((?:[^']|'')*)'"
+            cm = re.match(r"Calculate\([^,]+,[^,]+," + quoted + "," + quoted + r"\)\(([^)]*)\)", m[2] + "(" + tail)
+            if cm:
+                try:
+                    step["parents"] = [int(x) for x in cm[3].split(",") if x]
+                    step["rpn"] = cm[2].replace("''", "'")
+                except ValueError:
+                    pass
         steps.append(step)
     canvas = re.search(r"<APPLET\b[^>]*\bWIDTH=(\d+)\s+HEIGHT=(\d+)", text, re.I)
     return {"sha256": sha(raw), "steps": steps,
@@ -216,6 +246,10 @@ def bind_html(objects, html):
     for name, (_, ids) in TRANSFORM_HTML.items():
         for cid in ids:
             types.setdefault(cid, set()).add(name)
+    for name, (_, ids) in MEASURE_HTML.items():
+        for cid in ids:
+            types.setdefault(cid, set()).add(name)
+    types[48] = {"Calculate"}
     bindings = {}
     for obj in objects:
         i, c = obj["objectIndex"], obj["constraint"]
@@ -226,8 +260,19 @@ def bind_html(objects, html):
             if len(duplicates) == 1:
                 candidates = [s for s in direct_points if distance(add(s["point"], shifted), obj["savedPoint"]) <= MATCH_PX]
         elif c in types and obj["parents"] and all(p in bindings for p in obj["parents"]):
-            signature = sorted(bindings[p]["step"] for p in obj["parents"])
-            candidates = [s for s in html["steps"] if s["type"] in types[c] and sorted(s.get("parents", [])) == signature]
+            ordered = c in m5_measures.MEASURES
+            signature = [bindings[p]["step"] for p in obj["parents"]]
+            if not ordered:
+                signature.sort()
+            candidates = [s for s in html["steps"] if s["type"] in types[c]
+                          and (s.get("parents", []) if ordered else sorted(s.get("parents", []))) == signature]
+            if c == 48:
+                fields = m5_measures.record_fields(obj.get("measureRecord", b""), 2311)
+                try:
+                    tree = m5_measures.expression_tree(fields["tokens"], len(obj["parents"])) if fields else None
+                    candidates = [s for s in candidates if "rpn" in s and m5_measures.same_expression(tree, m5_measures.html_expression_tree(s["rpn"]))] if tree else []
+                except (ValueError, IndexError, KeyError):
+                    candidates = []
             if c == 15 and len(obj.get("constraintExtra", b"")) == 12:
                 t, = struct.unpack_from("<d", obj["constraintExtra"], 4)
                 candidates = [s for s in candidates if abs(s.get("pathParameter", math.inf) - t) <= max(0.0001, abs(t) * 0.00001)]
@@ -719,9 +764,11 @@ def appearance_of(p, emf):
     return {"stroke": pen.get("color"), "strokeWidthPx": pen.get("width_px96"), "fill": brush.get("color")}
 
 
-def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None):
+def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None, page_index=None):
     doc = native_document(source)
-    page = doc["pages"][doc["activePageIndex"] - 1]
+    if page_index is not None and (isinstance(page_index, bool) or not isinstance(page_index, int) or not 0 <= page_index < len(doc["pages"])):
+        raise ValueError("manifest pageIndex must be a zero-based existing page")
+    page = doc["pages"][doc["activePageIndex"] - 1 if page_index is None else page_index]
     objects = page["objects"]
     html = parse_html(html_path)
     html_bindings = bind_html(objects, html)
@@ -799,6 +846,9 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
                                           "htmlMapping": "unique_free_point_or_parent_graph" if i in html_bindings
                                           else "type_has_no_html_step_visible_state_0_and_identified_parents",
                                           "matchingPredictionUsed": True, "pen": p["pen"], "brush": p["brush"]}})
+    measure_checks, measure_excluded = m5_measures.measurement_assertions(objects, emf, offset)
+    assertions.extend(measure_checks)
+    excluded.extend(measure_excluded)
     try:
         rel = source.resolve().relative_to(ROOT).as_posix()
     except ValueError:
@@ -816,6 +866,10 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
                        "alignment": alignment}, "assertions": assertions, "excluded": excluded, "otherPages": other_pages,
             "coverage": {"activePageObjects": len(objects), "activePageAObjects": a_count,
                          "activePageCObjects": c_count,
+                         "activePageMeasureObjects": sum(o["constraint"] in m5_measures.MEASURES for o in objects),
+                         "hiddenMeasureObjects": sum(o["constraint"] in m5_measures.MEASURES and o["state"] != 0 for o in objects),
+                         "assertedMeasureObjects": len(measure_checks),
+                         "excludedMeasureObjects": len(measure_excluded),
                          "eligibleWithAAncestors": sum(v and is_geometric_a(objects[k - 1]) for k, v in eligible.items()),
                          "eligibleCObjects": sum(v and objects[k - 1]["constraint"] in C_GROUP for k, v in eligible.items()),
                          "assertedObjects": len(assertions),
@@ -862,7 +916,10 @@ def read_manifests(manifests):
             except (ValueError, UnicodeDecodeError) as exc:
                 raise ValueError(f"complete manifest line {manifest}:{number} invalid: {exc}") from exc
             if row.get("status") == "ok":
-                rows[row["input"].replace("\\", "/")] = row
+                key = row["input"].replace("\\", "/")
+                if "pageIndex" in row:
+                    key += "#page=" + str(row["pageIndex"])
+                rows[key] = row
     return rows, snapshots
 
 
@@ -899,7 +956,15 @@ def build_batch(manifests, output, max_emf_bytes):
     rows, manifest_snapshots = read_manifests(manifests)
     output.mkdir(parents=True, exist_ok=True)
     index, failures = [], []
-    for rel, row in sorted(rows.items()):
+    explicit_pages = {(r["input"].replace("\\", "/"), r["pageIndex"]) for r in rows.values() if "pageIndex" in r}
+    for case_id, row in sorted(rows.items()):
+        if "pageIndex" not in row:
+            candidate_source = ROOT / row["input"].replace("\\", "/")
+            if candidate_source.is_file():
+                active = native_document(candidate_source)["activePageIndex"] - 1
+                if (row["input"].replace("\\", "/"), active) in explicit_pages:
+                    continue
+        rel = row["input"].replace("\\", "/")
         source = ROOT / rel
         emf = output_path(row.get("outputs", {}).get("emf", {}).get("path"))
         html = output_path(row.get("outputs", {}).get("html", {}).get("path"))
@@ -907,13 +972,14 @@ def build_batch(manifests, output, max_emf_bytes):
             if sha(source.read_bytes()) != row["input_sha256"]:
                 raise ValueError("manifest/input SHA-256 mismatch")
             emf_reason = "emf_size_limit_explicitly_uncovered" if emf is not None and emf.is_file() and emf.stat().st_size > max_emf_bytes else None
-            case = make_case(source, emf, html, emf_reason)
+            case = make_case(source, emf, html, emf_reason, page_index=row.get("pageIndex"))
+            case["oracle"]["pageSelection"] = {k: row[k] for k in ("pageIndex", "pageCount", "originalActivePage", "selectionMethod") if k in row}
             # Validate actual local output identity, not just manifest status.
             for key, path in (("emf", emf), ("html", html)):
                 item = row.get("outputs", {}).get(key, {})
                 if path is not None and path.is_file() and item.get("sha256") and sha_file(path) != item["sha256"]:
                     raise ValueError(key + " manifest/output SHA-256 mismatch")
-            name = sha(rel.encode("utf-8"))[:16] + ".json"
+            name = sha(case_id.encode("utf-8"))[:16] + ".json"
             (output / name).write_text(json.dumps(case, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             index.append({"case": name, "source": case["source"], "pageIndex": case["pageIndex"],
                           "coverage": case["coverage"],
@@ -924,7 +990,10 @@ def build_batch(manifests, output, max_emf_bytes):
             failures.append({"source": rel, "reason": str(exc)})
     totals = {key: sum(x["coverage"][key] for x in index)
               for key in ("activePageObjects", "activePageAObjects", "eligibleWithAAncestors", "assertedObjects", "assertedAObjects",
-                          "assertedCObjects", "excludedAObjects", "toolAObjects", "activePageCObjects", "eligibleCObjects", "excludedCObjects")}
+                          "assertedCObjects", "excludedAObjects", "toolAObjects", "activePageCObjects", "eligibleCObjects", "excludedCObjects",
+                          "activePageMeasureObjects", "hiddenMeasureObjects", "assertedMeasureObjects", "excludedMeasureObjects")}
+    totals["toolAObjects"] = sum(next(x["coverage"]["toolAObjects"] for x in index if x["source"]["path"] == path)
+                                 for path in {x["source"]["path"] for x in index})
     reasons = Counter()
     constraints = Counter()
     for item in index:
@@ -934,14 +1003,25 @@ def build_batch(manifests, output, max_emf_bytes):
     covered_paths = {x["source"]["path"] for x in index}
     corpus_cases = [x for x in index if x["source"]["path"] in corpus_files]
     corpus_assertions = sum(x["coverage"]["assertedObjects"] for x in corpus_cases)
+    asserted_a = sum(x["coverage"]["assertedAObjects"] for x in corpus_cases)
+    covered_a = sum(x["coverage"]["activePageAObjects"] for x in corpus_cases)
+    exported_pages = {(x["source"]["path"], x["pageIndex"]) for x in corpus_cases}
+    nonexported = {}
+    for item in corpus_cases:
+        case_data = json.loads((output / item["case"]).read_text(encoding="utf-8"))
+        for pg in case_data["otherPages"]:
+            key = (item["source"]["path"], pg["pageIndex"])
+            if key not in exported_pages:
+                nonexported[key] = pg["AObjects"]
     report = {"schema": "gsp-m2-oracle-index-v1", "generator": "tools/emf_match.py", "generatorSha256": sha_file(Path(__file__)),
               "manifestSnapshots": manifest_snapshots,
               "manifestEntries": len(rows), "cases": index, "failures": failures,
-              "totals": {**totals, "nonCurrentPageAObjects": sum(x["nonCurrentPageAObjects"] for x in index)},
+              "totals": {**totals, "nonCurrentPageAObjects": sum(nonexported.values())},
               "assertionsByConstraint": dict(constraints), "exclusionReasons": dict(reasons),
               "corpusFileDenominator": inventory.get("files", 1431), "corpusInventory": inventory,
               "corpusCoverage": {"casesGenerated": len(corpus_cases), "assertedObjects": corpus_assertions,
-                                 "currentPageAObjectsWithoutAssertions": inventory.get("currentPageGeometricAObjects", 0) - corpus_assertions,
+                                 "currentPageAObjectsWithoutAssertions": covered_a - asserted_a,
+                                 "exportedPageAObjectsWithoutAssertions": covered_a - asserted_a,
                                  "filesWithoutGeneratedCases": len(set(corpus_files) - covered_paths),
                                  "currentPageAObjectsInFilesWithoutCases": sum(v["currentPageAObjects"] for p, v in corpus_files.items() if p not in covered_paths)},
               "fullM2Accepted": False,
