@@ -10,7 +10,7 @@
 
 存档格式只有 .gsp，第一目标是原版 4.x/5.x 存的文件都能正确打开。
 
-多 agent 协作时由 Opus 规划和检查、Sonnet/Haiku 作为 worker 执行；worker 出错记在 `worker-errors/`。
+多 agent 协作时由主 agent 规划、审查和验收，worker 按任务与当前可用模型选择；简单资料整理可用 GPT-6 Luna，但规格结论仍须逐项核证。历史交接里的 Opus/Sonnet/Haiku 是当时的建议，不是当前模型限制。worker 出错如实记录实际模型，放在 `worker-errors/`。
 
 ## 目录
 

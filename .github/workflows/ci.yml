@@ -50,3 +50,11 @@ jobs:
 
       - name: M2 比较器与基准身份回归
         run: python tools/check_m2.py --self-test
+
+      - name: 指定页副本隔离与输入校验
+        run: python tools/oracle/test_export_pages.py
+
+      - name: EMF 对齐、度量文本与阻塞分类回归
+        run: |
+          python tools/test_emf_match.py
+          python tools/test_m5_measures.py

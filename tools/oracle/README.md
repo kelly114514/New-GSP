@@ -3,7 +3,7 @@
 `gsp_oracle.py` 打开 `.gsp`，让**原版** `GSP5chs.exe`（5.06 中文版）把当前页另存为 **EMF** 和 **HTML（JavaSketchpad 构造描述）**，再关闭文档，并为每个文件写一行 `manifest.jsonl`。
 `tools/emf_dump.py` 把 EMF 解成图元列表，作为几何验收的比较对象。
 
-**启动须经用户同意。** 每次运行只启动一次原版；进程退出、超时或会话不可安全恢复时记录断点并停止，不自动重启。2026-10-23 本轮续跑已获用户授权。下文第 6 节的自动重启故障注入是旧版的历史测试，不代表当前策略。
+**启动须经用户同意。** 每次运行只启动一次原版；进程退出、超时或会话不可安全恢复时记录断点并停止，不自动重启。本轮2026-10-24的实验与指定页批次已获用户授权，不代表未来会话可自行启动。下文第6节的自动重启故障注入是旧版的历史测试，不代表当前策略。
 
 原版是用户自己的授权副本。程序只从 `oracle/runtime/` 的副本运行（启动前校验 SHA-256 `bf22c098…c7b3`）；输入 `.gsp` 先复制到 `oracle/work/in/` 再打开，原件不会被改动。
 
@@ -132,7 +132,7 @@ EMF 的页面大小和 HTML 的 `WIDTH/HEIGHT` 取决于文档窗口的画布大
 
 ## 7. 已知问题与限制
 
-- **只导出“当前页”**（打开后的页，通常是第 1 页）。多页文档的其它页没有导出；要导就得切页（页标签/文档选项），未实现。
+- `gsp_oracle.py`仍只导打开后的当前页。指定其它页使用下节的`export_pages.py`，不要用当前页输出冒充所有页面。
 - **字节不可复现，图元可复现**：同一输入两次导出，EMF 字节不同，但 `canon_sha256` 相同（26 个有 EMF 的验证文件里 25 个相同；不同的 1 个是自动播放动画的 `Sample.gsp`，加了“停止动画”后复测两次相同）。
 - **窗口状态敏感**（第 5 节）；不要在脚本运行中手动操作那个原版窗口（把它还原/最大化会改变画布）。
 - 自动播放动画的文档：导出的是停止后的某一帧；manifest 有 `busy_after_open` 和 `notes`。
@@ -141,3 +141,19 @@ EMF 的页面大小和 HTML 的 `WIDTH/HEIGHT` 取决于文档窗口的画布大
 - 如果原版真的崩溃，Windows 的“已停止工作”对话框（WerFault，别的进程）不会被处理，需要手动关；脚本本身会检测到进程消失并停止本轮。
 - 大文件：分形目录的 EMF 可达数十 MB（`L-圆迭代` 24.8 MB，86.6 万条记录）；全量跑要预留磁盘。`emf_dump.py` 解析 86 万条记录约 6 秒、内存可观，`--digest` 比较省。
 - 打开失败（损坏文件）、`status=failed`：现场信息在 `dialogs` 和 `error` 里。
+
+## 8. 指定页导出（2026-10-24）
+
+```powershell
+$py = 'tools/oracle/.venv/Scripts/python.exe'
+& $py tools/oracle/export_pages.py --list 'original/sketchpad5/Samples/4.x实例/官长寿作品/杂例/example-46.gsp' --pages all --out-dir oracle/pages-example46 --keep-work-files
+& $py tools/oracle/export_pages.py --list oracle/multipage-batch1.txt --pages inactive --out-dir oracle/pages-batch1 --keep-work-files --resume
+```
+
+`--pages`为`all`、`inactive`或逗号分隔的**1起页号**；`--max-pages`限制本轮页数。已有manifest必须使用`--resume`，断点键为`(input,pageIndex)`，输入哈希改变会重新导出。此脚本强制`--keep-work-files`，复用现有单进程锁、哈希校验、失败停止与只关闭自有进程规则。
+
+选择方法：先校验GSP4文档头与实际页数，再只改临时副本900头的活动页u16（文件偏移28），由原版打开该页；几何数据与原件不变。每页独立打开，可保留最小化模式下文件保存的画布大小。该方法不声称测试了原版页签交互。输出路径为`<文档去扩展名>/page-NNN.emf|htm`；临时输入使用ASCII单扩展名，避免旧批量导出双`.gsp`文件名的问题。
+
+manifest保留原件的`input/input_sha256`，另有`pageIndex`（**0起**）、`pageCount`、`originalActivePage`、`prepared_input_sha256`和`selectionMethod=temporary-copy-active-page-header`。`emf_match.py batch`读入这些页标记并为每页生成独立用例，验收协议的`pageIndex`仍为1起。
+
+本轮example-46的4页以及另10个文档的28个非活动页导出全部成功；详细观察与复跑见`spec/acceptance/m4-batch1.md`。这是一批增量，未重跑全部非活动页。

@@ -1,5 +1,5 @@
 import { ARC_ANGLE_TOLERANCE, ARC_RADIUS_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
-import { readF64, readU16 } from './bytes.ts';
+import { readF64, readU16, readU32 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
 import type { GspDocument } from './tree.ts';
@@ -102,11 +102,101 @@ function lineCircleCandidates(l: LinearGeometry, c: Circular): { points: XY[] } 
   return points.length === 0 ? absent('intersection-outside-parent-range') : { points };
 }
 
+/** Similarities use page coordinates. The separate scale/orientation avoid cancellation in det(M). */
+interface Similarity { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; scale: number; orientation: 1 | -1 }
+function transformGeometry(source: Geometry, m: Similarity): Geometry {
+  const map = ([x, y]: XY): XY => [m.xx * x + m.xy * y + m.tx, m.yx * x + m.yy * y + m.ty];
+  if (source.kind === 'point') return point(map(pointXY(source)));
+  if (isLinear(source)) return { kind: source.kind, geometry: { a: map(source.geometry.a), b: map(source.geometry.b) }, parameterizationKnown: source.parameterizationKnown, ...(source.degenerateArc ? { degenerateArc: true } : {}) };
+  if (source.kind === 'polygon') return { kind: 'polygon', geometry: { vertices: source.geometry.vertices.map(map) } };
+  const g = source.geometry, center = map(g.center), radius = g.radius * m.scale;
+  if (source.kind === 'circle' || source.kind === 'disk') return { kind: source.kind, geometry: { center, radius } };
+  const arc = source.geometry;
+  const start = map(arc.start!), end = map(arc.end!);
+  const startAngle = mathAngle(start[0] - center[0], start[1] - center[1]);
+  return { kind: source.kind, geometry: { center, radius, startAngle, sweepAngle: arc.sweepAngle! * m.orientation, start, end } };
+}
+const identity = (): Similarity => ({ xx: 1, xy: 0, yx: 0, yy: 1, tx: 0, ty: 0, scale: 1, orientation: 1 });
+function centeredMatrix(center: XY, xx: number, xy: number, yx: number, yy: number, scale: number, orientation: 1 | -1 = 1): Similarity {
+  return { xx, xy, yx, yy, scale, orientation, tx: center[0] - xx * center[0] - xy * center[1], ty: center[1] - yx * center[0] - yy * center[1] };
+}
+function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
+  const id = o.constraintId;
+  if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id)) return undefined;
+  const source = p[0];
+  if (source === undefined) return unsupported('transform-needs-source');
+  let m = identity();
+  if (id === 75) return transformGeometry(source, m); // Card 75: M4 copies geometry; numeric color evaluation is deferred.
+  const expectedParents = id === 16 ? 3 : id === 17 || id === 21 ? 1 : id === 28 || id === 32 ? 5 : 2;
+  if (p.length !== expectedParents) return unsupported('transform-parent-count');
+  const fixedSize = id === 17 ? 52 : id === 21 ? 60 : id === 27 ? 36 : id === 30 ? 12 : undefined;
+  const payload = o.node.records.find((r) => r.kind === 2003)?.payload;
+  if (fixedSize !== undefined && (payload === undefined || payload.length !== fixedSize || readU32(payload, 0) !== id)) return unsupported('invalid-native-transform-parameter');
+  if (id === 17) {
+    m.tx = readF64(payload!, 4); m.ty = -readF64(payload!, 24);
+  } else if (id === 21 || id === 27) {
+    const a = readF64(payload!, 4), b = readF64(payload!, 12);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return absent('non-finite-transform-parameter');
+    if (Math.abs(Math.hypot(a, b) - 1) > 1e-8) return unsupported('invalid-native-transform-direction');
+    // Native (a,b)=(-sin(theta),cos(theta)); units/angle display fields do not drive geometry.
+    if (id === 21) {
+      const distance = readF64(payload!, 32);
+      m.tx = distance * b; m.ty = distance * a;
+    } else {
+      if (p[1]?.kind !== 'point') return unsupported('transform-center-must-be-point');
+      m = centeredMatrix(pointXY(p[1]), b, -a, a, b, 1);
+    }
+  } else if (id === 34) {
+    const mirror = p[1];
+    if (mirror === undefined || !isLinear(mirror)) return unsupported('reflection-mirror-must-be-linear');
+    const d = sub(mirror.geometry.b, mirror.geometry.a), size = length(d);
+    if (size === 0) return absent('degenerate-reflection-mirror');
+    const dx = d[0] / size, dy = d[1] / size;
+    m = centeredMatrix(mirror.geometry.a, 2 * dx * dx - 1, 2 * dx * dy, 2 * dx * dy, 2 * dy * dy - 1, 1, -1);
+  } else {
+    if (p.slice(1).some((g) => g.kind !== 'point')) return unsupported('transform-parameters-must-be-points');
+    if (id === 16) {
+      const delta = sub(pointXY(p[2] as PointGeometry), pointXY(p[1] as PointGeometry));
+      [m.tx, m.ty] = delta;
+    } else {
+      const center = pointXY(p[1] as PointGeometry);
+      if (id === 28) {
+        const u = sub(pointXY(p[2] as PointGeometry), pointXY(p[3] as PointGeometry));
+        const v = sub(pointXY(p[4] as PointGeometry), pointXY(p[3] as PointGeometry));
+        const ul = length(u), vl = length(v);
+        if (ul === 0 || vl === 0) return absent('zero-angle-arm');
+        const ux = u[0] / ul, uy = u[1] / ul, vx = v[0] / vl, vy = v[1] / vl;
+        const cos = ux * vx + uy * vy, sin = uy * vx - ux * vy;
+        m = centeredMatrix(center, cos, sin, -sin, cos, 1);
+      } else {
+        let ratio: number;
+        if (id === 30) ratio = readF64(payload!, 4);
+        else {
+          const d = pointXY(p[2] as PointGeometry), e = sub(pointXY(p[3] as PointGeometry), d), f = sub(pointXY(p[4] as PointGeometry), d);
+          const denominator = length(e), numerator = length(f);
+          if (denominator === 0) return absent('zero-ratio-denominator');
+          if (Math.abs(cross(e, f)) > 64 * Number.EPSILON * denominator * numerator) return unsupported('three-point-ratio-noncollinear-unverified');
+          ratio = numerator / denominator * (e[0] * f[0] + e[1] * f[1] < 0 ? -1 : 1);
+        }
+        if (!Number.isFinite(ratio)) return absent('non-finite-transform-parameter');
+        if (ratio === 0) return unsupported('zero-scale-existence-unverified');
+        m = centeredMatrix(center, ratio, 0, 0, ratio, Math.abs(ratio));
+      }
+    }
+  }
+  if (![m.xx, m.xy, m.yx, m.yy, m.tx, m.ty, m.scale].every(Number.isFinite)) return absent('non-finite-transform-parameter');
+  return transformGeometry(source, m);
+}
+
+function needsUnimplementedMeasure(id: number): boolean { return [18, 19, 20, 23, 24, 25, 26, 29, 31, 33].includes(id); }
+
 function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byIndex: ReadonlyMap<number, ObjectInfo>): Outcome {
   const p = parents;
   const first = p[0];
   const second = p[1];
   const id = o.constraintId;
+  const transformed = transform(o, p);
+  if (transformed !== undefined) return transformed;
   if (id === 0) {
     if (o.mainKind !== 1) return unsupported('free-object-main-kind');
     if (page.type === 'tool' && o.genera !== 4) return { status: 'unbound-input', reason: 'tool-input-not-bound' };
@@ -138,7 +228,7 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
     if (length(d) === 0) return absent('degenerate-direction');
     if (id === 5) d = [-d[1], d[0]];
     const a = pointXY(first);
-    return { kind: 'line', geometry: { a, b: at(a, d, 1) }, parameterizationKnown: false };
+    return { kind: 'line', geometry: { a: at(a, d, -0.5), b: at(a, d, 0.5) }, parameterizationKnown: second.parameterizationKnown };
   }
   if (id === 7) {
     if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('angle-bisector-needs-three-points');
@@ -374,7 +464,8 @@ export class PageGeometryEvaluator {
       const o = this.byIndex.get(index)!;
       const parents: Geometry[] = [];
       let outcome: Outcome | undefined;
-      for (const parent of o.parents) {
+      // Geometry-only dynamic color evaluation depends solely on its source. Numeric parents remain in the graph/file.
+      for (const parent of o.constraintId === 75 ? o.parents.slice(0, 1) : o.parents) {
         const result = this.cache.get(parent);
         if (!this.byIndex.has(parent) || result === undefined) { outcome = absent(`missing-parent:${parent}`); continue; }
         if (result.status !== 'ok') {
@@ -383,6 +474,9 @@ export class PageGeometryEvaluator {
         }
         parents.push(result);
       }
+      // Give deferred measured transforms a stable root cause even when their numeric parents are unsupported.
+      const parentStatus = outcome !== undefined && 'status' in outcome ? outcome.status : undefined;
+      if (needsUnimplementedMeasure(o.constraintId) && parentStatus !== 'not-existing' && parentStatus !== 'unbound-input') outcome = unsupported('parameter-from-unimplemented-measure');
       outcome ??= construct(o, parents, this.page, this.byIndex);
       this.store(o, outcome);
       pending.delete(index);
