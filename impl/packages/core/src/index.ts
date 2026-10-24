@@ -13,3 +13,24 @@ export function readMagic(bytes: Uint8Array): string {
   }
   return s;
 }
+
+// 相对导入一律带 .ts 扩展名：Node 24 直接运行 TS（scripts/gsp-dump.ts）、vitest、Vite、tsc 都认。
+export * from './bytes.ts';
+export * from './constraints.ts';
+export * from './debug.ts';
+export * from './edit.ts';
+export * from './errors.ts';
+export * from './model.ts';
+export * from './parser.ts';
+export * from './recordKinds.ts';
+export * from './records.ts';
+export * from './text.ts';
+export * from './tree.ts';
+export * from './validate.ts';
+export * from './views/container.ts';
+export * from './views/docHeader.ts';
+export * from './views/envelope.ts';
+export * from './views/image.ts';
+export * from './views/object.ts';
+export * from './views/strings.ts';
+export * from './writer.ts';

@@ -2,7 +2,7 @@
 
 TypeScript 单仓（npm workspaces），桌面外壳是 Tauri 2，只面向 Windows 10 及以上。洁净室规则见 [CLAUDE.md](CLAUDE.md)，范围和里程碑见仓库根目录的 [PLAN.md](../PLAN.md)。
 
-当前进度：**M0 工程骨架**。还没有任何 .gsp 格式代码，`core` 里只有占位。
+当前进度：**M1 core：.gsp 无损读写**已完成（见下文“core：.gsp 无损读写”）；render/app/desktop 仍是 M0 骨架。
 
 ## 目录
 
@@ -12,7 +12,7 @@ impl/
   tsconfig.base.json      共用的严格 TS 配置
   packages/
     core/                 纯 TS 库，不依赖 DOM（lib 只有 ES2023），Node 里能跑全部测试
-      src/                库代码；目前是 CORE_VERSION 和 readMagic()
+      src/                库代码：.gsp 记录层、无损树、读写器、视图、对象模型；scripts/ 是生成表脚本和 gsp-dump CLI
       test/               vitest 测试；test/support/ 是可复用的语料测试工具
     render/               Canvas 2D 绘制（可用 DOM 类型），依赖 core；目前只有 drawGrid()
     app/                  React + Vite 前端：顶部菜单栏、画布、状态栏，界面文字为中文
@@ -42,6 +42,56 @@ impl/
 `packages/desktop/src-tauri/target/debug/bundle/nsis/GSP-plus_<版本>_x64-setup.exe`（发布版在 `target/release/bundle/nsis/`）。
 
 在单个包里测试：`npm test -w @gsp-plus/core`，或进入该包目录直接 `npx vitest run`。
+
+## core：.gsp 无损读写（M1）
+
+`packages/core` 能把任意 .gsp 读成无损树再原样写回（语料 1,431 个文件逐字节一致）。规格见 `spec/format/gsp-format.md`。
+
+```ts
+import { parseGsp, writeGsp, readDocumentModel, setFreePointCoordinates, toDebugJson, validateDocument } from '@gsp-plus/core';
+
+const doc = parseGsp(bytes);                 // 严格拒绝坏结构，抛 GspFormatError（code、offset、reason）
+const model = readDocumentModel(doc);        // 页/工具区/对象/父序号/自由点/约束描述符
+setFreePointCoordinates(doc, 0, 1, 251, 174); // 第 0 页第 1 个对象，只改那条 2201 的 16 字节
+const out = writeGsp(doc);                   // 未修改的文档逐字节还原
+```
+
+| 层 | 文件 | 内容 |
+|---|---|---|
+| 记录层 | `records.ts` | `GspRecord {kind, payload, pad}`；`readRecordAt`、`splitRecords`；补齐字节原值保留 |
+| 树 | `tree.ts`、`parser.ts`、`writer.ts` | `GspDocument → EnvelopeNode → ContainerNode(page/tool/group/blob) → ObjectNode`；不认识的 kind 留在原位置；901 之后的多余字节存在 `doc.trailing`；`parseGsp` / `writeGsp` |
+| 视图 | `views/*.ts` | 只读解码：文档头 900、信封 902（三个提示串，补齐字节保留）、页头、1100/9004 串、1201/1203、对象头 2000（布局 5/4）、2002、2201、2005、2008、8004、1300。形状不对返回 `undefined`，不抛异常 |
+| 文本 | `text.ts` | 布局 5 → UTF-8；布局 4 → GBK（可选 Big5）；坏字节得 U+FFFD，不抛异常；原始字节另存 |
+| 模型 | `model.ts`、`constraints.ts` | 每个容器的对象列表（1 起序号、约束 ID、主类、genera、父序号、自由点、约束描述符） |
+| 校验 | `validate.ts` | `validateDocument(doc)` 返回不变量违例清单（页数/对象数/父序号/自由点/信封对应……），读入时不调用 |
+| 调试 | `debug.ts`、`scripts/gsp-dump.ts` | `toDebugJson(doc)`；CLI 见下 |
+
+读取器只在结构层面拒绝：魔数、截断、长度越界、首尾记录、嵌套不配对或位置不允许、902 提示串结构（`fixtures/crash-19byte-envelope.gsp` 会被拒绝）、2000 头短于 12 字节。
+
+### 生成表
+
+`src/generated/constraints.ts`（约束 ID → 约束表 main_kind/genera/父模板词/描述模板）和 `recordKinds.ts`（kind → 名称/配对）由 `spec/objects/catalog.json`、`spec/format/record-kinds.json` 生成并提交。规格改了以后在 `impl/` 下运行：
+
+```
+npm run gen
+```
+
+有测试检查已提交的文件与规格同步。
+
+### 命令行
+
+```
+node packages/core/scripts/gsp-dump.ts <file.gsp> [--summary] [--hex-limit N] [--big5] [--compact]
+```
+
+不需要构建：Node 24 直接剥掉类型运行 `.ts`。
+
+### 导入约定（Node / vitest / Vite / tsc 通用）
+
+- core 的 `src/` 和 `scripts/` 里的相对导入**一律带 `.ts` 扩展名**（`import { x } from './records.ts'`），因为 Node 的 ESM 解析要求写全；`tsconfig.base.json` 打开了 `allowImportingTsExtensions`（项目 `noEmit`），Vite、vitest 本来就认。
+- 只用可擦除的 TS 语法（没有 enum、namespace、参数属性；`packages/core/tsconfig.json` 开了 `erasableSyntaxOnly`），类型导入用 `import type`（`verbatimModuleSyntax` 强制）。
+- core 不带 DOM 库，`text.ts` 通过 `globalThis` 取 `TextDecoder`/`TextEncoder`，用局部结构类型而不是全局声明，避免与 DOM 库或 `@types/node` 的声明冲突；Node 24（完整 ICU）和 WebView2 都有 gbk/big5。
+- 测试文件（`test/`）沿用无扩展名导入（由 vitest 解析）。
 
 ## 语料测试怎么找到语料
 

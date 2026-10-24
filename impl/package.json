@@ -16,7 +16,8 @@
     "dev": "npm run dev -w @gsp-plus/desktop",
     "build": "npm run build -w @gsp-plus/desktop",
     "dev:web": "npm run dev -w @gsp-plus/app",
-    "build:web": "npm run build -w @gsp-plus/app"
+    "build:web": "npm run build -w @gsp-plus/app",
+    "gen": "npm run gen -w @gsp-plus/core"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
