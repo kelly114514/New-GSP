@@ -79,6 +79,8 @@ describe('M4 transformations across existing geometry', () => {
       } else if (g.kind === 'polygon') {
         expect(g.geometry.vertices).toHaveLength(3);
         g.geometry.vertices.forEach((v, i) => close(v, [c.p, c.a, c.b][i]!));
+      } else if (g.kind === 'measure') {
+        throw new Error('a transform must not produce a numeric measure');
       } else {
         close(g.geometry.center, c.p); expect(g.geometry.radius).toBeCloseTo(c.radius, 9);
         if (g.kind === 'arc' || g.kind === 'sector' || g.kind === 'circular-segment') {

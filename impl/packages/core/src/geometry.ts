@@ -1,7 +1,10 @@
 import { ARC_ANGLE_TOLERANCE, ARC_RADIUS_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
 import { readF64, readU16, readU32 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
+import { evaluateMeasure, isMeasureObject } from './measure.ts';
+import type { MeasureGeometry } from './measure.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
+import { isContainerNode, isEnvelopeNode } from './tree.ts';
 import type { GspDocument } from './tree.ts';
 import { decodeFreePoint } from './views/object.ts';
 
@@ -28,7 +31,7 @@ export type RegionGeometry = { [K in 'disk' | 'sector' | 'circular-segment']: {
   kind: K;
   geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number; start?: XY; end?: XY };
 } }['disk' | 'sector' | 'circular-segment'];
-export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry;
+export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry | MeasureGeometry;
 export type GeometryStatus = 'ok' | 'not-existing' | 'unsupported' | 'unbound-input';
 export type EvaluatedObject = { objectIndex: number; constraintId: number } & (
   | ({ exists: true; status: 'ok' } & Geometry)
@@ -55,6 +58,9 @@ function inLinearRange(g: LinearGeometry, t: number): boolean {
 }
 function inUnitRange(t: number): boolean { const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t)); return t >= -e && t <= 1 + e; }
 function finiteGeometry(g: Geometry): boolean {
+  if (g.kind === 'measure') {
+    return Number.isFinite(g.measurement.displayValue) && Number.isFinite(g.measurement.internal.magnitude);
+  }
   if (g.kind === 'point') return Number.isFinite(g.geometry.x) && Number.isFinite(g.geometry.y);
   if (isLinear(g)) return [...g.geometry.a, ...g.geometry.b].every(Number.isFinite);
   if (g.kind === 'polygon') return g.geometry.vertices.flat().every(Number.isFinite);
@@ -105,6 +111,7 @@ function lineCircleCandidates(l: LinearGeometry, c: Circular): { points: XY[] } 
 /** Similarities use page coordinates. The separate scale/orientation avoid cancellation in det(M). */
 interface Similarity { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; scale: number; orientation: 1 | -1 }
 function transformGeometry(source: Geometry, m: Similarity): Geometry {
+  if (source.kind === 'measure') return source;
   const map = ([x, y]: XY): XY => [m.xx * x + m.xy * y + m.tx, m.yx * x + m.yy * y + m.ty];
   if (source.kind === 'point') return point(map(pointXY(source)));
   if (isLinear(source)) return { kind: source.kind, geometry: { a: map(source.geometry.a), b: map(source.geometry.b) }, parameterizationKnown: source.parameterizationKnown, ...(source.degenerateArc ? { degenerateArc: true } : {}) };
@@ -125,6 +132,7 @@ function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id)) return undefined;
   const source = p[0];
   if (source === undefined) return unsupported('transform-needs-source');
+  if (source.kind === 'measure') return unsupported('transform-source-not-geometric');
   let m = identity();
   if (id === 75) return transformGeometry(source, m); // Card 75: M4 copies geometry; numeric color evaluation is deferred.
   const expectedParents = id === 16 ? 3 : id === 17 || id === 21 ? 1 : id === 28 || id === 32 ? 5 : 2;
@@ -197,6 +205,12 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   const id = o.constraintId;
   const transformed = transform(o, p);
   if (transformed !== undefined) return transformed;
+  if (isMeasureObject(o)) {
+    const measured = evaluateMeasure(o, p, page);
+    return measured.ok
+      ? { kind: 'measure', measurement: measured.measurement }
+      : { status: measured.status, reason: measured.reason };
+  }
   if (id === 0) {
     if (o.mainKind !== 1) return unsupported('free-object-main-kind');
     if (page.type === 'tool' && o.genera !== 4) return { status: 'unbound-input', reason: 'tool-input-not-bound' };
@@ -414,8 +428,11 @@ export class PageGeometryEvaluator {
   /** Objects recomputed by the most recent evaluate() call, useful for diagnostics. */
   recomputedIndices: number[] = [];
 
-  constructor(page: ContainerModel) {
-    this.page = page;
+  constructor(page: ContainerModel, dpi?: number) {
+    // 9008 正常写在页容器里（格式 §7.6）；调用方若另外提供了文档级 DPI，只在页面自己缺失时补位。
+    this.page = dpi === undefined || page.numericPreferences.dpi !== undefined
+      ? page
+      : { ...page, numericPreferences: { ...page.numericPreferences, dpi } };
     for (const o of page.objects) {
       this.byIndex.set(o.index, o);
       this.dirty.add(o.index);
@@ -507,9 +524,33 @@ export class PageGeometryEvaluator {
   }
 }
 
-export function evaluatePageGeometry(page: ContainerModel): PageGeometry { return new PageGeometryEvaluator(page).evaluate(); }
+/**
+ * 文档级 9008（如果有）：正常语料把 DPI 写在页容器里，这里只是给“写在文档节点上”的文件留的补位。
+ * 页面自己的 9008 永远优先。
+ */
+function documentDpi(doc: GspDocument): number | undefined {
+  let dpi: number | undefined;
+  const inspect = (kind: number, payload: Uint8Array): void => {
+    if (kind !== 9008 || payload.length < 4) return;
+    const value = readU32(payload, 0);
+    if (value > 0) dpi = value;
+  };
+  for (const item of doc.items) {
+    if (isEnvelopeNode(item)) {
+      for (const child of item.items) if (!isContainerNode(child)) inspect(child.kind, child.payload);
+    } else {
+      inspect(item.kind, item.payload);
+    }
+  }
+  return dpi;
+}
+
+export function evaluatePageGeometry(page: ContainerModel, dpi?: number): PageGeometry {
+  return new PageGeometryEvaluator(page, dpi).evaluate();
+}
 export function toGeometryJson(model: DocumentModel): GeometryDocument {
-  return { schema: 'gsp-core-geometry-v1', pages: model.pages.map(evaluatePageGeometry) };
+  const dpi = documentDpi(model.doc);
+  return { schema: 'gsp-core-geometry-v1', pages: model.pages.map((p) => evaluatePageGeometry(p, dpi)) };
 }
 
 
