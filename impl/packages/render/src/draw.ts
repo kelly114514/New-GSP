@@ -27,6 +27,7 @@ function anchor(item: DrawItem): XY {
   if (item.kind === 'point') return [item.geometry.x, item.geometry.y];
   if (item.kind === 'segment' || item.kind === 'line' || item.kind === 'ray') return [(item.geometry.a[0] + item.geometry.b[0]) / 2, (item.geometry.a[1] + item.geometry.b[1]) / 2];
   if (item.kind === 'polygon') return item.geometry.vertices[0] ?? [0, 0];
+  if (item.kind === 'arc' && item.geometry.start !== undefined && item.geometry.end !== undefined) return [(item.geometry.start[0] + item.geometry.end[0]) / 2, (item.geometry.start[1] + item.geometry.end[1]) / 2];
   return [item.geometry.center[0] + item.geometry.radius, item.geometry.center[1]];
 }
 function trace(ctx: CanvasRenderingContext2D, item: DrawItem, view: View, width: number, height: number): boolean {
@@ -45,9 +46,10 @@ function trace(ctx: CanvasRenderingContext2D, item: DrawItem, view: View, width:
     const c = screenXY(view, item.geometry.center), r = item.geometry.radius * view.scale;
     if (item.kind === 'circle' || item.kind === 'disk') ctx.arc(...c, r, 0, Math.PI * 2);
     else {
+      // Kernel angles are math angles (y up, counter-clockwise positive); canvas angles run clockwise on a y-down page.
       const start = item.geometry.startAngle ?? 0, sweep = item.geometry.sweepAngle ?? 0;
       if (item.kind === 'sector') ctx.moveTo(...c);
-      ctx.arc(...c, r, start, start + sweep, sweep < 0);
+      ctx.arc(...c, r, -start, -(start + sweep), sweep > 0);
       if (item.kind !== 'arc') ctx.closePath();
     }
   }
@@ -121,15 +123,15 @@ export function hitTest(list: PageDrawList, view: View, sx: number, sy: number, 
         if (item.kind === 'circle') d = Math.abs(radial - r);
         else if (item.kind === 'disk') d = Math.max(0, radial - r);
         else {
-          const start = item.geometry.startAngle ?? 0, sweep = item.geometry.sweepAngle ?? 0, angle = Math.atan2(sy - c[1], sx - c[0]);
+          const start = item.geometry.startAngle ?? 0, sweep = item.geometry.sweepAngle ?? 0, angle = Math.atan2(c[1] - sy, sx - c[0]);
           const onSweep = angularDistance(angle, start, sweep) <= Math.abs(sweep);
           if (item.kind === 'arc') {
-            d = onSweep ? Math.abs(radial - r) : Math.min(...[start, start + sweep].map((a) => Math.hypot(sx - c[0] - r * Math.cos(a), sy - c[1] - r * Math.sin(a))));
+            d = onSweep ? Math.abs(radial - r) : Math.min(...[start, start + sweep].map((a) => Math.hypot(sx - c[0] - r * Math.cos(a), sy - c[1] + r * Math.sin(a))));
           } else {
             // Filled arc regions use a sampled outline consistently for picking.
             const vertices: XY[] = item.kind === 'sector' ? [c] : [];
             const steps = Math.max(8, Math.ceil(Math.abs(sweep) * 24));
-            for (let i = 0; i <= steps; i++) vertices.push([c[0] + r * Math.cos(start + sweep * i / steps), c[1] + r * Math.sin(start + sweep * i / steps)]);
+            for (let i = 0; i <= steps; i++) vertices.push([c[0] + r * Math.cos(start + sweep * i / steps), c[1] - r * Math.sin(start + sweep * i / steps)]);
             if (inPolygon([sx, sy], vertices)) d = 0;
           }
         }

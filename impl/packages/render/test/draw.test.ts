@@ -56,4 +56,24 @@ describe('drawPageScene', () => {
   });
 });
 
+describe('arc drawing', () => {
+  it('converts math angles to canvas angles: a counter-clockwise quarter arc is drawn anticlockwise', () => {
+    const page = loadSample('segment.gsp').pages[0]!;
+    const base = buildPageDrawList(page);
+    const item = { ...base.items[0]!, index: 99, kind: 'arc', geometry: { center: [100, 100], radius: 10, startAngle: 0, sweepAngle: Math.PI / 2, start: [110, 100], end: [100, 90] } } as unknown as typeof base.items[number];
+    const { ctx, calls } = recordingContext();
+    drawPageScene(ctx, { ...base, items: [item] }, { scale: 1, offsetX: 0, offsetY: 0 });
+    expect(calls).toContain('arc(100,100,10,0,-1.57,true)');
+    expect(calls).toContain('stroke()');
+    expect(calls).not.toContain('fill()');
+  });
+  it('fills sectors starting at the centre', () => {
+    const base = buildPageDrawList(loadSample('segment.gsp').pages[0]!);
+    const item = { ...base.items[0]!, index: 99, kind: 'sector', geometry: { center: [100, 100], radius: 10, startAngle: 0, sweepAngle: Math.PI / 2, start: [110, 100], end: [100, 90] } } as unknown as typeof base.items[number];
+    const { ctx, calls } = recordingContext();
+    drawPageScene(ctx, { ...base, items: [item] }, { scale: 1, offsetX: 0, offsetY: 0 });
+    expect(calls.indexOf('moveTo(100,100)')).toBeGreaterThanOrEqual(0);
+    expect(calls).toContain('fill()');
+  });
+});
 

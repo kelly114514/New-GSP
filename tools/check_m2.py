@@ -42,7 +42,46 @@ def finite_geometry(value):
     return False
 
 
+def arc_points(g):
+    """End points and middle of the covered visual-counterclockwise interval of an arc-like geometry.
+
+    startAngle / sweepAngle are radians; sweepAngle is signed (positive = visually counterclockwise).
+    The interval is normalised so a negative sweep and its mirrored description compare equal."""
+    s, w = g["startAngle"], g["sweepAngle"]
+    lo, hi = (s, s + w) if w >= 0 else (s + w, s)
+    c, r = g["center"], g["radius"]
+
+    def at(angle):
+        return [c[0] + r * math.cos(angle), c[1] - r * math.sin(angle)]
+
+    return at(lo), at(hi), at((lo + hi) / 2), math.degrees(hi - lo)
+
+
+def arc_error(expected, actual):
+    if actual["radius"] < 0:
+        return math.inf
+    base = max(distance(expected["center"], actual["center"]), abs(expected["radius"] - actual["radius"]))
+    elo, ehi, emid, espan = arc_points(expected)
+    alo, ahi, amid, aspan = arc_points(actual)
+    full_e, full_a = espan >= 359.999, aspan >= 359.999
+    if full_e or full_a:
+        return base if full_e and full_a else math.inf
+    if "start" in actual and "end" in actual:
+        # Optional redundant end points must be the interval's end points (either order).
+        pair = [actual["start"], actual["end"]]
+        slack = 1e-3 * max(1.0, actual["radius"])
+        if min(max(distance(pair[0], alo), distance(pair[1], ahi)), max(distance(pair[0], ahi), distance(pair[1], alo))) > slack:
+            return math.inf
+    # The middle point separates an arc from its complement (same end points, e.g. two half circles).
+    return max(base, distance(elo, alo), distance(ehi, ahi), distance(emid, amid))
+
+
+NON_COORDINATE_FLAGS = ("degenerateArc", "parameterizationKnown")
+
+
 def geometry_error(kind, expected, actual):
+    if isinstance(actual, dict):
+        actual = {k: v for k, v in actual.items() if k not in NON_COORDINATE_FLAGS}
     if not finite_geometry(actual):
         return math.inf
     try:
@@ -55,6 +94,8 @@ def geometry_error(kind, expected, actual):
             if actual["radius"] < 0:
                 return math.inf
             return max(distance(expected["center"], actual["center"]), abs(expected["radius"] - actual["radius"]))
+        if kind in ("arc", "sector", "circular-segment"):
+            return arc_error(expected, actual)
         if kind == "line":
             return max(line_distance(expected["a"], actual["a"], actual["b"]),
                        line_distance(expected["b"], actual["a"], actual["b"]))
@@ -152,6 +193,13 @@ def self_test():
         if fixture["assertions"]:
             assert fixture["oracle"]["emfSha256"]
             assert all(a["provenance"]["source"] == "original_emf_primitive" for a in fixture["assertions"])
+    q = math.pi / 2
+    arc = {"center": [0, 0], "radius": 10, "startAngle": 0, "sweepAngle": q}
+    assert geometry_error("arc", arc, {"center": [0, 0], "radius": 10, "startAngle": q, "sweepAngle": -q}) < 1e-9
+    assert geometry_error("arc", arc, {"center": [0, 0], "radius": 10, "startAngle": q, "sweepAngle": 3 * q}) > 1
+    half = {"center": [0, 0], "radius": 10, "startAngle": 0, "sweepAngle": math.pi}
+    assert geometry_error("sector", half, {"center": [0, 0], "radius": 10, "startAngle": math.pi, "sweepAngle": math.pi}) > 1
+    assert geometry_error("segment", {"a": [0, 0], "b": [3, 4]}, {"a": [0, 0], "b": [3, 4], "degenerateArc": True}) == 0
     print("M2 comparator rejection paths and 6 original baseline fixture identities PASS; this is not core acceptance")
 
 

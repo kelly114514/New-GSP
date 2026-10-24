@@ -23,3 +23,53 @@ Q1–Q3 的答复已移入 [格式规格 §6.1.1、§5.9](format/gsp-format.md)�
 - 需要：原版构造/拖动到上述边界并恢复的期望存在性；若存在，给出几何和命中/显示策略。
 - 现状：退化线段和零半径圆返回 unsupported + 稳定原因，后代传播该状态；多边形仍保留所有重复顶点、父序和几何，不删除零长度边。正常输入按卡片求值。
 - 卡住：退化边界的完整兼容验收；正常基准几何和拖动不阻塞。
+
+## Q6（M2 core）：弧、扇形、弓形的交换格式，及弧相关的未验证边界
+
+实现方在 `geometry-dump.ts` 输出里为弧与弧内部加了字段。验收协议 [acceptance/README.md](acceptance/README.md) 的 kind 表还没有这些类型，请规格方（W2 的比较器）对齐，或告诉我要改成什么。
+
+**交换格式（`gsp-core-geometry-v1` 的扩展）：**
+
+| kind | geometry | 说明 |
+|---|---|---|
+| `arc` | `{center:[x,y], radius, startAngle, sweepAngle, start:[x,y], end:[x,y]}` | 约束 79/80/81 |
+| `sector` | 同上 | 约束 82，父弧加两条半径闭合 |
+| `circular-segment` | 同上 | 约束 83，父弧加弦闭合 |
+| `segment`（带 `degenerateArc:true`） | `{a,b}` | 约束 81 的共线/半径超过 30,000 的线段分支；`parameterizationKnown:false` |
+
+- `startAngle`、`sweepAngle` 是**数学角**（弧度）：`angle = atan2(−dy, dx)`，页面点 `center + radius·(cos a, −sin a)`；`sweepAngle > 0` 表示在页面上看起来逆时针，符号带方向，|sweepAngle| 在 (0, 2π) 内。
+- `start`、`end` 是弧端点的页面坐标，由角度推出。**建议比较器比较 `start`/`end`/`center`/`radius` 和经过的一侧（例如弧中点），不要直接比角度**：方向约定是〔静态证据〕，原版若证明相反，只改内核里一个常量（`impl/packages/core/src/arc.ts` 的 `ARC_ORIENTATION`），端点会随之互换，而比较器不用改。
+- 弧中点可由 `center + radius·(cos, −sin)(startAngle + sweepAngle/2)` 得到。
+
+**内核返回 `unsupported` / 不存在的弧相关边界（都需要原版实验或更多静态证据）：**
+
+| 约束 | 条件 | 当前结果 |
+|---|---|---|
+| 79 | A 或 B 不在圆周上（相对容差 1e-6） | `unsupported: arc-endpoint-off-circle-unverified` |
+| 79 | A=B（整圆还是零弧） | `unsupported: arc-coincident-endpoints-unverified` |
+| 80 | O=A 或 O=B | `not-existing: arc-center-coincides-with-direction-point`（卡片说“无定义”） |
+| 80 | |OA|≠|OB| | `unsupported: arc-unequal-radii-unverified` |
+| 80 | A、B 同方向 | `unsupported: arc-coincident-directions-unverified` |
+| 81 | A=B | `not-existing: coincident-arc-endpoints` |
+| 81 | 共线或半径/圆心坐标超过 30,000，M 在弦内（沿 A→B 的投影严格在 0 与 1 之间） | 线段 A→B，`degenerateArc:true` |
+| 81 | 同上但 M 在弦外 | `unsupported: three-point-arc-degenerate-middle-outside-chord-unverified` |
+| 82/83 | 父是 81 的线段退化分支 | `unsupported: arc-interior-of-degenerate-arc-unverified` |
+| 15 | 多边形参数 s 不在 [0,1]（边比例） | `unsupported: native-polygon-parameter-out-of-range-unverified` |
+| 15 | 多边形边序号 ≥ 顶点数 | `unsupported: native-polygon-edge-index-out-of-range` |
+| 15 | 81 的线段退化分支作为路径 | `unsupported: path-direction-and-unit-unverified` |
+| 11/12 | 弧父有两个合法候选（线在弧范围内的两个根） | `unsupported: intersection-arc-root-order-unverified` |
+| 13/14 | 弧父有两个合法候选 | `unsupported: intersection-arc-root-order-unverified` |
+| 13/14 | 圆与 81 的线段退化分支有两个合法候选 | `unsupported: intersection-degenerate-arc-root-order-unverified` |
+
+只有一个合法候选时（另一个落在线段/射线范围或弧范围之外），11/12、13/14 返回这一点，两个 ID 结果相同；这与卡片“只有一个合法候选时两 ID 可能得到同一点”一致。
+
+- 问题：弧父的两个合法候选时 11/12、13/14 各取哪一个（卡片只说“方向符号参与选择”，没给公式）；81 共线时 M 在弦外是否有效；79 的 A/B 偏离圆周时是投影还是不存在；多边形上 s 超出 [0,1] 的含义。
+- 需要：原版对这些边界的实验结果，或 EMF/拖动证据。
+- 卡住：弧相关交点在“两个合法候选”状态下的验收；其余正常几何不阻塞。
+
+**规格方答复（Q6 的交换格式部分，2026-10-24）：**
+
+- 交换格式已按本条采纳，写入 [acceptance/README.md](acceptance/README.md)：`kind` 取 `arc`、`sector`、`circular-segment`，字段 `center`、`radius`、`startAngle`、`sweepAngle`（弧度，数学角，`sweepAngle>0` 为页面上看起来逆时针，带符号）和可选 `start`/`end`；退化的 81 若按线段输出，`kind` 取 `segment`，可附 `degenerateArc`、`parameterizationKnown`，比较器忽略这两个标志。`tools/check_m2.py` 的比较器按「逆时针覆盖区间」比较圆心、半径、区间两端点和区间中点，因此 `sweepAngle` 的符号写法不限，取成补弧（方向写反）会失败。期望值来自原版 EMF 弧/扇形/弓形图元，已归一成 `sweepAngle>0`。
+- 弧的方向约定已由原版 EMF 验证，不再是静态证据：79/80/81 都是页面上看起来逆时针从第一端点 A 到第二端点 B（81 是经过 M 的那一段，可顺可逆），见 [79.md](objects/cards/79.md)–[81.md](objects/cards/81.md)。实现里 `ARC_ORIENTATION` 常量不必改。
+- 仍然〔未知〕、语料保存状态里**从未出现**、只有拖动才会出现的情形：80 的 |OA|≠|OB|（语料 506 个可求对象最大偏差 4.7e−12 px）、79 的 A/B 偏离圆周（223 个对象最大 1.2e−5 px）、81 共线/半径超过 30,000（183 个对象最大半径 9,162）、A=B 同方向、弧交点在「两个合法候选」时的选择（13 个弧父交点对象里每次都只有一个根在弧上）。实现保持当前的 `unsupported` 处理是对的；要确定这些，需要用户同意的原版实验，建议见各卡片的「建议原版实验」。
+- 已验证、可以去掉 `unsupported` 的：15 在多边形上的 `s∈[0,1]`（46 个可见点）；15 在弧上按 `t·sweepAngle` 从 A 起算（55 个可见点）；11/12/13/14 弧父的回退规则（首选根不在弧上时取另一个，10 个对象）。多边形 `s` 超出 [0,1] 的含义〔未知〕，保持现状。

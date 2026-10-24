@@ -27,3 +27,23 @@ describe('M2 curve and region picking', () => {
   });
 });
 
+/** Kernel arc angles are math angles (counter-clockwise on screen, y down on the page). */
+const quarterArc = (kind: 'arc' | 'sector' | 'circular-segment', index = 1): DrawItem => ({ ...base, index, kind, geometry: { center: [50, 50], radius: 20, startAngle: 0, sweepAngle: Math.PI / 2, start: [70, 50], end: [50, 30] } } as DrawItem);
+describe('arcs and arc regions', () => {
+  it('hit-tests the arc on the screen side given by the math convention, not its mirror', () => {
+    const scene = list([quarterArc('arc')]);
+    expect(hitTest(scene, view, 50 + 20 * Math.SQRT1_2, 50 - 20 * Math.SQRT1_2)).toBe(1);
+    expect(hitTest(scene, view, 50 + 20 * Math.SQRT1_2, 50 + 20 * Math.SQRT1_2)).toBeNull();
+    expect(hitTest(scene, view, 30, 50)).toBeNull();
+  });
+  it('fills a sector through the centre and a circular segment only to the chord', () => {
+    const inside = [58, 42];
+    expect(hitTest(list([quarterArc('sector')]), view, inside[0]!, inside[1]!)).toBe(1);
+    expect(hitTest(list([quarterArc('sector')]), view, 42, 58)).toBeNull();
+    // Point near the centre is in the sector but outside the chord-bounded segment.
+    expect(hitTest(list([quarterArc('sector')]), view, 53, 47)).toBe(1);
+    expect(hitTest(list([quarterArc('circular-segment')]), view, 53, 47)).toBeNull();
+    expect(hitTest(list([quarterArc('circular-segment')]), view, 64, 36)).toBe(1);
+  });
+});
+

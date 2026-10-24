@@ -7,6 +7,10 @@ import unittest
 
 from emf_match import fit_offset, bind_html, parse_html, read_manifests
 from emf_match import circle_circle_root, linear_circle_root
+from emf_match import arc_error, arc_interval, bezier_region, ccw_between, circumcircle, make_arc, predict
+import m4_transforms as T
+import math
+import struct
 
 
 class IntersectionPredictionTests(unittest.TestCase):
@@ -42,6 +46,89 @@ class IntersectionPredictionTests(unittest.TestCase):
         self.assertAlmostEqual(lower[1], 4, places=9)
         self.assertIsNone(circle_circle_root(first, {"kind": "circle", "center": [0, 0], "radius": 1}, True))
         self.assertIsNone(circle_circle_root(first, {"kind": "circle", "center": [20, 0], "radius": 1}, True))
+
+
+def free(index, x, y):
+    return {"objectIndex": index, "constraint": 0, "mainKind": 1, "parents": [], "savedPoint": [x, y], "state": 0}
+
+
+class ArcPredictionTests(unittest.TestCase):
+    """Directions fixed by original EMF measurements (cards 79-83): visual counter-clockwise from A to B."""
+
+    def test_center_arc_runs_counter_clockwise_from_first_to_second_direction(self):
+        # O=(533,417) A=(809,417) B=(257,417): the drawn arc is the upper half (page y smaller), not the lower one.
+        objs = [free(1, 533, 417), free(2, 809, 417), free(3, 257, 417),
+                {"objectIndex": 4, "constraint": 80, "mainKind": 12, "parents": [1, 2, 3], "state": 0}]
+        hints, _ = predict(objs)
+        arc = hints[4]
+        self.assertAlmostEqual(arc["sweepAngle"], 180.0, places=9)
+        lo, hi = arc_interval(arc)
+        mid = math.radians((lo + hi) / 2)
+        self.assertAlmostEqual(math.sin(mid), 1.0, places=9)  # visual up
+        # The complementary arc (swapped endpoints) is a mismatch even though its end points coincide.
+        swapped = make_arc([533, 417], 276, [257, 417], [809, 417], ccw_between([533, 417], [257, 417], [809, 417]))
+        self.assertGreater(arc_error(arc, swapped), 100)
+
+    def test_three_point_arc_goes_through_the_middle_point_in_either_direction(self):
+        a, b = [100, 100], [200, 100]
+        for middle, expected_sign in (([150, 50], 1), ([150, 150], -1)):
+            objs = [free(1, *a), free(2, *middle), free(3, *b),
+                    {"objectIndex": 4, "constraint": 81, "mainKind": 12, "parents": [1, 2, 3], "state": 0}]
+            arc = predict(objs)[0][4]
+            self.assertEqual(1 if arc["sweepAngle"] > 0 else -1, expected_sign * -1)
+            self.assertTrue(T.apply_matrix(T.identity(), arc) is not None)
+            from emf_match import arc_contains
+            self.assertTrue(arc_contains(arc, middle))
+        self.assertIsNone(circumcircle([0, 0], [1, 1], [2, 2]))
+
+    def test_path_point_on_arc_uses_the_signed_sweep_from_the_first_endpoint(self):
+        objs = [free(1, 0, 0), free(2, 10, 0), free(3, 0, -10),
+                {"objectIndex": 4, "constraint": 80, "mainKind": 12, "parents": [1, 2, 3], "state": 0},
+                {"objectIndex": 5, "constraint": 15, "mainKind": 1, "parents": [4], "state": 0,
+                 "constraintExtra": struct.pack("<HHd", 15, 0x43, 0.5)}]
+        point = predict(objs)[0][5]["point"]
+        self.assertAlmostEqual(point[0], 10 * math.cos(math.radians(45)), places=9)
+        self.assertAlmostEqual(point[1], -10 * math.sin(math.radians(45)), places=9)
+
+    def test_bezier_arc_region_recovers_circle_from_single_cubic(self):
+        r, k = 100.0, 4 / 3 * math.tan(math.radians(90) / 4)
+        # quarter arc from (r,0) to (0,r) in page coordinates, centre (50, 60)
+        pts = [[150, 60], [150, 60 + k * r], [50 + k * r, 160], [50, 160]]
+        region = bezier_region({"subpaths": [{"ops": [["M", [pts[0]]], ["B", pts[1:]]]}], "px96": pts})
+        self.assertAlmostEqual(region["center"][0], 50, places=6)
+        self.assertAlmostEqual(region["center"][1], 60, places=6)
+        self.assertAlmostEqual(region["radius"], 100, places=6)
+        self.assertAlmostEqual(region["sweepAngle"], 90, places=6)
+
+
+class TransformPredictionTests(unittest.TestCase):
+    """Conventions measured against original EMF primitives (cards 16-34)."""
+
+    def test_rotation_positive_angle_is_visually_counterclockwise(self):
+        m = T.rotation([420, 417], -90)  # -90 degrees: clockwise on screen
+        x, y = T.point_map(m, [305, 417])
+        self.assertAlmostEqual(x, 420, places=9)
+        self.assertAlmostEqual(y, 302, places=9)  # the left point moves to the top
+
+    def test_fixed_payload_translations_and_angle_pair(self):
+        # 17: vertical distance is positive upwards, so page y decreases.
+        payload = struct.pack("<I2dI2dI8s", 17, 0.0, 0.0, 1, 11.338582677165356, 0.3, 1, bytes(8))
+        self.assertEqual(T.matrix_for({"constraint": 17, "constraintExtra": payload}, [{}], [])[1][1], -11.338582677165356)
+        # 27 / 21 / 24: (a, b) = (-sin t, cos t) wins over the unit-dependent angle number.
+        angle = struct.pack("<I3dI4s", 27, -1.0, 0.0, math.pi / 2, 0, bytes(4))
+        self.assertAlmostEqual(T.stored_angle_degrees({"constraintExtra": angle}), 90.0, places=9)
+
+    def test_dilation_reflection_and_arc_orientation(self):
+        self.assertEqual(T.point_map(T.dilation([10, 10], -2), [11, 12]), [8, 6])
+        flip = T.reflection([0, 0], [1, 0])
+        self.assertEqual(T.point_map(flip, [3, 4]), [3, -4])
+        arc = make_arc([0, 0], 10, [10, 0], [0, -10], 90)
+        image = T.apply_matrix(flip, arc)
+        self.assertAlmostEqual(image["sweepAngle"], -90.0, places=9)  # a reflection reverses the arc direction
+        self.assertAlmostEqual(image["b"][1], 10.0, places=9)
+        scaled = T.apply_matrix(T.dilation([0, 0], -2), arc)
+        self.assertAlmostEqual(scaled["radius"], 20.0, places=9)
+        self.assertAlmostEqual(scaled["sweepAngle"], 90.0, places=9)  # a negative ratio keeps orientation
 
 
 class MatcherTests(unittest.TestCase):
