@@ -174,3 +174,32 @@ Q1–Q3 的答复已移入 [格式规格 §6.1.1、§5.9](format/gsp-format.md)�
 - **94 只放开原生 8 多边形与普通 80 弧的边界点**（13 + 2 条原版读数）。接缝 V0、重边多解、圆心最近点多解、离边界/离弧、79/81/变换弧、坐标轴逻辑值仍未支持；3 条重边多解读数保留为 `point-value-94-nearest-logical-value-ambiguous`，不按“恰好吻合某个候选”改成通过。
 - **59 只放开水平轴的原生 200 px 参数基**（2 条新原版点断言）。竖直 59、60 两个方向、59 轴的变换像仍未验证；61 的模式、斜轴、不同原点、错序轴与 69 带单位父继续未支持。
 - **编辑器的撤销粒度是项目选定规则，不是原版动态核证结论**。一次拖动记一步、移回起点不记、取消恢复起点、撤销后新编辑清空重做、历史按文档跨页共享，均写在 `features/m3-editor-closure.md`，没有声称与原版逐操作一致。窗口关闭前的未保存提示不在本批。
+
+## Q15（M5 第三批洁净室重写，实现方，m3-editor-closure）
+
+规格足够完成本批，以下是实现时自行取舍的歧义，请规格方确认或改判（均不阻塞）：
+
+1. **保存快照的时刻**。规格写“保存确定的文档快照”，没说在保存对话框之前还是之后取。实现取在对话框之前（先提交进行中的拖动，再 `writeGsp`），写出的文件就是这份字节，成功后它也是新的检查点；对话框打开期间发生的编辑因此保持为未保存。若规格要的是“用户点确定那一刻”的快照，需要改。
+2. **“拖动进行中先提交当前实际变动再保存”之后拖动是否继续**。实现把已发生的变动提交成一步历史，拖动本身继续，起点前移到提交点；之后 Escape/取消只回到保存时的位置，抬起时若没有新变动不再追加历史。打开文件前的“有无未保存修改”判断同样先做这一步提交。
+3. **打开时询问放弃修改的时机**。实现先选文件并解析成功，替换前才按“当时”的字节检查点判断是否有未保存修改并询问；这样取消选择或解析失败都不会无谓弹出确认框。等待确认期间文档又被改过则重新询问。规格只说“替换前”，若要求先问再弹打开对话框，需要说明。
+4. **放弃/取消确认框的形式**。规格限定只增加 `dialog:allow-save` 与 `fs:allow-write-file`，所以不能用原生 `ask`/`confirm`（需要额外权限）；实现用应用内模态框（“放弃修改 / 取消”，默认焦点在取消）。
+5. **撤销/重做的快捷键与 WebView 刷新**。Ctrl+R 是重做，会同时对 WebView 自带的刷新调用 `preventDefault`（刷新会丢掉文档），即使当时没有可重做项也如此；输入控件聚焦时 Ctrl+Z / Ctrl+R 不拦截。没有绑定 Ctrl+Y、Ctrl+Shift+Z 等别的重做键，也没有给 Ctrl+O、Ctrl+Shift+S 做输入控件让步（它们不是编辑快捷键）。
+6. **异步打开/保存期间的历史操作**。“阻止异步打开/保存之间互相覆盖状态”只落实为：打开与保存互斥、重复触发被忽略。实现不阻止期间的拖动、撤销、重做（规格明确要求保存期间的后续编辑仍标未保存，所以编辑必须可用）；撤销/重做也不被禁用。
+7. **检查点字节**。打开成功时检查点取 `writeGsp(解析出的树)` 而不是读入的原始字节，保证未编辑的文档永远不脏（对 `writeGsp` 与读入字节逐字节一致的文件两者相同；不一致的文件规格没有说明，语料往返测试里没有此类文件）。
+8. **另存为到当前文件本身**。不额外询问覆盖（交给系统保存对话框的覆盖确认）；写出前不做临时文件+重命名，写失败时目标文件可能已被部分写入——规格只要求“不更新路径/检查点”，未要求原子写出。
+9. **“菜单显示对应动作”**。实现在“编辑”菜单里放“撤销（Ctrl+Z）/重做（Ctrl+R）”两项，文字不带具体操作描述（如“撤销移动自由点”）；若规格要显示具体动作名，需要给出文字。
+10. **没有对 DOM 手势做自动化测试**。仓库没有 DOM 测试环境，pointerdown/move/up/cancel、Escape、lost pointer capture 的事件接线（`CanvasView`、`App`）只通过类型检查和手工路径保证，历史/事务/保存逻辑全部放在无 DOM 的 `EditorController` 里测试。
+
+
+## Q15（M5 第三批洁净室重写）
+
+实现方在读规格时遇到的歧义，每条都按“保守（未支持）”落地；请规格方确认或改判。
+
+- **Q15.1 62 按钮作为被调用父的 reason。** 函数规格 §4 表把“62 按钮”和点、直线并列写成 `function-parent-not-callable`，但紧接着的段落说点、直线要在进入函数规则之前按 `parent:N:numeric-value-required` 报。62 本身不是几何对象，也没有数值，实现把它的结果只是 `unsupported`（本批不执行按钮）。实现的取法：`0x7000+i` 的第 i 槽父是 62 时报 `function-parent-not-callable`（先于普通的 `parent:N:unsupported` 祖先阻塞）；62 被 `0x6000+i` 引用或根本没被调用时仍是 `parent:N:unsupported`。需要确认：62 被 `0x6000+i` 读数值时该报 `parent:N:numeric-value-required` 还是祖先阻塞。
+- **Q15.2 模式 1/2/3 函数被调用时 48 报什么。** §4 只写“`function-mode-unverified`；仍保留模式与原记录”。实现：函数容器自身 `unsupported/function-mode-unverified`，调用它的 48 同样报 `function-mode-unverified`（先于 `parent:N:unsupported`），不是祖先阻塞。2311 +46 为 0..3 以外的值（含数值表达式的 4）出现在 `(0,11,57)` 上时按同一原因处理。
+- **Q15.3 “其它函数族”的范围。** 规格只点名 71、70。实现的取法：被调用槽的父是约束 70、约束 71，或 genera 57 但约束不是 0 的对象时，报 `function-callee-unverified`（这些对象本批自身求值为 `constraint-N-not-supported`）。语料里是否还有别的函数族（如 98 的采样曲线）被 48 以 `0x7000+i` 调用，规格没有逐类给出。
+- **Q15.4 函数体里的未支持项在定义时还是调用时报。** 规格 §1 说函数体里的 `0x6000+i`、`0x7000+i`、单位后缀、未列 token “必须未支持”。实现：定义（mode 0 且 2311 布局正确）永远求值成“可调用”，因为不能不带实参去执行正文；这些问题在**调用时**由调用者的 48 报告（`expression-unsupported:0x6000` / `function-body-unit-unverified` 等）。检查顺序：实参求值失败 → 被调用父类型 → 函数体单位后缀 → 实参量纲 → 正文求值。若规格期望“定义时就报 unsupported”，则调用者会变成 `parent:N:unsupported`，需要确认。
+- **Q15.5 调用槽越界 / 缺右括号 / 无实参的 reason。** §4 只说“显式无效表达式/未支持”。实现的字符串：越界 `expression-unsupported:0x70NN`（NN 为 token 低字节，与 `0x6000+i` 越界的写法一致）、缺右括号 `expression-unsupported:syntax-missing-rparen`、无实参 `expression-unsupported:syntax-call-missing-argument`。
+- **Q15.6 94 多边形接缝与并列的 reason。** 卡片只给了 `point-value-94-nearest-logical-value-ambiguous` 一个例子。实现：所有“并列候选逻辑值相差 >1e−9”（含闭合接缝 V0 的 0/1、重边多解）都报这一条；其余新增 reason：`point-value-94-polygon-degenerate-edge`（有边长 ≤1e−10）、`point-value-94-point-off-boundary-unverified`（最近距离 >1e−7）、`point-value-94-polygon-parent-must-be-native-8`、`point-value-94-arc-parent-must-be-native-80`、`point-value-94-degenerate-arc`（半径非正、扫角 ≤1e−9 或接近整圆）、`point-value-94-point-off-arc-unverified`（离圆周或不在弧覆盖范围内，圆心也在此类）。
+- **Q15.7 “原生”多边形/弧的识别方式。** 94 的父表指向的对象约束 ID 必须是 8 / 80，才放开子集；75 恒等像、16–34 的像、79/81 弧都不放开。`evaluateMeasure` 因此多了一个可选的 `byIndex` 参数（没有它时一律按未支持处理）。
+- **Q15.8 坐标轴变换像的标记。** 变换后的轴线不再带 `axis` 元数据，实现另加布尔字段 `transformedAxis`（只用于区分 reason），并强制 `parameterizationKnown:false`。15 在其上报 `axis-image-path-parameter-unverified`；以它为父的 5/6 继承 `parameterizationKnown:false`，其上 15 报 `path-direction-and-unit-unverified`。过原轴同一点的 5/6 平行线/垂线不是轴像，不受影响。没有改 `gsp-core-geometry-v1` 的既有字段。

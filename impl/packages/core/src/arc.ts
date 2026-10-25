@@ -24,14 +24,14 @@ export function pointAtAngle(center: XY, radius: number, angle: number): XY {
 }
 
 const TAU = 2 * Math.PI;
-const wrap = (a: number): number => { const r = a % TAU; return r < 0 ? r + TAU : r; };
+export const wrapAngle = (a: number): number => { const r = a % TAU; return r < 0 ? r + TAU : r; };
 
 /**
  * Signed sweep from `start` to `end` for constraints 79/80, in (-2pi, 2pi).
  * The caller rejects results that are numerically 0 or a full turn.
  */
 export function directedSweep(start: number, end: number): number {
-  return ARC_ORIENTATION * wrap(ARC_ORIENTATION * (end - start));
+  return ARC_ORIENTATION * wrapAngle(ARC_ORIENTATION * (end - start));
 }
 
 /** Angular tolerance (radians) for "same direction" and for arc range membership. */
@@ -42,7 +42,7 @@ export const ARC_SEGMENT_LIMIT = 30000;
 /** True when the page point lies inside the directed arc range (end points included). */
 export function inArcRange(arc: { center: XY; startAngle: number; sweepAngle: number }, p: XY): boolean {
   const phi = mathAngle(p[0] - arc.center[0], p[1] - arc.center[1]);
-  const rel = wrap(arc.sweepAngle >= 0 ? phi - arc.startAngle : arc.startAngle - phi);
+  const rel = wrapAngle(arc.sweepAngle >= 0 ? phi - arc.startAngle : arc.startAngle - phi);
   return rel <= Math.abs(arc.sweepAngle) + ARC_ANGLE_TOLERANCE || rel >= TAU - ARC_ANGLE_TOLERANCE;
 }
 
@@ -62,6 +62,6 @@ export function sweepThrough(center: XY, a: XY, m: XY, b: XY): { start: number; 
   const ta = mathAngle(a[0] - center[0], a[1] - center[1]);
   const tm = mathAngle(m[0] - center[0], m[1] - center[1]);
   const tb = mathAngle(b[0] - center[0], b[1] - center[1]);
-  const positive = wrap(tb - ta);
-  return wrap(tm - ta) <= positive ? { start: ta, sweep: positive } : { start: ta, sweep: -wrap(ta - tb) };
+  const positive = wrapAngle(tb - ta);
+  return wrapAngle(tm - ta) <= positive ? { start: ta, sweep: positive } : { start: ta, sweep: -wrapAngle(ta - tb) };
 }

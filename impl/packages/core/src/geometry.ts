@@ -2,7 +2,7 @@ import { ARC_ANGLE_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, in
 import { readF64, readU16, readU32 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
 import { constructCoordinate } from './coordinates.ts';
-import { evaluateFunctionObject, evaluateMeasure, isMeasureObject } from './measure.ts';
+import { calleeFailure, evaluateFunctionDefinition, evaluateMeasure, isFunctionObject, isMeasureObject } from './measure.ts';
 import type { FunctionGeometry, MeasureGeometry } from './measure.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
 import { isNumericParameterTransform, numericParameterTransform } from './transform-numeric.ts';
@@ -27,6 +27,11 @@ export type LinearGeometry = { [K in 'segment' | 'line' | 'ray']: {
    * the mathematical coordinate unit basis is origin/unit and is used only by 61 and coordinate measures.
    */
   axis?: { direction: 'horizontal' | 'vertical'; origin: XY; unit: XY };
+  /**
+   * Set when this line is the image of a coordinate axis under any transform (16-34/75). The axis metadata is gone,
+   * and its native path basis is unverified (card 15), so it never counts as an ordinary verified line basis.
+   */
+  transformedAxis?: true;
 } }['segment' | 'line' | 'ray'];
 export interface CircleGeometry { kind: 'circle'; geometry: { center: XY; radius: number } }
 export interface PolygonGeometry { kind: 'polygon'; geometry: { vertices: XY[] } }
@@ -43,7 +48,7 @@ export type RegionGeometry = { [K in 'disk' | 'sector' | 'circular-segment']: {
   geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number; start?: XY; end?: XY };
 } }['disk' | 'sector' | 'circular-segment'];
 export interface CoordinateSystemGeometry { kind: 'coordinate-system'; geometry: { origin: XY; u: XY; v: XY } }
-export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry | MeasureGeometry | CoordinateSystemGeometry | FunctionGeometry;
+export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry | MeasureGeometry | FunctionGeometry | CoordinateSystemGeometry;
 export type GeometryStatus = 'ok' | 'not-existing' | 'unsupported' | 'unbound-input';
 export type EvaluatedObject = { objectIndex: number; constraintId: number } & (
   | ({ exists: true; status: 'ok' } & Geometry)
@@ -70,7 +75,7 @@ function inLinearRange(g: LinearGeometry, t: number): boolean {
 }
 function inUnitRange(t: number): boolean { const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t)); return t >= -e && t <= 1 + e; }
 function finiteGeometry(g: Geometry): boolean {
-  if (g.kind === 'function') return true;
+  if (g.kind === 'function') return true; // 可调用定义没有坐标；非有限值只会出现在调用结果里。
   if (g.kind === 'coordinate-system') return [...g.geometry.origin, ...g.geometry.u, ...g.geometry.v].every(Number.isFinite);
   if (g.kind === 'measure') {
     return Number.isFinite(g.measurement.displayValue) && Number.isFinite(g.measurement.internal.magnitude);
@@ -125,10 +130,14 @@ function lineCircleCandidates(l: LinearGeometry, c: Circular): { points: XY[] } 
 /** Similarities use page coordinates. The separate scale/orientation avoid cancellation in det(M). */
 interface Similarity { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; scale: number; orientation: 1 | -1 }
 function transformGeometry(source: Geometry, m: Similarity): Geometry {
-  if (source.kind === 'measure' || source.kind === 'coordinate-system' || source.kind === 'function') return source;
+  if (source.kind === 'measure' || source.kind === 'function' || source.kind === 'coordinate-system') return source;
   const map = ([x, y]: XY): XY => [m.xx * x + m.xy * y + m.tx, m.yx * x + m.yy * y + m.ty];
   if (source.kind === 'point') return point(map(pointXY(source)));
-  if (isLinear(source)) return { kind: source.kind, geometry: { a: map(source.geometry.a), b: map(source.geometry.b) }, parameterizationKnown: source.parameterizationKnown, ...(source.degenerateArc ? { degenerateArc: true } : {}) };
+  if (isLinear(source)) {
+    // Card 15: a transformed axis keeps no axis metadata and must not be taken as a verified line basis.
+    const axisImage = source.axis !== undefined || source.transformedAxis === true;
+    return { kind: source.kind, geometry: { a: map(source.geometry.a), b: map(source.geometry.b) }, parameterizationKnown: axisImage ? false : source.parameterizationKnown, ...(source.degenerateArc ? { degenerateArc: true } : {}), ...(axisImage ? { transformedAxis: true } : {}) };
+  }
   if (source.kind === 'polygon') return { kind: 'polygon', geometry: { vertices: source.geometry.vertices.map(map) } };
   const g = source.geometry, center = map(g.center), radius = g.radius * m.scale;
   if (source.kind === 'circle' || source.kind === 'disk') return { kind: source.kind, geometry: { center, radius } };
@@ -146,7 +155,7 @@ function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id) && !isNumericParameterTransform(id)) return undefined;
   const source = p[0];
   if (source === undefined) return unsupported('transform-needs-source');
-  if (source.kind === 'measure' || source.kind === 'coordinate-system' || source.kind === 'function') return unsupported('transform-source-not-geometric');
+  if (source.kind === 'measure' || source.kind === 'function' || source.kind === 'coordinate-system') return unsupported('transform-source-not-geometric');
   if (id === 75) return transformGeometry(source, identity()); // Card 75: geometry only; the colour formula is unspecified (questions.md Q10.1).
   if (isNumericParameterTransform(id)) {
     // Cards 18-20/23-26/29/31/33: the displacement/angle/ratio comes from a numeric parent, so the
@@ -225,10 +234,10 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   if (coordinate !== undefined) return coordinate;
   const transformed = transform(o, p);
   if (transformed !== undefined) return transformed;
-  // 自由函数是带自变量的表达式容器，不是数值读数；只有 48 的 0x7000+i 才会执行正文。
-  if (o.constraintId === 0 && o.mainKind === 11 && o.genera === 57) {
-    const defined = evaluateFunctionObject(o);
-    return defined.ok ? { kind: 'function', function: defined.definition } : { status: defined.status, reason: defined.reason };
+  if (isFunctionObject(o)) {
+    // Free single-variable function definition (card 0 / m5-functions): callable, never a measurement.
+    const defined = evaluateFunctionDefinition(o, page);
+    return defined.ok ? { kind: 'function', callable: true, definition: defined.definition } : { status: defined.status, reason: defined.reason };
   }
   if (isMeasureObject(o)) {
     const measured = evaluateMeasure(o, p, page, byIndex);
@@ -437,7 +446,7 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
       return point(at(v0, sub(v1, v0), s));
     }
     if (!isLinear(first)) return unsupported('native-path-parameter-not-supported');
-    if (!first.parameterizationKnown) return unsupported(first.axis !== undefined ? 'axis-path-parameter-unverified' : 'path-direction-and-unit-unverified');
+    if (!first.parameterizationKnown) return unsupported(first.axis !== undefined ? 'axis-path-parameter-unverified' : first.transformedAxis === true ? 'axis-image-path-parameter-unverified' : 'path-direction-and-unit-unverified');
     if (record.payload.length !== 12) return unsupported('native-linear-parameter-layout');
     const t = readF64(record.payload, 4);
     if (!Number.isFinite(t)) return absent('non-finite-path-parameter');
@@ -508,7 +517,8 @@ export class PageGeometryEvaluator {
       const index = queue[cursor]!;
       const o = this.byIndex.get(index)!;
       const parents: Geometry[] = [];
-      let outcome: Outcome | undefined;
+      // A 0x7000+i call slot whose parent has no callable result gets its own classification before ancestor blocking.
+      let outcome: Outcome | undefined = calleeFailure(o, this.byIndex, (i) => this.cache.get(i));
       // Geometry-only dynamic color evaluation depends solely on its source. Numeric parents remain in the graph/file.
       for (const parent of o.constraintId === 75 ? o.parents.slice(0, 1) : o.parents) {
         const result = this.cache.get(parent);

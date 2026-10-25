@@ -99,16 +99,15 @@ node packages/core/scripts/gsp-dump.ts <file.gsp> [--summary] [--hex-limit N] [-
 
 - 页签：每页一个；页名为空时显示“第 N 页”。工具区不作为页，只在状态栏计数。
 - 对象列表（右侧）：当前页每个对象一行，显示序号、约束 ID、描述（描述模板的 `^A` 等标记换成 `〈A〉`）、主类、genera、父序号、标签和自由点坐标。点列表行或画布上的对象会高亮。
-- 画布：由现有几何求值结果绘制已支持对象；自由点拖动后重算依赖对象（包括基准样本的中点）。不支持的对象继续保留存档内容并计入“暂不支持”。
+- 画布：由现有几何求值结果绘制已支持对象；拖动自由点后重算依赖对象。不支持的对象继续保留存档内容，并计入“暂不支持”。
 - 操作：拖动空白处平移，滚轮以光标为中心缩放，“适合窗口”按钮或打开文件时自动适合窗口（最多放大 2 倍）。
-- 自由点编辑：布局 5 文件中拖动自由点即时预览；松开提交一步，移回起点不提交。Escape、pointercancel 或丢失指针捕获恢复拖动起点；派生点没有新增拖动入口。
-- 编辑 → 撤销（Ctrl+Z）/重做（Ctrl+R）：一份文档共享跨页历史，执行后定位到操作所在页；撤销后新编辑清空重做分支。输入控件保留原生编辑快捷键。
-- 文件 → 另存为…（Ctrl+Shift+S）：原生对话框只列 `.gsp`，调用现有 `writeGsp` 写入确定快照。取消或失败保留路径与检查点；保存期间后续编辑仍显示未保存。打开与保存互斥，重复操作不会覆盖状态。
-- 修改状态：按当前写出字节与最近成功打开/保存的字节检查点比较；标题文件名后显示 `*`，状态栏显示“未保存修改”。原打开路径和最近保存路径分别保留。
-- 打开另一文件：取消/读取失败/解析失败保留原文档与历史；替换未保存文档前提供“放弃修改并打开”与“取消”。本批尚未增加窗口关闭前的未保存提示。
-- 状态栏：文件名、修改与文件操作状态、布局版本（4/5）、页数、工具区数、当前页对象数、已绘制 / 暂不支持数。
+- 自由点编辑：拖动即时预览，松开提交一步历史，移回起点不提交。Escape、pointercancel 或丢失指针捕获时恢复起点。派生点没有拖动入口。
+- 编辑 → 撤销（Ctrl+Z）/重做（Ctrl+R）：一份文档共享跨页历史，执行后定位到操作所在页；撤销后再做新编辑会清空重做。输入控件聚焦时保留它自己的快捷键。
+- 文件 → 另存为…（Ctrl+Shift+S）：原生对话框只列 `.gsp`，用现有 `writeGsp` 写入确定的快照。取消或写失败保留路径与检查点，并显示可恢复的中文错误。保存期间的后续编辑仍算未保存；打开与保存互斥。
+- 修改状态：比较当前写出字节与最近一次成功打开/保存的检查点字节。标题文件名后加 `*`，状态栏显示未保存修改。替换有未保存修改的文档前，先问用户是放弃修改还是取消。
+- 状态栏：文件名、修改状态、布局版本（4/5）、页数、工具区数、当前页对象数、已绘制 / 暂不支持数。
 
-文档控制器在 `packages/app/src/model/editor.ts`；事务与保存测试覆盖基准样本 `midpoint.gsp` 的 `(211,147) → (251,174)`、派生中点、跨页历史、字节检查点、异步保存、重开、未知记录和未修改页保留。普通浏览器预览中的原生文件操作显示可恢复中文错误。
+文档控制器在 `packages/app/src/model/editorController.ts`，历史栈在 `history.ts`，平台读写在 `platform/`。控制器测试覆盖规格列出的历史与保存用例，以及基准样本 `midpoint.gsp` 的拖动、重开和逐字节回写。指针事件到控制器的接线只有类型检查，没有 DOM 测试。
 
 绘制描述和视图的纯函数在 `packages/render`（`buildPageDrawList`、`fitView`、`zoomAt`、`hitTest`、`drawPageScene`），单测用基准样本 `samples/baseline/samples/*.gsp`。
 
@@ -147,7 +146,7 @@ $env:GSP_CORPUS_DIR = 'D:\somewhere\gsp-files'; npm test
 - **安装包**：只出 NSIS（`bundle.targets = ["nsis"]`），默认按当前用户安装（`installMode = currentUser`，不需要管理员权限），安装语言简体中文和英文（按系统语言选）。
 - **WebView2**：`embedBootstrapper`。把约 1.8 MB 的微软 WebView2 引导程序直接打进安装包，目标机器没有运行时（部分 Windows 10）时由它联网安装；相比默认的 `downloadBootstrapper` 少一次“安装时先去下载引导程序”，更不容易被网络环境卡住，代价是安装包大 1.8 MB。Windows 11 自带运行时，不会触发。要完全离线可改成 `offlineInstaller`（安装包增加约 127 MB）。
 - **C 运行库**：`src-tauri/.cargo/config.toml` 让 MSVC 目标静态链接 CRT，干净的 Windows 10 不需要先装 VC++ 运行库。
-- **插件与权限**（`src-tauri/capabilities/default.json`，只对 `main` 窗口）：`core:default`、`dialog:allow-open`、`dialog:allow-save`、`fs:allow-read-file`、`fs:allow-write-file`，没有静态路径范围。dialog 选中的文件会被临时加入 fs 范围，仅支持读写用户选定的文件；没有开放 `fs:default`、全盘路径范围或消息框权限。
+- **插件与权限**（`src-tauri/capabilities/default.json`，只对 `main` 窗口）：`core:default`、`dialog:allow-open`、`dialog:allow-save`、`fs:allow-read-file`、`fs:allow-write-file`，没有静态路径范围。dialog 选中的文件会被临时加入 fs 范围，所以前端只能读写用户在对话框里选过的文件；没有开放 `fs:default`、全盘路径范围或消息框权限。
 - **CSP**：`default-src 'self'`，另允许 Tauri IPC（`ipc:` 和 `http://ipc.localhost`）。在 Tauri 窗口里加载外部脚本或连外网都会被拦。
 - 前端 `packages/app/src/platform/openGsp.ts` 里的 `openGspFile()` 把 dialog + fs 串起来（选 .gsp、读字节），由“文件 → 打开…”和 Ctrl+O 调用。
 - `packages/app/src/platform/saveGsp.ts` 选择 `.gsp` 保存路径并写入快照字节，由“文件 → 另存为…”和 Ctrl+Shift+S 调用。

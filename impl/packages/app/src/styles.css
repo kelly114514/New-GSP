@@ -109,35 +109,6 @@ button {
   outline: none;
 }
 
-.menu__item:disabled {
-  color: #929ba6;
-  background: transparent;
-}
-
-.dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(0 0 0 / 30%);
-}
-
-.confirm-dialog {
-  max-width: 480px;
-  margin: 20px;
-  padding: 22px;
-  border: 1px solid var(--bar-border);
-  border-radius: 6px;
-  background: #fff;
-  box-shadow: 0 8px 32px rgb(0 0 0 / 20%);
-}
-
-.confirm-dialog h2 { margin-top: 0; font-size: 18px; }
-.confirm-dialog__actions { display: flex; justify-content: flex-end; gap: 12px; }
-.confirm-dialog__actions button { padding: 5px 12px; }
-
 .menu__item kbd {
   color: var(--text-dim);
   font-family: inherit;
@@ -406,4 +377,66 @@ button {
 
 .statusbar__item--dim {
   color: #8a94a1;
+}
+
+.statusbar__item--dirty {
+  color: var(--error-text);
+  font-weight: 600;
+}
+
+.menu__item:disabled {
+  color: #a3acb8;
+}
+
+.menu__item:disabled:hover {
+  background: transparent;
+}
+
+/* 放弃修改确认框 */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.modal {
+  min-width: 320px;
+  max-width: 480px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid var(--bar-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.modal__title {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.modal__text {
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal__button {
+  padding: 4px 14px;
+  background: var(--tag-bg);
+  border: 1px solid var(--bar-border);
+  border-radius: 3px;
+}
+
+.modal__button--danger {
+  color: var(--error-text);
 }

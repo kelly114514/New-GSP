@@ -2,8 +2,8 @@
 ///
 /// 插件：
 /// - dialog：系统“打开文件”和“另存为”对话框；
-/// - fs：读写文件。能访问哪些路径由 capabilities/default.json 决定；
-///   没有静态路径范围，只有经 dialog 选中的文件才可读写。
+/// - fs：读取、写入文件。能访问哪些路径由 capabilities/default.json 决定（只开读文件和
+///   写文件，没有静态路径范围，只有经 dialog 选中的文件才可读写）。
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
