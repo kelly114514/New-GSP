@@ -21,6 +21,7 @@ from emf_dump import parse_emf
 import m4_transforms
 import m5_measures
 import m5_numeric_hints
+import m5_coords
 
 ROOT = Path(__file__).resolve().parents[1]
 A_GROUP = set(range(16)) | {63, 64, 79, 80, 81, 82, 83, 93, 98}
@@ -39,7 +40,7 @@ def is_geometric_a(obj):
 
 def is_asserted_group(obj):
     """Objects the matcher may assert: the A group plus the transform types verified against original EMF."""
-    return is_geometric_a(obj) or obj["constraint"] in m4_transforms.C_VERIFIED | m4_transforms.C_NUMERIC
+    return is_geometric_a(obj) or obj["constraint"] in m4_transforms.C_VERIFIED | m4_transforms.C_NUMERIC | (m5_coords.GEOMETRIC - {61})
 
 
 def is_numeric_hint_type(obj):
@@ -124,6 +125,8 @@ def native_document(path):
             elif k in (2307, 2311):
                 obj["measureRecord"] = p
                 obj["measureRecordKind"] = k
+            elif k in (2308, 2309):
+                obj["coordRecord"] = p
             elif k == 2005 and len(p) >= 6:
                 obj["labelFlags"] = list(struct.unpack_from("<3H", p))
                 if len(p) >= 24:
@@ -185,6 +188,15 @@ def parse_html(path):
                 step["numbers"] = [float(x) for x in tokens[refs:]]
             except ValueError:
                 pass
+        if m[2] in m5_coords.HTML:
+            refs = m5_coords.HTML[m[2]][0]
+            tokens = args.split(',')
+            try:
+                step['parents'] = [int(x) for x in tokens[:refs]]
+                if m[2] == 'PlotXY':
+                    step['parents'] = [step['parents'][2], step['parents'][0], step['parents'][1]]
+                if m[2] == 'UnitPoint':step['unitLength'] = float(tokens[1])
+            except (ValueError, IndexError):pass
         if m[2] == "Parameter":
             try:
                 values = args.split(",")
@@ -265,28 +277,41 @@ def bind_html(objects, html):
         for cid in ids:
             types.setdefault(cid, set()).add(name)
     types[48] = {"Calculate"}
+    for name, (_, ids) in m5_coords.HTML.items():
+        for cid in ids:types.setdefault(cid, set()).add(name)
+    step_index = defaultdict(list)
+    for s in html['steps']:
+        refs = s.get('parents', [])
+        step_index[(s['type'], True, tuple(refs))].append(s)
+        step_index[(s['type'], False, tuple(sorted(refs)))].append(s)
+    parameters = [s for s in html['steps'] if s['type'] == 'Parameter']
     bindings = {}
     for obj in objects:
         i, c = obj["objectIndex"], obj["constraint"]
         candidates = []
         if "savedPoint" in obj:
             # Native duplicates (including hidden objects) make coordinate identity ambiguous.
-            duplicates = [o for o in objects if "savedPoint" in o and distance(o["savedPoint"], obj["savedPoint"]) <= MATCH_PX]
+            duplicates = [o for o in native_points if distance(o["savedPoint"], obj["savedPoint"]) <= MATCH_PX]
             if len(duplicates) == 1:
                 candidates = [s for s in direct_points if distance(add(s["point"], shifted), obj["savedPoint"]) <= MATCH_PX]
         elif c == 0 and obj["mainKind"] == 11 and not obj["parents"]:
             # Free numeric parameter: no parents, so bind by its saved text position (same page shift as points).
             fields = m5_measures.record_fields(obj.get("measureRecord", b""), obj.get("measureRecordKind"))
             if fields:
-                candidates = [s for s in html["steps"] if s["type"] == "Parameter" and "textPosition" in s
+                candidates = [s for s in parameters if "textPosition" in s
                               and distance(add(s["textPosition"], shifted), fields["position"]) <= 0.5]
         elif c in types and obj["parents"] and all(p in bindings for p in obj["parents"]):
-            ordered = c in m5_measures.MEASURES
+            ordered = c in m5_measures.MEASURES or c in m5_coords.GEOMETRIC
             signature = [bindings[p]["step"] for p in obj["parents"]]
             if not ordered:
                 signature.sort()
-            candidates = [s for s in html["steps"] if s["type"] in types[c]
-                          and (s.get("parents", []) if ordered else sorted(s.get("parents", []))) == signature]
+            candidates = [s for name in types[c] for s in step_index.get((name, ordered, tuple(signature)), [])]
+            if c == 52:
+                n = m5_coords.unit_length(obj)
+                candidates = [s for s in candidates if n is not None and abs(s.get('unitLength', math.inf)-n)<=max(.001,abs(n)*1e-5)]
+            if c == 58:
+                name = 'HorizontalAxis' if m5_coords.axis_direction(obj)==1 else 'VerticalAxis'
+                candidates = [s for s in candidates if s['type']==name]
             if c == 48:
                 fields = m5_measures.record_fields(obj.get("measureRecord", b""), 2311)
                 try:
@@ -445,12 +470,14 @@ def predict(objects, html_bindings=None, page=None):
     for obj in objects:
         i, c, parents = obj["objectIndex"], obj["constraint"], obj["parents"]
         eligible[i] = ((c in A_GROUP and (c != 0 or obj["mainKind"] == 1)) or c in m4_transforms.C_VERIFIED
-                       or c in m4_transforms.C_NUMERIC or (page is not None and is_numeric_hint_type(obj)))             and all(eligible.get(p, False) for p in (parents[:1] if c == 75 else parents))
+                       or c in m4_transforms.C_NUMERIC or c in m5_coords.GEOMETRIC | m5_coords.NUMERIC or (page is not None and is_numeric_hint_type(obj)))             and all(eligible.get(p, False) for p in (parents[:1] if c == 75 else parents))
         ps = [out.get(p) for p in parents]
         g = None
         if not eligible[i]:
             continue
-        if page is not None and is_numeric_hint_type(obj):
+        if c in m5_coords.GEOMETRIC | m5_coords.NUMERIC:
+            g = m5_coords.hint(obj, ps, objects)
+        elif page is not None and is_numeric_hint_type(obj):
             g = m5_numeric_hints.numeric_hint(obj, ps, page)
         elif c == 0 and "savedPoint" in obj:
             g = {"kind": "point", "point": obj["savedPoint"]}
@@ -475,7 +502,8 @@ def predict(objects, html_bindings=None, page=None):
                 if c == 5:
                     d = [-d[1], d[0]]
                 # Native base points: P -/+ half the base vector, so that P is t = 0.5 (cards 5 and 6).
-                g = {"kind": "line", "a": sub(points[0], mul(d, 0.5)), "b": add(points[0], mul(d, 0.5))}
+                g = {"kind": "line", "a": sub(points[0], mul(d, 0.5)), "b": add(points[0], mul(d, 0.5)),
+                     **({"baseUnknown": True} if lines[0].get("baseUnknown") else {})}
             elif c == 7 and len(points) == 3 and len(ps) == 3:
                 u, v = sub(points[0], points[1]), sub(points[2], points[1])
                 nu, nv = math.hypot(*u), math.hypot(*v)
@@ -508,9 +536,10 @@ def predict(objects, html_bindings=None, page=None):
             elif c == 15 and len(ps) == 1 and len(lines) == 1:
                 extra = obj.get("constraintExtra", b"")
                 parent = objects[parents[0] - 1]
-                if len(extra) == 12 and parent["mainKind"] == 2:
+                if len(extra) == 12 and parent["mainKind"] in (2, 9) and not lines[0].get("baseUnknown"):
                     t, = struct.unpack_from("<d", extra, 4)
-                    if math.isfinite(t):
+                    if math.isfinite(t) and (parent["mainKind"] == 2 or parent["constraint"] == 58):
+                        # Axis lines carry their native 200 px base as a/b (card 58), so one formula fits both.
                         g = {"kind": "point", "point": add(lines[0]["a"], mul(sub(lines[0]["b"], lines[0]["a"]), t))}
             elif c == 15 and len(ps) == 1 and len(circles) == 1:
                 extra = obj.get("constraintExtra", b"")

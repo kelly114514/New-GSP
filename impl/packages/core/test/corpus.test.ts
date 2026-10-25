@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { closeSync, openSync, readSync } from 'node:fs';
 import { readMagic } from '../src/index';
 import {
   baselineSampleFiles,
@@ -6,15 +7,19 @@ import {
   corpusDir,
   corpusFiles,
   displayPath,
-  readBytes,
 } from './support';
 
 /** 返回魔数不是 expected 的文件，格式为“相对路径: 实际魔数”。 */
 function magicMismatches(files: readonly string[], expected: string): string[] {
   const bad: string[] = [];
   for (const file of files) {
-    const magic = readMagic(readBytes(file));
-    if (magic !== expected) bad.push(`${displayPath(file)}: ${JSON.stringify(magic)}`);
+    const handle = openSync(file, 'r');
+    try {
+      const header = new Uint8Array(4);
+      const count = readSync(handle, header, 0, header.length, 0);
+      const magic = readMagic(header.subarray(0, count));
+      if (magic !== expected) bad.push(`${displayPath(file)}: ${JSON.stringify(magic)}`);
+    } finally { closeSync(handle); }
   }
   return bad;
 }

@@ -9,6 +9,7 @@
  */
 
 import { readU16, readU32 } from './bytes.ts';
+import { coordinateOf } from './coordinates.ts';
 import type { Geometry, PointGeometry } from './geometry.ts';
 import type { XY } from './geometry.ts';
 import { fontNameOf } from './model.ts';
@@ -49,7 +50,7 @@ export type MeasureOutcome =
 const MEASURE_PREFIX_BYTES = 32;
 const EXPRESSION_PREFIX_BYTES = 32;
 const EXPRESSION_HEADER_BYTES = 92;
-const MEASURE_CONSTRAINTS = new Set([36, 37, 39, 40, 41, 43, 44, 46, 47, 48]);
+const MEASURE_CONSTRAINTS = new Set([36, 37, 39, 40, 41, 43, 44, 46, 47, 48, 65, 66, 86, 94]);
 
 const unsupported = (reason: string): MeasureOutcome => ({ ok: false, status: 'unsupported', reason });
 const undefinedValue = (what: string): MeasureOutcome => unsupported(`value-undefined:${what}`);
@@ -365,7 +366,49 @@ function measureRatio(o: ObjectInfo, parents: readonly Geometry[], page: Contain
  * 所有度量对象的统一入口。`parents` 与 `o.parents` 在成功求值时一一对应
  *（上游失败的情形由 geometry 的依赖传播先截断）。
  */
+function measureCoordinate(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel): MeasureOutcome {
+  const id = o.constraintId;
+  if (o.mainKind !== 7 || o.genera !== 51) return unsupported(`measure-${id}-object-type-unverified`);
+  const payload = measureRecord(o);
+  if (payload === undefined || payload.length !== 32 || readU16(payload, 16) !== 3
+    || payload[18] !== 60 || payload[19] !== 48 || payload[20] !== 62 || payload[21] !== 0 || readU16(payload, 28) > 5) {
+    return unsupported(`measure-${id}-2307-layout-unverified`);
+  }
+  const digits = readU16(payload, 28), first = parents[0], second = parents[1];
+  if (id === 94) {
+    if (parents.length !== 2 || first?.kind !== 'point' || second === undefined) return unsupported('point-value-94-parent-types-unverified');
+    let value: number;
+    if (second.kind === 'segment' || second.kind === 'ray' || second.kind === 'line') {
+      if (second.axis !== undefined) return unsupported('point-value-94-coordinate-axis-logical-parameter-unverified');
+      if (second.degenerateArc || !second.parameterizationKnown) return unsupported('point-value-94-path-parameterization-unverified');
+      const { a, b } = second.geometry, dx = b[0] - a[0], dy = b[1] - a[1];
+      const denominator = dx * dx + dy * dy;
+      if (!(denominator > 0) || !Number.isFinite(denominator)) return unsupported('point-value-94-degenerate-or-non-finite-path');
+      value = ((first.geometry.x - a[0]) * dx + (first.geometry.y - a[1]) * dy) / denominator;
+      if (!Number.isFinite(value)) return unsupported('point-value-94-non-finite-projection');
+      if (second.kind !== 'line') value = Math.max(0, value);
+      if (second.kind === 'segment') value = Math.min(1, value);
+    } else if (second.kind === 'circle') {
+      const { center, radius } = second.geometry;
+      if (!(radius > 0) || !Number.isFinite(radius)) return unsupported('point-value-94-degenerate-circle');
+      const dx = first.geometry.x - center[0], dy = center[1] - first.geometry.y;
+      if (dx === 0 && dy === 0) return unsupported('point-value-94-circle-center-multiple-nearest-points');
+      value = Math.atan2(dy, dx) / (2 * Math.PI);
+      if (value < 0) value += 1;
+    } else return unsupported(`point-value-94-path-type-unverified:${second.kind}`);
+    return makeReading(value, 'number', digits, page, o);
+  }
+  if (id === 65 || id === 66) {
+    if (parents.length !== 2 || first?.kind !== 'point' || second?.kind !== 'coordinate-system') return unsupported(`coordinate-${id}-parent-types-unverified`);
+    return makeReading(coordinateOf(first, second)[id === 65 ? 0 : 1], 'number', digits, page, o);
+  }
+  const k = parents[2];
+  if (parents.length !== 3 || first?.kind !== 'point' || second?.kind !== 'point' || k?.kind !== 'coordinate-system') return unsupported('coordinate-distance-86-parent-types-unverified');
+  return makeReading(distance(coordinateOf(first, k), coordinateOf(second, k)), 'number', digits, page, o);
+}
+
 export function evaluateMeasure(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel): MeasureOutcome {
+  if ([65, 66, 86, 94].includes(o.constraintId)) return measureCoordinate(o, parents, page);
   if (o.constraintId === 0) {
     if (o.mainKind !== 11) return unsupported('free-object-main-kind');
     return evaluateNumericFreeObject(o, page);
