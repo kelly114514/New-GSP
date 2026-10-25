@@ -20,6 +20,7 @@ from inspect_gsp import parse_records
 from emf_dump import parse_emf
 import m4_transforms
 import m5_measures
+import m5_numeric_hints
 
 ROOT = Path(__file__).resolve().parents[1]
 A_GROUP = set(range(16)) | {63, 64, 79, 80, 81, 82, 83, 93, 98}
@@ -38,7 +39,13 @@ def is_geometric_a(obj):
 
 def is_asserted_group(obj):
     """Objects the matcher may assert: the A group plus the transform types verified against original EMF."""
-    return is_geometric_a(obj) or obj["constraint"] in m4_transforms.C_VERIFIED
+    return is_geometric_a(obj) or obj["constraint"] in m4_transforms.C_VERIFIED | m4_transforms.C_NUMERIC
+
+
+def is_numeric_hint_type(obj):
+    """Numeric parents the predictor can value for the C_NUMERIC transforms (hints only, never asserted here)."""
+    c = obj["constraint"]
+    return (c == 0 and obj["mainKind"] == 11) or c in (36, 37, 40, 41, 46, 47, 48)
 
 
 def sha(data):
@@ -178,6 +185,13 @@ def parse_html(path):
                 step["numbers"] = [float(x) for x in tokens[refs:]]
             except ValueError:
                 pass
+        if m[2] == "Parameter":
+            try:
+                values = args.split(",")
+                step["value"] = float(values[0])
+                step["textPosition"] = [float(values[1]), float(values[2])]
+            except (ValueError, IndexError):
+                pass
         if m[2] in ("Point", "FixedPoint"):
             try:
                 xy = [float(x) for x in args.split(",")]
@@ -215,7 +229,8 @@ def transform_numbers_agree(obj, step, objects):
     if c == 30:
         ratio = m4_transforms.extra_f64(obj, 4)
         return ratio is not None and abs(nums[0] - ratio) <= 1e-4 * max(1.0, abs(ratio))
-    if c == 27:
+    if c in (24, 27):
+        # 24 repeats only its fixed angle (radians); 27 its rotation angle.
         angle = m4_transforms.stored_angle_degrees(obj)
         return angle is not None and abs(nums[0] - math.radians(angle)) <= 1e-3
     matrix = m4_transforms.matrix_for(obj, [{}], objects)
@@ -259,6 +274,12 @@ def bind_html(objects, html):
             duplicates = [o for o in objects if "savedPoint" in o and distance(o["savedPoint"], obj["savedPoint"]) <= MATCH_PX]
             if len(duplicates) == 1:
                 candidates = [s for s in direct_points if distance(add(s["point"], shifted), obj["savedPoint"]) <= MATCH_PX]
+        elif c == 0 and obj["mainKind"] == 11 and not obj["parents"]:
+            # Free numeric parameter: no parents, so bind by its saved text position (same page shift as points).
+            fields = m5_measures.record_fields(obj.get("measureRecord", b""), obj.get("measureRecordKind"))
+            if fields:
+                candidates = [s for s in html["steps"] if s["type"] == "Parameter" and "textPosition" in s
+                              and distance(add(s["textPosition"], shifted), fields["position"]) <= 0.5]
         elif c in types and obj["parents"] and all(p in bindings for p in obj["parents"]):
             ordered = c in m5_measures.MEASURES
             signature = [bindings[p]["step"] for p in obj["parents"]]
@@ -283,7 +304,7 @@ def bind_html(objects, html):
                     t = (math.atan2(v, u) / (2 * math.pi)) % 1
                     candidates = [s for s in candidates if math.isfinite(s.get("pathParameter", math.inf))
                                   and abs((s["pathParameter"] - t + 0.5) % 1 - 0.5) <= 0.00001]
-            elif c in (17, 21, 27, 30):
+            elif c in (17, 21, 24, 27, 30):
                 # HTML repeats the fixed 2003 parameters (translation px with y up, radians, ratio).
                 candidates = [s for s in candidates if transform_numbers_agree(obj, s, objects)]
         if len(candidates) == 1:
@@ -412,7 +433,7 @@ def arc_contains(arc, point, tolerance_deg=1e-6):
     return ((phi - lo + tolerance_deg) % 360.0) <= span + 2 * tolerance_deg
 
 
-def predict(objects, html_bindings=None):
+def predict(objects, html_bindings=None, page=None):
     """Conservative geometric search hints, NOT oracle assertions.
 
     Ambiguous orientation, path parameters, arcs and arc-bounded regions are deliberately
@@ -423,14 +444,17 @@ def predict(objects, html_bindings=None):
     html_bindings = html_bindings or {}
     for obj in objects:
         i, c, parents = obj["objectIndex"], obj["constraint"], obj["parents"]
-        eligible[i] = ((c in A_GROUP and (c != 0 or obj["mainKind"] == 1)) or c in m4_transforms.C_VERIFIED)             and all(eligible.get(p, False) for p in (parents[:1] if c == 75 else parents))
+        eligible[i] = ((c in A_GROUP and (c != 0 or obj["mainKind"] == 1)) or c in m4_transforms.C_VERIFIED
+                       or c in m4_transforms.C_NUMERIC or (page is not None and is_numeric_hint_type(obj)))             and all(eligible.get(p, False) for p in (parents[:1] if c == 75 else parents))
         ps = [out.get(p) for p in parents]
         g = None
         if not eligible[i]:
             continue
-        if c == 0 and "savedPoint" in obj:
+        if page is not None and is_numeric_hint_type(obj):
+            g = m5_numeric_hints.numeric_hint(obj, ps, page)
+        elif c == 0 and "savedPoint" in obj:
             g = {"kind": "point", "point": obj["savedPoint"]}
-        elif c in m4_transforms.C_VERIFIED and ps and ps[0] is not None and (all(ps) or c == 75):
+        elif c in m4_transforms.C_VERIFIED | m4_transforms.C_NUMERIC and ps and ps[0] is not None and (all(ps) or c == 75):
             matrix = m4_transforms.matrix_for(obj, ps, objects)
             if matrix is not None:
                 g = m4_transforms.apply_matrix(matrix, ps[0])
@@ -764,7 +788,14 @@ def appearance_of(p, emf):
     return {"stroke": pen.get("color"), "strokeWidthPx": pen.get("width_px96"), "fill": brush.get("color")}
 
 
-def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None, page_index=None):
+def modified_after_open(row):
+    """The original changed the document while exporting: auto-played animation had to be stopped,
+    or closing asked to save changes. The exported frame is then not the saved state."""
+    return bool(row.get("animation_stop_sent") or row.get("busy_after_open")
+                or any("保存更改" in (d.get("text") or "") for d in row.get("dialogs", [])))
+
+
+def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None, page_index=None, document_modified=False):
     doc = native_document(source)
     if page_index is not None and (isinstance(page_index, bool) or not isinstance(page_index, int) or not 0 <= page_index < len(doc["pages"])):
         raise ValueError("manifest pageIndex must be a zero-based existing page")
@@ -772,7 +803,7 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
     objects = page["objects"]
     html = parse_html(html_path)
     html_bindings = bind_html(objects, html)
-    hints, eligible = predict(objects, html_bindings)
+    hints, eligible = predict(objects, html_bindings, page)
     raw = emf_path.read_bytes() if emf_path is not None and emf_path.is_file() and not emf_unavailable_reason else None
     emf = parse_emf(raw, with_records=False) if raw else None
     if emf and not emf["validation"]["ok"]:
@@ -800,10 +831,11 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
 
     for obj in objects:
         i, c = obj["objectIndex"], obj["constraint"]
-        if not is_asserted_group(obj) and not (c in C_GROUP and c not in m4_transforms.C_VERIFIED):
+        asserted_c = m4_transforms.C_VERIFIED | m4_transforms.C_NUMERIC
+        if not is_asserted_group(obj) and not (c in C_GROUP and c not in asserted_c):
             continue
         reason = None
-        if c in C_GROUP and c not in m4_transforms.C_VERIFIED:
+        if c in C_GROUP and c not in asserted_c:
             reason = "transform_type_not_yet_verified"
         elif not eligible.get(i):
             reason = "ancestor_outside_predicted_groups"
@@ -847,6 +879,33 @@ def make_case(source, emf_path=None, html_path=None, emf_unavailable_reason=None
                                           else "type_has_no_html_step_visible_state_0_and_identified_parents",
                                           "matchingPredictionUsed": True, "pen": p["pen"], "brush": p["brush"]}})
     measure_checks, measure_excluded = m5_measures.measurement_assertions(objects, emf, offset)
+    if document_modified:
+        # Readings are bound by saved text position, not by predicted geometry, so a frame taken after
+        # animation would pass a moved value off as the saved one. Keep a reading only when every
+        # non-numeric ancestor is itself confirmed in place by a geometry assertion of this EMF.
+        confirmed = {a["objectIndex"] for a in assertions}
+
+        def ancestors_confirmed(index, seen=None):
+            seen = set() if seen is None else seen
+            for parent in objects[index - 1]["parents"]:
+                if parent in seen:
+                    continue
+                seen.add(parent)
+                q = objects[parent - 1]
+                if q["constraint"] in m5_measures.MEASURES and q["constraint"] != 0:
+                    if not ancestors_confirmed(parent, seen):
+                        return False
+                elif parent not in confirmed:
+                    return False
+            return True
+        kept = []
+        for m in measure_checks:
+            if ancestors_confirmed(m["objectIndex"]):
+                kept.append(m)
+            else:
+                measure_excluded.append({"objectIndex": m["objectIndex"], "constraint": m["constraint"],
+                                         "reason": "oracle_document_modified_after_open"})
+        measure_checks = kept
     assertions.extend(measure_checks)
     excluded.extend(measure_excluded)
     try:
@@ -972,7 +1031,8 @@ def build_batch(manifests, output, max_emf_bytes):
             if sha(source.read_bytes()) != row["input_sha256"]:
                 raise ValueError("manifest/input SHA-256 mismatch")
             emf_reason = "emf_size_limit_explicitly_uncovered" if emf is not None and emf.is_file() and emf.stat().st_size > max_emf_bytes else None
-            case = make_case(source, emf, html, emf_reason, page_index=row.get("pageIndex"))
+            case = make_case(source, emf, html, emf_reason, page_index=row.get("pageIndex"),
+                             document_modified=modified_after_open(row))
             case["oracle"]["pageSelection"] = {k: row[k] for k in ("pageIndex", "pageCount", "originalActivePage", "selectionMethod") if k in row}
             # Validate actual local output identity, not just manifest status.
             for key, path in (("emf", emf), ("html", html)):

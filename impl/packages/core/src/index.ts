@@ -36,3 +36,6 @@ export * from './views/strings.ts';
 export * from './writer.ts';
 export * from './geometry.ts';
 export * from './arc.ts';
+export * from './measure.ts';
+export * from './numeric/units.ts';
+export * from './numeric/expression.ts';

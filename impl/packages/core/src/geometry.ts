@@ -1,7 +1,11 @@
-import { ARC_ANGLE_TOLERANCE, ARC_RADIUS_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
+import { ARC_ANGLE_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, inArcRange, mathAngle, pointAtAngle, sweepThrough } from './arc.ts';
 import { readF64, readU16, readU32 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
+import { evaluateMeasure, isMeasureObject } from './measure.ts';
+import type { MeasureGeometry } from './measure.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
+import { isNumericParameterTransform, numericParameterTransform } from './transform-numeric.ts';
+import { isContainerNode, isEnvelopeNode } from './tree.ts';
 import type { GspDocument } from './tree.ts';
 import { decodeFreePoint } from './views/object.ts';
 
@@ -28,7 +32,7 @@ export type RegionGeometry = { [K in 'disk' | 'sector' | 'circular-segment']: {
   kind: K;
   geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number; start?: XY; end?: XY };
 } }['disk' | 'sector' | 'circular-segment'];
-export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry;
+export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry | MeasureGeometry;
 export type GeometryStatus = 'ok' | 'not-existing' | 'unsupported' | 'unbound-input';
 export type EvaluatedObject = { objectIndex: number; constraintId: number } & (
   | ({ exists: true; status: 'ok' } & Geometry)
@@ -55,6 +59,9 @@ function inLinearRange(g: LinearGeometry, t: number): boolean {
 }
 function inUnitRange(t: number): boolean { const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t)); return t >= -e && t <= 1 + e; }
 function finiteGeometry(g: Geometry): boolean {
+  if (g.kind === 'measure') {
+    return Number.isFinite(g.measurement.displayValue) && Number.isFinite(g.measurement.internal.magnitude);
+  }
   if (g.kind === 'point') return Number.isFinite(g.geometry.x) && Number.isFinite(g.geometry.y);
   if (isLinear(g)) return [...g.geometry.a, ...g.geometry.b].every(Number.isFinite);
   if (g.kind === 'polygon') return g.geometry.vertices.flat().every(Number.isFinite);
@@ -105,6 +112,7 @@ function lineCircleCandidates(l: LinearGeometry, c: Circular): { points: XY[] } 
 /** Similarities use page coordinates. The separate scale/orientation avoid cancellation in det(M). */
 interface Similarity { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; scale: number; orientation: 1 | -1 }
 function transformGeometry(source: Geometry, m: Similarity): Geometry {
+  if (source.kind === 'measure') return source;
   const map = ([x, y]: XY): XY => [m.xx * x + m.xy * y + m.tx, m.yx * x + m.yy * y + m.ty];
   if (source.kind === 'point') return point(map(pointXY(source)));
   if (isLinear(source)) return { kind: source.kind, geometry: { a: map(source.geometry.a), b: map(source.geometry.b) }, parameterizationKnown: source.parameterizationKnown, ...(source.degenerateArc ? { degenerateArc: true } : {}) };
@@ -122,11 +130,18 @@ function centeredMatrix(center: XY, xx: number, xy: number, yx: number, yy: numb
 }
 function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   const id = o.constraintId;
-  if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id)) return undefined;
+  if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id) && !isNumericParameterTransform(id)) return undefined;
   const source = p[0];
   if (source === undefined) return unsupported('transform-needs-source');
+  if (source.kind === 'measure') return unsupported('transform-source-not-geometric');
+  if (id === 75) return transformGeometry(source, identity()); // Card 75: geometry only; the colour formula is unspecified (questions.md Q10.1).
+  if (isNumericParameterTransform(id)) {
+    // Cards 18-20/23-26/29/31/33: the displacement/angle/ratio comes from a numeric parent, so the
+    // matrix depends on measured values; the shape transform itself stays shared with 16-34.
+    const outcome = numericParameterTransform(id, p, o.node.records.find((r) => r.kind === 2003)?.payload);
+    return outcome.ok ? transformGeometry(source, outcome.matrix) : { status: outcome.status, reason: outcome.reason };
+  }
   let m = identity();
-  if (id === 75) return transformGeometry(source, m); // Card 75: M4 copies geometry; numeric color evaluation is deferred.
   const expectedParents = id === 16 ? 3 : id === 17 || id === 21 ? 1 : id === 28 || id === 32 ? 5 : 2;
   if (p.length !== expectedParents) return unsupported('transform-parent-count');
   const fixedSize = id === 17 ? 52 : id === 21 ? 60 : id === 27 ? 36 : id === 30 ? 12 : undefined;
@@ -188,8 +203,6 @@ function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   return transformGeometry(source, m);
 }
 
-function needsUnimplementedMeasure(id: number): boolean { return [18, 19, 20, 23, 24, 25, 26, 29, 31, 33].includes(id); }
-
 function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byIndex: ReadonlyMap<number, ObjectInfo>): Outcome {
   const p = parents;
   const first = p[0];
@@ -197,6 +210,12 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   const id = o.constraintId;
   const transformed = transform(o, p);
   if (transformed !== undefined) return transformed;
+  if (isMeasureObject(o)) {
+    const measured = evaluateMeasure(o, p, page);
+    return measured.ok
+      ? { kind: 'measure', measurement: measured.measurement }
+      : { status: measured.status, reason: measured.reason };
+  }
   if (id === 0) {
     if (o.mainKind !== 1) return unsupported('free-object-main-kind');
     if (page.type === 'tool' && o.genera !== 4) return { status: 'unbound-input', reason: 'tool-input-not-bound' };
@@ -245,25 +264,28 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   }
   if (id === 79) {
     if (p.length !== 3 || first?.kind !== 'circle' || second?.kind !== 'point' || p[2]?.kind !== 'point') return unsupported('arc-on-circle-needs-circle-and-two-points');
-    const { center, radius } = first.geometry, a = pointXY(second), b = pointXY(p[2]);
-    for (const q of [a, b]) {
-      if (Math.abs(length(sub(q, center)) - radius) > ARC_RADIUS_TOLERANCE * Math.max(1, radius)) return unsupported('arc-endpoint-off-circle-unverified');
-    }
+    // Card 79: the centre comes from the parent circle but the radius is |OA| — equal to the parent
+    // radius only while A sits on the circle; B contributes the end direction alone.
+    const { center } = first.geometry, a = pointXY(second), b = pointXY(p[2]);
+    const radius = length(sub(a, center));
+    if (radius === 0) return absent('arc-start-point-coincides-with-circle-center');
+    const endOffset = sub(b, center);
+    if (length(endOffset) === 0) return absent('arc-end-point-coincides-with-circle-center');
     const start = mathAngle(a[0] - center[0], a[1] - center[1]);
-    const sweep = directedSweep(start, mathAngle(b[0] - center[0], b[1] - center[1]));
+    const sweep = directedSweep(start, mathAngle(endOffset[0], endOffset[1]));
     if (Math.abs(sweep) <= ARC_ANGLE_TOLERANCE || Math.abs(sweep) >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return unsupported('arc-coincident-endpoints-unverified');
     return arcOf(center, radius, start, sweep);
   }
   if (id === 80) {
     if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('arc-from-center-needs-three-points');
+    // Card 80: radius is |OA|; B only supplies the end direction, so |OA| != |OB| is allowed.
     const center = pointXY(p[0] as PointGeometry), a = pointXY(p[1] as PointGeometry), b = pointXY(p[2] as PointGeometry);
-    const ra = length(sub(a, center)), rb = length(sub(b, center));
-    if (ra === 0 || rb === 0) return absent('arc-center-coincides-with-direction-point');
-    if (Math.abs(ra - rb) > ARC_RADIUS_TOLERANCE * Math.max(1, ra, rb)) return unsupported('arc-unequal-radii-unverified');
+    const radius = length(sub(a, center));
+    if (radius === 0 || length(sub(b, center)) === 0) return absent('arc-center-coincides-with-direction-point');
     const start = mathAngle(a[0] - center[0], a[1] - center[1]);
     const sweep = directedSweep(start, mathAngle(b[0] - center[0], b[1] - center[1]));
     if (Math.abs(sweep) <= ARC_ANGLE_TOLERANCE || Math.abs(sweep) >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return unsupported('arc-coincident-directions-unverified');
-    return arcOf(center, ra, start, sweep);
+    return arcOf(center, radius, start, sweep);
   }
   if (id === 81) {
     if (p.length !== 3 || p.some((g) => g.kind !== 'point')) return unsupported('three-point-arc-needs-three-points');
@@ -414,8 +436,11 @@ export class PageGeometryEvaluator {
   /** Objects recomputed by the most recent evaluate() call, useful for diagnostics. */
   recomputedIndices: number[] = [];
 
-  constructor(page: ContainerModel) {
-    this.page = page;
+  constructor(page: ContainerModel, dpi?: number) {
+    // 9008 正常写在页容器里（格式 §7.6）；调用方若另外提供了文档级 DPI，只在页面自己缺失时补位。
+    this.page = dpi === undefined || page.numericPreferences.dpi !== undefined
+      ? page
+      : { ...page, numericPreferences: { ...page.numericPreferences, dpi } };
     for (const o of page.objects) {
       this.byIndex.set(o.index, o);
       this.dirty.add(o.index);
@@ -474,9 +499,6 @@ export class PageGeometryEvaluator {
         }
         parents.push(result);
       }
-      // Give deferred measured transforms a stable root cause even when their numeric parents are unsupported.
-      const parentStatus = outcome !== undefined && 'status' in outcome ? outcome.status : undefined;
-      if (needsUnimplementedMeasure(o.constraintId) && parentStatus !== 'not-existing' && parentStatus !== 'unbound-input') outcome = unsupported('parameter-from-unimplemented-measure');
       outcome ??= construct(o, parents, this.page, this.byIndex);
       this.store(o, outcome);
       pending.delete(index);
@@ -507,9 +529,33 @@ export class PageGeometryEvaluator {
   }
 }
 
-export function evaluatePageGeometry(page: ContainerModel): PageGeometry { return new PageGeometryEvaluator(page).evaluate(); }
+/**
+ * 文档级 9008（如果有）：正常语料把 DPI 写在页容器里，这里只是给“写在文档节点上”的文件留的补位。
+ * 页面自己的 9008 永远优先。
+ */
+function documentDpi(doc: GspDocument): number | undefined {
+  let dpi: number | undefined;
+  const inspect = (kind: number, payload: Uint8Array): void => {
+    if (kind !== 9008 || payload.length < 4) return;
+    const value = readU32(payload, 0);
+    if (value > 0) dpi = value;
+  };
+  for (const item of doc.items) {
+    if (isEnvelopeNode(item)) {
+      for (const child of item.items) if (!isContainerNode(child)) inspect(child.kind, child.payload);
+    } else {
+      inspect(item.kind, item.payload);
+    }
+  }
+  return dpi;
+}
+
+export function evaluatePageGeometry(page: ContainerModel, dpi?: number): PageGeometry {
+  return new PageGeometryEvaluator(page, dpi).evaluate();
+}
 export function toGeometryJson(model: DocumentModel): GeometryDocument {
-  return { schema: 'gsp-core-geometry-v1', pages: model.pages.map(evaluatePageGeometry) };
+  const dpi = documentDpi(model.doc);
+  return { schema: 'gsp-core-geometry-v1', pages: model.pages.map((p) => evaluatePageGeometry(p, dpi)) };
 }
 
 

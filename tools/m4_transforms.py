@@ -9,10 +9,14 @@ a unique measured EMF primitive, they never become expected values.
 from __future__ import annotations
 
 import math
+
+import m5_numeric_hints
 import struct
 
 ANGLE_VARIANT = 1
 C_VERIFIED = {16, 17, 21, 27, 28, 30, 32, 34, 75}  # numerically matched against original EMF, see spec/objects/cards
+# M5: parameter comes from a numeric parent (or two segments for 31); asserted from original EMF primitives.
+C_NUMERIC = {24, 25, 29, 31, 33}
 
 
 def identity():
@@ -140,6 +144,26 @@ def matrix_for(obj, ps, objects):
             return math.hypot(g["b"][0] - g["a"][0], g["b"][1] - g["a"][1])
         if length(ps[3]) > 0:
             return dilation(pts[0], length(ps[2]) / length(ps[3]))
+    if c in (24, 25, 29, 33):
+        slot = next(iter(m5_numeric_hints.REQUIRED_DIMENSION[c]))
+        value = m5_numeric_hints.parameter_of(c, ps, slot)
+        if value is None:
+            return None
+        if c == 24 and len(ps) == 2:
+            angle = stored_angle_degrees(obj)
+            if angle is not None:
+                return translation(value * math.cos(math.radians(angle)), -value * math.sin(math.radians(angle)))
+        if c == 25 and len(ps) == 5 and all(q is not None and q["kind"] == "point" for q in ps[1:4]):
+            c_, d_, e_ = (q["point"] for q in ps[1:4])
+            u, v = (c_[0] - d_[0], c_[1] - d_[1]), (e_[0] - d_[0], e_[1] - d_[1])
+            if math.hypot(*u) > 0 and math.hypot(*v) > 0:
+                theta = math.atan2(u[1], u[0]) - math.atan2(v[1], v[0])  # visual-CCW from d->c to d->e, as card 28
+                return translation(value * math.cos(theta), -value * math.sin(theta))
+        if c == 29 and len(ps) == 3 and ps[1] is not None and ps[1]["kind"] == "point":
+            return rotation(ps[1]["point"], math.degrees(value))
+        if c == 33 and len(ps) == 3 and ps[1] is not None and ps[1]["kind"] == "point" and value != 0:
+            return dilation(ps[1]["point"], value)
+        return None
     if c == 32 and len(ps) == 5 and len(pts) == 4:
         center, d, e, f = pts
         base = math.hypot(e[0] - d[0], e[1] - d[1])
