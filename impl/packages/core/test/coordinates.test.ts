@@ -28,9 +28,9 @@ function unit(index: number, id: number, parent: number, size: number): ObjectIn
   view.setUint16(0, id, true); view.setFloat64(4, size, true);
   return obj(index, id, [parent], [record(2003, bytes)]);
 }
-function axisPoint(index: number, parent: number, t: number): ObjectInfo {
+function axisPoint(index: number, parent: number, t: number, genera = 38): ObjectInfo {
   const bytes = new Uint8Array(12), view = new DataView(bytes.buffer);
-  view.setUint16(0, 15, true); view.setUint16(2, 38, true); view.setFloat64(4, t, true);
+  view.setUint16(0, 15, true); view.setUint16(2, genera, true); view.setFloat64(4, t, true);
   return { ...obj(index, 15, [parent], [record(2003, bytes)]), mainKind: 1, genera: 10 };
 }
 function prefix(digits = 2): Uint8Array {
@@ -73,7 +73,8 @@ describe('rectangular coordinate geometry and numeric values', () => {
     const evaluated = evaluatePageGeometry(page(square()));
     expect(result(evaluated, 2)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: 110, y: 200 } });
     expect(result(evaluated, 3)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: 100, y: 190 } });
-    expect(result(evaluated, 4)).toMatchObject({ kind: 'line', geometry: { a: [100, 200], b: [110, 200] }, axis: { direction: 'horizontal', unit: [10, 0] } });
+    expect(result(evaluated, 4)).toMatchObject({ kind: 'line', geometry: { a: [0, 200], b: [200, 200] }, parameterizationKnown: true, axis: { direction: 'horizontal', origin: [100, 200], unit: [10, 0] } });
+    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [100, 100], b: [100, 300] }, parameterizationKnown: true, axis: { direction: 'vertical', origin: [100, 200], unit: [0, -10] } });
     expect(result(evaluated, 6)).toMatchObject({ kind: 'coordinate-system', status: 'ok', exists: true, geometry: { origin: [100, 200], u: [10, 0], v: [0, -10] } });
     expect(result(evaluated, 9)).toMatchObject({ kind: 'point', geometry: { x: 80, y: 165 } });
     expect(magnitude(evaluated, 10)).toBe(-2); expect(magnitude(evaluated, 11)).toBe(3.5);
@@ -100,15 +101,15 @@ describe('rectangular coordinate geometry and numeric values', () => {
       axis(5, 59, [1, 3], 1), axis(6, 59, [1, 4], 0, 1)];
     const evaluated = evaluatePageGeometry(page(objects));
     expect(result(evaluated, 4)).toMatchObject({ measurement: { displayValue: 3, internal: { magnitude: 96 } } });
-    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [100, 200], b: [196, 200] } });
-    expect(result(evaluated, 6)).toMatchObject({ kind: 'line', geometry: { a: [100, 200], b: [100, 104] } });
+    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [0, 200], b: [200, 200] }, parameterizationKnown: false, axis: { origin: [100, 200], unit: [96, 0] } });
+    expect(result(evaluated, 6)).toMatchObject({ kind: 'line', geometry: { a: [100, 100], b: [100, 300] }, parameterizationKnown: false, axis: { origin: [100, 200], unit: [0, -96] } });
   });
 
   it('uses the circle center and radius for both 60 axis directions', () => {
     const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 3, [1, 2]), axis(4, 60, [3], 1), axis(5, 60, [3], 0)];
     const evaluated = evaluatePageGeometry(page(objects));
-    expect(result(evaluated, 4)).toMatchObject({ kind: 'line', geometry: { a: [20, 30], b: [45, 30] } });
-    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [20, 30], b: [20, 5] } });
+    expect(result(evaluated, 4)).toMatchObject({ kind: 'line', geometry: { a: [-80, 30], b: [120, 30] }, parameterizationKnown: false, axis: { origin: [20, 30], unit: [25, 0] } });
+    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [20, -70], b: [20, 130] }, parameterizationKnown: false, axis: { origin: [20, 30], unit: [0, -25] } });
   });
 
   it('recomputes descendants when origin, unit length, or number parent changes', () => {
@@ -214,12 +215,78 @@ describe('15 coordinate-axis path parameters', () => {
     expect(result(evaluated, 7)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
   });
 
+  it('puts the 58 line on the native 200 px basis O -/+ 100e for both directions, independent of the unit', () => {
+    const evaluated = evaluatePageGeometry(page([pt(1, 105, 203), pt(2, 145, 203), pt(3, 105, 163), axis(4, 58, [1, 2], 1), axis(5, 58, [1, 3], 0)]));
+    expect(result(evaluated, 4)).toMatchObject({ geometry: { a: [5, 203], b: [205, 203] }, parameterizationKnown: true, axis: { origin: [105, 203], unit: [40, 0] } });
+    expect(result(evaluated, 5)).toMatchObject({ geometry: { a: [105, 103], b: [105, 303] }, parameterizationKnown: true, axis: { origin: [105, 203], unit: [0, -40] } });
+  });
+
+  it('evaluates 15 on vertical and horizontal 58 axes with the card-15 values and no range clamp', () => {
+    const objects = [pt(1, 105, 203), pt(2, 143, 203), pt(3, 105, 165), axis(4, 58, [1, 2], 1), axis(5, 58, [1, 3], 0),
+      axisPoint(6, 5, 1.255), axisPoint(7, 4, 1.445), axisPoint(8, 4, -2), axisPoint(9, 5, 3)];
+    const evaluated = evaluatePageGeometry(page(objects));
+    const v = result(evaluated, 6);
+    if (v.status !== 'ok' || v.kind !== 'point') throw new Error('expected point');
+    expect(v.geometry.x).toBe(105); expect(v.geometry.y).toBeCloseTo(354, 12);
+    const h = result(evaluated, 7);
+    if (h.status !== 'ok' || h.kind !== 'point') throw new Error('expected point');
+    expect(h.geometry.x).toBeCloseTo(294, 12); expect(h.geometry.y).toBe(203);
+    expect(result(evaluated, 8)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: -395, y: 203 } });
+    expect(result(evaluated, 9)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: 105, y: 703 } });
+  });
+
+  it.each([1, 0] as const)('5/6 through P on a 58 axis (direction %i) use the 200 px line basis, and 15 follows it', (direction) => {
+    // Axis O=(100,200), unit L=10: the line a/b is O -/+ 100e, so d is 200 px long, not 10 px.
+    const objects = [pt(1, 100, 200), pt(2, 110, 200), pt(3, 100, 190), axis(4, 58, [1, direction === 1 ? 2 : 3], direction), pt(5, 50, 60),
+      { ...obj(6, 5, [5, 4]), mainKind: 2, genera: 47 }, { ...obj(7, 6, [5, 4]), mainKind: 2, genera: 46 },
+      axisPoint(8, 6, 0.25, 47), axisPoint(9, 7, 0.75, 46), axisPoint(10, 6, 0.5, 47), axisPoint(11, 7, 0.5, 46)];
+    const evaluated = evaluatePageGeometry(page(objects));
+    if (direction === 1) {
+      // d=(200,0): perpendicular n=(0,200), A'=P-n/2=(50,-40), B'=(50,160); parallel A'=(-50,60), B'=(150,60).
+      expect(result(evaluated, 6)).toMatchObject({ kind: 'line', geometry: { a: [50, -40], b: [50, 160] }, parameterizationKnown: true });
+      expect(result(evaluated, 7)).toMatchObject({ kind: 'line', geometry: { a: [-50, 60], b: [150, 60] }, parameterizationKnown: true });
+      expect(result(evaluated, 8)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 10 } });
+      expect(result(evaluated, 9)).toMatchObject({ status: 'ok', geometry: { x: 100, y: 60 } });
+    } else {
+      // d=(0,200) (page +y): n=(-200,0), A'=(150,60), B'=(-50,60); parallel A'=(50,-40), B'=(50,160).
+      expect(result(evaluated, 6)).toMatchObject({ kind: 'line', geometry: { a: [150, 60], b: [-50, 60] }, parameterizationKnown: true });
+      expect(result(evaluated, 7)).toMatchObject({ kind: 'line', geometry: { a: [50, -40], b: [50, 160] }, parameterizationKnown: true });
+      expect(result(evaluated, 8)).toMatchObject({ status: 'ok', geometry: { x: 100, y: 60 } });
+      expect(result(evaluated, 9)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 110 } });
+    }
+    expect(result(evaluated, 10)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 60 } });
+    expect(result(evaluated, 11)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 60 } });
+  });
+
+  it.each([59, 60])('5/6 through a point on a %i axis have parameterizationKnown false and their 15 is unsupported', (id) => {
+    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, id === 59 ? 2 : 3, [1, 2]), axis(4, id, id === 59 ? [1, 3] : [3], 1), pt(5, 50, 60),
+      { ...obj(6, 5, [5, 4]), mainKind: 2, genera: 47 }, { ...obj(7, 6, [5, 4]), mainKind: 2, genera: 46 },
+      axisPoint(8, 6, 0.25, 47), axisPoint(9, 7, 0.25, 46)];
+    const evaluated = evaluatePageGeometry(page(objects));
+    expect(result(evaluated, 6)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: false });
+    expect(result(evaluated, 7)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: false });
+    expect(result(evaluated, 8)).toMatchObject({ status: 'unsupported', exists: null, reason: 'path-direction-and-unit-unverified' });
+    expect(result(evaluated, 9)).toMatchObject({ status: 'unsupported', exists: null, reason: 'path-direction-and-unit-unverified' });
+  });
+
+  it('keeps 61, 65, 66, 86 and 69 on the coordinate unit basis when Lx differs from Ly', () => {
+    // O=(100,200), Lx=20, Ly=10; the 200 px axis lines must not influence the coordinate basis.
+    const objects = [pt(1, 100, 200), pt(2, 120, 200), pt(3, 100, 190), axis(4, 58, [1, 2], 1), axis(5, 58, [1, 3], 0), system(6, 4, 5),
+      pt(7, 140, 170), pt(8, 60, 180), measure(9, 65, [7, 6]), measure(10, 66, [7, 6]), measure(11, 86, [7, 8, 6], 5),
+      numeric(12, [0x1001, 2]), numeric(13, [3, 10, 5]), obj(14, 69, [12, 13, 6])];
+    const evaluated = evaluatePageGeometry(page(objects));
+    expect(result(evaluated, 6)).toMatchObject({ kind: 'coordinate-system', status: 'ok', geometry: { origin: [100, 200], u: [20, 0], v: [0, -10] } });
+    expect(magnitude(evaluated, 9)).toBe(2); expect(magnitude(evaluated, 10)).toBe(3);
+    expect(magnitude(evaluated, 11)).toBeCloseTo(Math.hypot(4, 1), 9);
+    expect(result(evaluated, 14)).toMatchObject({ kind: 'point', status: 'ok' });
+  });
+
   it('rejects 94 on coordinate axes while accepting an ordinary line with identical a/b', () => {
     const p: Geometry = { kind: 'point', geometry: { x: 130, y: 100 } };
     const line = { kind: 'line', geometry: { a: [100, 100], b: [110, 100] }, parameterizationKnown: true } satisfies Geometry;
     const o = measure(3, 94, [1, 2]);
     expect(evaluateMeasure(o, [p, line], page([]))).toMatchObject({ ok: true, measurement: { internal: { magnitude: 3 } } });
-    expect(evaluateMeasure(o, [p, { ...line, axis: { direction: 'horizontal', unit: [10, 0] } }], page([])))
+    expect(evaluateMeasure(o, [p, { ...line, axis: { direction: 'horizontal', origin: [100, 100], unit: [10, 0] } }], page([])))
       .toMatchObject({ ok: false, status: 'unsupported', reason: 'point-value-94-coordinate-axis-logical-parameter-unverified' });
   });
 });

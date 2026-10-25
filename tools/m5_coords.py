@@ -85,14 +85,17 @@ def hint(obj, ps, objects):
         else:return None
         if n<=1e-10:return None
         v=[n,0] if direction else [0,-n]
-        return {"kind":"line","a":o,"b":[o[0]+v[0],o[1]+v[1]],"axisDirection":direction}
+        # Card 58: the line geometry is the native 200 px page base O -/+ 100e (e = page +x or +y);
+        # the coordinate unit base lives in origin/unit. 59/60 base is unverified (baseUnknown).
+        e=[100,0] if direction else [0,100]
+        return {"kind":"line","a":[o[0]-e[0],o[1]-e[1]],"b":[o[0]+e[0],o[1]+e[1]],"axisDirection":direction,
+                "origin":o,"unit":v,**({} if c==58 else {"baseUnknown":True})}
     if c==61 and len(ps)==2 and all(p["kind"]=="line" for p in ps):
         raw=obj.get("coordRecord",b"")
         if len(raw) not in (2,8) or struct.unpack_from('<H',raw)[0] not in (1,2):return None
         x,y=ps
-        if x.get("axisDirection")!=1 or y.get("axisDirection")!=0 or math.dist(x["a"],y["a"])>1e-7:return None
-        return {"kind":"coordinate-system","origin":x["a"],"u":[x["b"][j]-x["a"][j] for j in (0,1)],
-                "v":[y["b"][j]-y["a"][j] for j in (0,1)]}
+        if x.get("axisDirection")!=1 or y.get("axisDirection")!=0 or math.dist(x["origin"],y["origin"])>1e-7:return None
+        return {"kind":"coordinate-system","origin":x["origin"],"u":list(x["unit"]),"v":list(y["unit"])}
     if c==69 and len(ps)==3 and all(p["kind"]=="number" and p["dimension"]=="number" for p in ps[:2]) and ps[2]["kind"]=="coordinate-system":
         x,y=ps[0]["value"],ps[1]["value"];k=ps[2]
         return {"kind":"point","point":[k["origin"][j]+x*k["u"][j]+y*k["v"][j] for j in (0,1)]}

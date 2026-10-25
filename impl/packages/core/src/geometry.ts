@@ -22,7 +22,11 @@ export type LinearGeometry = { [K in 'segment' | 'line' | 'ray']: {
   parameterizationKnown: boolean;
   /** Set when constraint 81 degenerated into the chord A-B (card 81); it intersects as a linear object. */
   degenerateArc?: true;
-  axis?: { direction: 'horizontal' | 'vertical'; unit: XY };
+  /**
+   * Coordinate-axis metadata (cards 58-61). The line a/b is the native 200 px path basis (O -/+ 100e);
+   * the mathematical coordinate unit basis is origin/unit and is used only by 61 and coordinate measures.
+   */
+  axis?: { direction: 'horizontal' | 'vertical'; origin: XY; unit: XY };
 } }['segment' | 'line' | 'ray'];
 export interface CircleGeometry { kind: 'circle'; geometry: { center: XY; radius: number } }
 export interface PolygonGeometry { kind: 'polygon'; geometry: { vertices: XY[] } }
@@ -427,17 +431,10 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
       return point(at(v0, sub(v1, v0), s));
     }
     if (!isLinear(first)) return unsupported('native-path-parameter-not-supported');
-    if (!first.parameterizationKnown) return unsupported('path-direction-and-unit-unverified');
+    if (!first.parameterizationKnown) return unsupported(first.axis !== undefined ? 'axis-path-parameter-unverified' : 'path-direction-and-unit-unverified');
     if (record.payload.length !== 12) return unsupported('native-linear-parameter-layout');
     const t = readF64(record.payload, 4);
     if (!Number.isFinite(t)) return absent('non-finite-path-parameter');
-    if (first.axis !== undefined) {
-      if (parentObject.constraintId !== 58) return unsupported('axis-path-parameter-unverified');
-      // Card 15: native 58 axes have a fixed 200 px path basis increasing in PAGE x/y.
-      // Their a/b and axis.unit instead describe the mathematical coordinate unit used by 61.
-      const [x, y] = first.geometry.a, offset = 200 * t - 100;
-      return point(first.axis.direction === 'horizontal' ? [x + offset, y] : [x, y + offset]);
-    }
     return inLinearRange(first, t) ? point(at(first.geometry.a, sub(first.geometry.b, first.geometry.a), t)) : absent('path-parameter-outside-range');
   }
   return unsupported(`constraint-${id}-not-supported`);

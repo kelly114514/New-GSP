@@ -61,6 +61,25 @@ class CoordinateHints(unittest.TestCase):
                  {'objectIndex':7,'mainKind':1,**obj(15,[5],struct.pack('<HHd',15,38,1.255))}]
         hints,_=predict(objects)
         self.assertEqual(hints[6],point(294,203));self.assertEqual(hints[7],point(105,354))
+    def test_axis_line_is_native_page_base_and_feeds_perpendicular_parallel(self):
+        # Card 58: line a/b = O -/+ 100e; unit base only in origin/unit. Cards 5/6 use that base.
+        objects=[{'objectIndex':1,'constraint':0,'mainKind':1,'parents':[],'savedPoint':[105,203]},
+                 {'objectIndex':2,'mainKind':1,**unit(52,37.79527559055118)},
+                 {'objectIndex':3,'mainKind':9,**obj(58,[1,2],coordRecord=b'\1\0\0\0')},
+                 {'objectIndex':4,'constraint':0,'mainKind':1,'parents':[],'savedPoint':[300,100]},
+                 {'objectIndex':5,'mainKind':2,**obj(5,[4,3])},
+                 {'objectIndex':6,'mainKind':1,**obj(15,[5],struct.pack('<HHd',15,38,0.75))},
+                 {'objectIndex':7,'mainKind':2,**obj(6,[4,3])},
+                 {'objectIndex':8,'mainKind':1,**obj(15,[7],struct.pack('<HHd',15,38,0.75))}]
+        hints,_=predict(objects)
+        self.assertEqual((hints[3]['a'],hints[3]['b'],hints[3]['origin']),([5,203],[205,203],[105,203]))
+        self.assertAlmostEqual(hints[3]['unit'][0],37.79527559055118);self.assertEqual(hints[3]['unit'][1],0)
+        self.assertEqual(hints[6],point(300,150))   # perpendicular base d=(0,200): P-(0,100)+0.75*(0,200)
+        self.assertEqual(hints[8],point(350,100))
+    def test_unverified_axis_base_does_not_predict_path_points(self):
+        q={'kind':'segment','a':[0,0],'b':[20,0]}
+        axis=hint(obj(59,[1,2],coordRecord=b'\1\0'),[point(10,10),q],[])
+        self.assertTrue(axis['baseUnknown']);self.assertEqual(axis['unit'],[20,0])
     def test_html_plot_parent_order(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'x.htm';path.write_text('{8} PlotXY(3,7,4)[black];\n',encoding='utf8')

@@ -502,7 +502,8 @@ def predict(objects, html_bindings=None, page=None):
                 if c == 5:
                     d = [-d[1], d[0]]
                 # Native base points: P -/+ half the base vector, so that P is t = 0.5 (cards 5 and 6).
-                g = {"kind": "line", "a": sub(points[0], mul(d, 0.5)), "b": add(points[0], mul(d, 0.5))}
+                g = {"kind": "line", "a": sub(points[0], mul(d, 0.5)), "b": add(points[0], mul(d, 0.5)),
+                     **({"baseUnknown": True} if lines[0].get("baseUnknown") else {})}
             elif c == 7 and len(points) == 3 and len(ps) == 3:
                 u, v = sub(points[0], points[1]), sub(points[2], points[1])
                 nu, nv = math.hypot(*u), math.hypot(*v)
@@ -535,16 +536,11 @@ def predict(objects, html_bindings=None, page=None):
             elif c == 15 and len(ps) == 1 and len(lines) == 1:
                 extra = obj.get("constraintExtra", b"")
                 parent = objects[parents[0] - 1]
-                if len(extra) == 12 and parent["mainKind"] in (2, 9):
+                if len(extra) == 12 and parent["mainKind"] in (2, 9) and not lines[0].get("baseUnknown"):
                     t, = struct.unpack_from("<d", extra, 4)
-                    if math.isfinite(t):
-                        if parent['mainKind'] == 9:
-                            direction = lines[0].get('axisDirection')
-                            if parent['constraint'] == 58 and direction in (0, 1):
-                                delta = [200*t-100, 0] if direction else [0, 200*t-100]
-                                g = {"kind":"point", "point":add(lines[0]['a'], delta)}
-                        else:
-                            g = {"kind": "point", "point": add(lines[0]["a"], mul(sub(lines[0]["b"], lines[0]["a"]), t))}
+                    if math.isfinite(t) and (parent["mainKind"] == 2 or parent["constraint"] == 58):
+                        # Axis lines carry their native 200 px base as a/b (card 58), so one formula fits both.
+                        g = {"kind": "point", "point": add(lines[0]["a"], mul(sub(lines[0]["b"], lines[0]["a"]), t))}
             elif c == 15 and len(ps) == 1 and len(circles) == 1:
                 extra = obj.get("constraintExtra", b"")
                 if len(extra) == 20:

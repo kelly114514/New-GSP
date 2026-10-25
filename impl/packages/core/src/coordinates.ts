@@ -1,6 +1,6 @@
 /** Verified rectangular-coordinate subset: cards 52/54/58–61/69. */
 import { readF64, readU16 } from './bytes.ts';
-import type { CoordinateSystemGeometry, Geometry, LinearGeometry, PointGeometry, XY } from './geometry.ts';
+import type { CoordinateSystemGeometry, Geometry, PointGeometry, XY } from './geometry.ts';
 import type { ObjectInfo } from './model.ts';
 
 type Failure = { status: 'unsupported'; reason: string };
@@ -17,13 +17,20 @@ export function coordinateOf(p: PointGeometry, k: CoordinateSystemGeometry): XY 
   return [(dx * v[1] - dy * v[0]) / determinant, (u[0] * dy - u[1] * dx) / determinant];
 }
 
-function axis(origin: XY, size: number, direction: number): Result {
+/**
+ * Card 58: an axis has two bases. The line geometry is the native path basis a = O - 100e, b = O + 100e
+ * (e = page +x for horizontal, page +y for vertical); `axis.origin`/`axis.unit` is the coordinate unit basis for 61.
+ * Only 58 has original-program evidence for the native path parameters (59/60: parameterizationKnown false).
+ */
+function axis(origin: XY, size: number, direction: number, nativeParameterizationKnown: boolean): Result {
   if (!positive(size)) return unsupported('axis-unit-must-be-positive-finite');
-  const unit: XY = direction === 1 ? [size, 0] : [0, -size];
-  const b: XY = [origin[0] + unit[0], origin[1] + unit[1]];
-  if (![...origin, ...b].every(Number.isFinite)) return unsupported('axis-non-finite-geometry');
-  return { kind: 'line', geometry: { a: origin, b }, parameterizationKnown: true,
-    axis: { direction: direction === 1 ? 'horizontal' : 'vertical', unit } };
+  const horizontal = direction === 1;
+  const unit: XY = horizontal ? [size, 0] : [0, -size];
+  const e: XY = horizontal ? [1, 0] : [0, 1];
+  const a: XY = [origin[0] - 100 * e[0], origin[1] - 100 * e[1]], b: XY = [origin[0] + 100 * e[0], origin[1] + 100 * e[1]];
+  if (![...origin, ...a, ...b].every(Number.isFinite)) return unsupported('axis-non-finite-geometry');
+  return { kind: 'line', geometry: { a, b }, parameterizationKnown: nativeParameterizationKnown,
+    axis: { direction: horizontal ? 'horizontal' : 'vertical', origin, unit } };
 }
 
 export function constructCoordinate(o: ObjectInfo, p: readonly Geometry[], byIndex: ReadonlyMap<number, ObjectInfo>): Result | undefined {
@@ -60,7 +67,7 @@ export function constructCoordinate(o: ObjectInfo, p: readonly Geometry[], byInd
     if (direction !== 0 && direction !== 1) return unsupported('axis-direction-unverified');
     if (id === 60) {
       if (p.length !== 1 || first?.kind !== 'circle') return unsupported('axis-60-parent-must-be-circle');
-      return axis(first.geometry.center, first.geometry.radius, direction);
+      return axis(first.geometry.center, first.geometry.radius, direction, false);
     }
     if (p.length !== 2 || first?.kind !== 'point' || second === undefined) return unsupported(`axis-${id}-parent-types-unverified`);
     const origin = pointXY(first);
@@ -70,10 +77,10 @@ export function constructCoordinate(o: ObjectInfo, p: readonly Geometry[], byInd
       if (direction === 1 ? unit[1] !== 0 || !positive(unit[0]) : unit[0] !== 0 || !positive(-unit[1])) {
         return unsupported('axis-58-slanted-reversed-or-zero-unit-unverified');
       }
-      return axis(origin, direction === 1 ? unit[0] : -unit[1], direction);
+      return axis(origin, direction === 1 ? unit[0] : -unit[1], direction, true);
     }
-    if (second.kind === 'segment' && !second.degenerateArc) return axis(origin, Math.hypot(...difference(second.geometry.b, second.geometry.a)), direction);
-    if (second.kind === 'measure' && second.measurement.internal.dimension === 'length') return axis(origin, second.measurement.internal.magnitude, direction);
+    if (second.kind === 'segment' && !second.degenerateArc) return axis(origin, Math.hypot(...difference(second.geometry.b, second.geometry.a)), direction, false);
+    if (second.kind === 'measure' && second.measurement.internal.dimension === 'length') return axis(origin, second.measurement.internal.magnitude, direction, false);
     return unsupported('axis-59-length-provider-unverified');
   }
   if (id === 61) {
@@ -84,13 +91,13 @@ export function constructCoordinate(o: ObjectInfo, p: readonly Geometry[], byInd
     if (p.length !== 2 || first?.kind !== 'line' || second?.kind !== 'line' || first.axis?.direction !== 'horizontal' || second.axis?.direction !== 'vertical') {
       return unsupported('coordinate-system-ordered-axis-parents-required');
     }
-    const x = first as LinearGeometry, y = second as LinearGeometry;
-    if (x.geometry.a[0] !== y.geometry.a[0] || x.geometry.a[1] !== y.geometry.a[1]) return unsupported('coordinate-system-different-origins-unverified');
-    const u = difference(x.geometry.b, x.geometry.a), v = difference(y.geometry.b, y.geometry.a);
+    const xa = first.axis, ya = second.axis;
+    if (xa.origin[0] !== ya.origin[0] || xa.origin[1] !== ya.origin[1]) return unsupported('coordinate-system-different-origins-unverified');
+    const u = xa.unit, v = ya.unit;
     if (u[1] !== 0 || v[0] !== 0 || !positive(u[0]) || !positive(-v[1]) || !Number.isFinite(u[0] * v[1]) || u[0] * v[1] === 0) {
       return unsupported('coordinate-system-slanted-nonpositive-or-singular-basis-unverified');
     }
-    return { kind: 'coordinate-system', geometry: { origin: x.geometry.a, u, v } };
+    return { kind: 'coordinate-system', geometry: { origin: xa.origin, u, v } };
   }
   const k = p[2];
   if (p.length !== 3 || first?.kind !== 'measure' || second?.kind !== 'measure' || k?.kind !== 'coordinate-system') return unsupported('plot-69-parent-types-unverified');
