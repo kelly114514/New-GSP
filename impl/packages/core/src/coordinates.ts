@@ -20,7 +20,8 @@ export function coordinateOf(p: PointGeometry, k: CoordinateSystemGeometry): XY 
 /**
  * Card 58: an axis has two bases. The line geometry is the native path basis a = O - 100e, b = O + 100e
  * (e = page +x for horizontal, page +y for vertical); `axis.origin`/`axis.unit` is the coordinate unit basis for 61.
- * Only 58 has original-program evidence for the native path parameters (59/60: parameterizationKnown false).
+ * Native path parameters: 58 both directions, and 59 horizontal (M5 batch 3 original EMF dot). Vertical 59,
+ * either direction of 60, and transformed axes stay `parameterizationKnown:false`.
  */
 function axis(origin: XY, size: number, direction: number, nativeParameterizationKnown: boolean): Result {
   if (!positive(size)) return unsupported('axis-unit-must-be-positive-finite');
@@ -79,8 +80,8 @@ export function constructCoordinate(o: ObjectInfo, p: readonly Geometry[], byInd
       }
       return axis(origin, direction === 1 ? unit[0] : -unit[1], direction, true);
     }
-    if (second.kind === 'segment' && !second.degenerateArc) return axis(origin, Math.hypot(...difference(second.geometry.b, second.geometry.a)), direction, false);
-    if (second.kind === 'measure' && second.measurement.internal.dimension === 'length') return axis(origin, second.measurement.internal.magnitude, direction, false);
+    if (second.kind === 'segment' && !second.degenerateArc) return axis(origin, Math.hypot(...difference(second.geometry.b, second.geometry.a)), direction, direction === 1);
+    if (second.kind === 'measure' && second.measurement.internal.dimension === 'length') return axis(origin, second.measurement.internal.magnitude, direction, direction === 1);
     return unsupported('axis-59-length-provider-unverified');
   }
   if (id === 61) {

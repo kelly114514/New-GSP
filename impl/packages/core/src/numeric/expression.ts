@@ -9,11 +9,25 @@
 import { angleUnitScale, distanceUnitScale } from './units.ts';
 import type { Dimension, PageNumericPreferences } from './units.ts';
 
+/** 一个带量纲的未舍入显示单位值。 */
+export interface NumericOperand {
+  value: number;
+  dimension: Dimension;
+}
+
 export interface NumericContext {
-  /** 父槽 i → 父数值（显示单位值 + 量纲）。 */
+  /** 父槽 i → 父数值（显示单位值 + 量纲）；函数容器的槽位在这里没有数值。 */
   parents: readonly { value: number; dimension: Dimension }[];
   page: PageNumericPreferences;
+  /** 函数正文的自变量绑定（token 0x000F）。普通表达式不提供，遇到 15 仍显式未支持。 */
+  variable?: NumericOperand;
+  /** 函数调用（token 0x7000+i）。只有调用表达式提供；自由函数正文没有父表，不提供。 */
+  call?: (slot: number, argument: NumericOperand) => CallOutcome;
+  /** 这些父槽是函数容器：0x6000+i 读取它们必须失败，不能隐式转数值。 */
+  nonNumericSlots?: ReadonlySet<number>;
 }
+
+export type CallOutcome = { ok: true; operand: NumericOperand } | { ok: false; reason: string };
 
 export type ExpressionResult =
   | { ok: true; value: number; dimension: Dimension }
@@ -217,9 +231,14 @@ class Parser {
     if (token === E) { this.position++; return this.finishLiteral(Math.E, 'number'); }
     if (token >= FUNCTION_FIRST && token <= FUNCTION_LAST) return this.parseFunction(token);
     if (token >= PARENT_FIRST && token <= PARENT_LAST) return this.parseParent(token);
-    if (token >= CALL_FIRST && token <= CALL_LAST) unsupportedToken(token);
+    if (token >= CALL_FIRST && token <= CALL_LAST) return this.parseCall(token);
     if (SYMBOLIC_UNSUPPORTED_UNITS.has(token)) unsupportedToken(token);
-    if (token === FUNCTION_ARGUMENT_PLACEHOLDER) unsupportedToken(token);
+    if (token === FUNCTION_ARGUMENT_PLACEHOLDER) {
+      this.position++;
+      const variable = this.context.variable;
+      if (variable === undefined) return unsupportedToken(token);
+      return { value: variable.value, dimension: variable.dimension };
+    }
     return unsupportedToken(token);
   }
 
@@ -266,9 +285,25 @@ class Parser {
   private parseParent(token: number): NumericValue {
     this.position++;
     const slot = token - PARENT_FIRST;
+    if (this.context.nonNumericSlots?.has(slot) === true) fail('expression-unsupported:function-parent-as-number');
     const parent = this.context.parents[slot];
     if (parent === undefined) return unsupportedToken(token);
     return { value: parent.value, dimension: parent.dimension };
+  }
+
+  /** 0x7000+i：调用父表槽 i 的函数容器，实参是一个完整中缀表达式。 */
+  private parseCall(token: number): NumericValue {
+    this.position++;
+    const slot = token - CALL_FIRST;
+    const call = this.context.call;
+    if (call === undefined) fail('function-call-unavailable');
+    const argument = this.parseSum();
+    if (this.peek() !== RPAREN) fail('expression-unsupported:syntax-missing-rparen');
+    this.position++;
+    const outcome = call!(slot, { value: argument.value, dimension: argument.dimension });
+    if (!outcome.ok) fail(outcome.reason);
+    const operand = (outcome as { ok: true; operand: NumericOperand }).operand;
+    return { value: operand.value, dimension: operand.dimension };
   }
 
   private parseFunction(token: number): NumericValue {

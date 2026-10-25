@@ -101,7 +101,7 @@ describe('rectangular coordinate geometry and numeric values', () => {
       axis(5, 59, [1, 3], 1), axis(6, 59, [1, 4], 0, 1)];
     const evaluated = evaluatePageGeometry(page(objects));
     expect(result(evaluated, 4)).toMatchObject({ measurement: { displayValue: 3, internal: { magnitude: 96 } } });
-    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [0, 200], b: [200, 200] }, parameterizationKnown: false, axis: { origin: [100, 200], unit: [96, 0] } });
+    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [0, 200], b: [200, 200] }, parameterizationKnown: true, axis: { origin: [100, 200], unit: [96, 0] } });
     expect(result(evaluated, 6)).toMatchObject({ kind: 'line', geometry: { a: [100, 100], b: [100, 300] }, parameterizationKnown: false, axis: { origin: [100, 200], unit: [0, -96] } });
   });
 
@@ -206,13 +206,17 @@ describe('15 coordinate-axis path parameters', () => {
     expect(magnitude(evaluated, 10)).toBeCloseTo(-3.02, 12);
   });
 
-  it.each([59, 60])('rejects unverified native axis %i path parameters', (id) => {
-    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, id === 59 ? 2 : 3, [1, 2]),
-      axis(4, id, id === 59 ? [1, 3] : [3], 1), axis(5, id, id === 59 ? [1, 3] : [3], 0),
-      axisPoint(6, 4, -0.25), axisPoint(7, 5, 0.75)];
-    const evaluated = evaluatePageGeometry(page(objects));
-    expect(result(evaluated, 6)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
-    expect(result(evaluated, 7)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
+  it('accepts native path parameters on a horizontal 59 axis only', () => {
+    const horizontal = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 2, [1, 2]), axis(4, 59, [1, 3], 1), axisPoint(5, 4, -0.25)];
+    const h = evaluatePageGeometry(page(horizontal));
+    // a=(-80,30), b=(120,30): t=-0.25 -> (20,30) - 150e = (-130,30).
+    expect(result(h, 5)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: -130, y: 30 } });
+
+    const rejected = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 2, [1, 2]), obj(4, 3, [1, 2]),
+      axis(5, 59, [1, 3], 0), axis(6, 60, [4], 1), axisPoint(7, 5, 0.75), axisPoint(8, 6, 0.75)];
+    const r = evaluatePageGeometry(page(rejected));
+    expect(result(r, 7)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
+    expect(result(r, 8)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
   });
 
   it('puts the 58 line on the native 200 px basis O -/+ 100e for both directions, independent of the unit', () => {
@@ -258,15 +262,21 @@ describe('15 coordinate-axis path parameters', () => {
     expect(result(evaluated, 11)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 60 } });
   });
 
-  it.each([59, 60])('5/6 through a point on a %i axis have parameterizationKnown false and their 15 is unsupported', (id) => {
-    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, id === 59 ? 2 : 3, [1, 2]), axis(4, id, id === 59 ? [1, 3] : [3], 1), pt(5, 50, 60),
+  it('gives 5/6 and 15 the native 200 px basis on a horizontal 59 axis, and keeps 60 unverified', () => {
+    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 2, [1, 2]), axis(4, 59, [1, 3], 1), pt(5, 50, 60),
       { ...obj(6, 5, [5, 4]), mainKind: 2, genera: 47 }, { ...obj(7, 6, [5, 4]), mainKind: 2, genera: 46 },
       axisPoint(8, 6, 0.25, 47), axisPoint(9, 7, 0.25, 46)];
     const evaluated = evaluatePageGeometry(page(objects));
-    expect(result(evaluated, 6)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: false });
-    expect(result(evaluated, 7)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: false });
-    expect(result(evaluated, 8)).toMatchObject({ status: 'unsupported', exists: null, reason: 'path-direction-and-unit-unverified' });
-    expect(result(evaluated, 9)).toMatchObject({ status: 'unsupported', exists: null, reason: 'path-direction-and-unit-unverified' });
+    expect(result(evaluated, 6)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: true, geometry: { a: [50, -40], b: [50, 160] } });
+    expect(result(evaluated, 7)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: true, geometry: { a: [-50, 60], b: [150, 60] } });
+    expect(result(evaluated, 8)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 10 } });
+    expect(result(evaluated, 9)).toMatchObject({ status: 'ok', geometry: { x: 0, y: 60 } });
+
+    const circle = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 3, [1, 2]), axis(4, 60, [3], 1), pt(5, 50, 60),
+      { ...obj(6, 5, [5, 4]), mainKind: 2, genera: 47 }, axisPoint(7, 6, 0.25, 47)];
+    const c = evaluatePageGeometry(page(circle));
+    expect(result(c, 6)).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: false });
+    expect(result(c, 7)).toMatchObject({ status: 'unsupported', exists: null, reason: 'path-direction-and-unit-unverified' });
   });
 
   it('keeps 61, 65, 66, 86 and 69 on the coordinate unit basis when Lx differs from Ly', () => {
@@ -315,5 +325,47 @@ describe('94 nearest point path parameter', () => {
     { kind: 'arc', geometry: { center: [0, 0], radius: 10, startAngle: 0, sweepAngle: 1, start: [10, 0], end: [5, -8] } },
   ] satisfies Geometry[])('rejects ambiguous or unverified path %#', (path) => {
     expect(value([0, 0], path)).toMatchObject({ ok: false, status: 'unsupported', reason: expect.stringContaining('point-value-94-') });
+  });
+});
+
+describe('94 boundary logical values for native polygons and ordinary 80 arcs', () => {
+  const evaluated = (objects: ObjectInfo[]) => evaluatePageGeometry(page(objects));
+  function rectangle(): ObjectInfo[] {
+    return [pt(1, 0, 0), pt(2, 100, 0), pt(3, 100, 50), pt(4, 0, 50), obj(5, 8, [1, 2, 3, 4])];
+  }
+
+  it('uses cumulative perimeter length, not the edge index, for a polygon boundary point', () => {
+    // 周长 300；P 在第二边中点：prefix 100 + 25。
+    const objects = [...rectangle(), pt(6, 100, 25), measure(7, 94, [6, 5])];
+    expect(magnitude(evaluated(objects), 7)).toBeCloseTo(125 / 300, 12);
+  });
+
+  it('merges the two equal parameters of a non-seam vertex', () => {
+    const objects = [...rectangle(), pt(6, 100, 0), measure(7, 94, [6, 5])];
+    expect(magnitude(evaluated(objects), 7)).toBeCloseTo(100 / 300, 12);
+  });
+
+  it('does not merge the V0 seam, and rejects a point off the boundary', () => {
+    const seam = evaluated([...rectangle(), pt(6, 0, 0), measure(7, 94, [6, 5])]);
+    expect(result(seam, 7)).toMatchObject({ status: 'unsupported', reason: 'point-value-94-nearest-logical-value-ambiguous' });
+    const off = evaluated([...rectangle(), pt(6, 50, 25), measure(7, 94, [6, 5])]);
+    expect(result(off, 7)).toMatchObject({ status: 'unsupported', reason: 'point-value-94-off-path' });
+  });
+
+  it('measures an ordinary 80 arc from its first endpoint along the directed sweep', () => {
+    const base = [pt(1, 0, 0), pt(2, 10, 0), pt(3, 0, -10), obj(4, 80, [1, 2, 3])];
+    const middle = evaluated([...base, pt(5, Math.SQRT1_2 * 10, -Math.SQRT1_2 * 10), measure(6, 94, [5, 4])]);
+    expect(magnitude(middle, 6)).toBeCloseTo(0.5, 12);
+    const end = evaluated([...base, pt(5, 0, -10), measure(6, 94, [5, 4])]);
+    expect(magnitude(end, 6)).toBeCloseTo(1, 12);
+    const outside = evaluated([...base, pt(5, 10 * Math.cos(-Math.PI / 6), -10 * Math.sin(-Math.PI / 6)), measure(6, 94, [5, 4])]);
+    expect(result(outside, 6)).toMatchObject({ status: 'unsupported', reason: 'point-value-94-outside-arc' });
+  });
+
+  it('keeps a 79 arc parent unverified instead of reusing the 80 rule', () => {
+    const objects = [pt(1, 0, 0), pt(2, 10, 0), pt(3, 0, 0), obj(4, 3, [1, 2]),
+      pt(5, Math.SQRT1_2 * 10, -Math.SQRT1_2 * 10), obj(6, 79, [4, 2, 5]), measure(7, 94, [5, 6])];
+    expect(result(evaluated(objects), 7))
+      .toMatchObject({ status: 'unsupported', reason: 'point-value-94-path-constraint-unverified:79' });
   });
 });

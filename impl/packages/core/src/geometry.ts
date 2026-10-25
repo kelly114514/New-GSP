@@ -2,8 +2,8 @@ import { ARC_ANGLE_TOLERANCE, ARC_SEGMENT_LIMIT, circumcircle, directedSweep, in
 import { readF64, readU16, readU32 } from './bytes.ts';
 import { setFreePointCoordinates } from './edit.ts';
 import { constructCoordinate } from './coordinates.ts';
-import { evaluateMeasure, isMeasureObject } from './measure.ts';
-import type { MeasureGeometry } from './measure.ts';
+import { evaluateFunctionObject, evaluateMeasure, isMeasureObject } from './measure.ts';
+import type { FunctionGeometry, MeasureGeometry } from './measure.ts';
 import type { ContainerModel, DocumentModel, ObjectInfo } from './model.ts';
 import { isNumericParameterTransform, numericParameterTransform } from './transform-numeric.ts';
 import { isContainerNode, isEnvelopeNode } from './tree.ts';
@@ -43,7 +43,7 @@ export type RegionGeometry = { [K in 'disk' | 'sector' | 'circular-segment']: {
   geometry: { center: XY; radius: number; startAngle?: number; sweepAngle?: number; start?: XY; end?: XY };
 } }['disk' | 'sector' | 'circular-segment'];
 export interface CoordinateSystemGeometry { kind: 'coordinate-system'; geometry: { origin: XY; u: XY; v: XY } }
-export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry | MeasureGeometry | CoordinateSystemGeometry;
+export type Geometry = PointGeometry | LinearGeometry | CircleGeometry | PolygonGeometry | ArcGeometry | RegionGeometry | MeasureGeometry | CoordinateSystemGeometry | FunctionGeometry;
 export type GeometryStatus = 'ok' | 'not-existing' | 'unsupported' | 'unbound-input';
 export type EvaluatedObject = { objectIndex: number; constraintId: number } & (
   | ({ exists: true; status: 'ok' } & Geometry)
@@ -70,6 +70,7 @@ function inLinearRange(g: LinearGeometry, t: number): boolean {
 }
 function inUnitRange(t: number): boolean { const e = 64 * Number.EPSILON * Math.max(1, Math.abs(t)); return t >= -e && t <= 1 + e; }
 function finiteGeometry(g: Geometry): boolean {
+  if (g.kind === 'function') return true;
   if (g.kind === 'coordinate-system') return [...g.geometry.origin, ...g.geometry.u, ...g.geometry.v].every(Number.isFinite);
   if (g.kind === 'measure') {
     return Number.isFinite(g.measurement.displayValue) && Number.isFinite(g.measurement.internal.magnitude);
@@ -124,7 +125,7 @@ function lineCircleCandidates(l: LinearGeometry, c: Circular): { points: XY[] } 
 /** Similarities use page coordinates. The separate scale/orientation avoid cancellation in det(M). */
 interface Similarity { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; scale: number; orientation: 1 | -1 }
 function transformGeometry(source: Geometry, m: Similarity): Geometry {
-  if (source.kind === 'measure' || source.kind === 'coordinate-system') return source;
+  if (source.kind === 'measure' || source.kind === 'coordinate-system' || source.kind === 'function') return source;
   const map = ([x, y]: XY): XY => [m.xx * x + m.xy * y + m.tx, m.yx * x + m.yy * y + m.ty];
   if (source.kind === 'point') return point(map(pointXY(source)));
   if (isLinear(source)) return { kind: source.kind, geometry: { a: map(source.geometry.a), b: map(source.geometry.b) }, parameterizationKnown: source.parameterizationKnown, ...(source.degenerateArc ? { degenerateArc: true } : {}) };
@@ -145,7 +146,7 @@ function transform(o: ObjectInfo, p: Geometry[]): Outcome | undefined {
   if (![16, 17, 21, 27, 28, 30, 32, 34, 75].includes(id) && !isNumericParameterTransform(id)) return undefined;
   const source = p[0];
   if (source === undefined) return unsupported('transform-needs-source');
-  if (source.kind === 'measure' || source.kind === 'coordinate-system') return unsupported('transform-source-not-geometric');
+  if (source.kind === 'measure' || source.kind === 'coordinate-system' || source.kind === 'function') return unsupported('transform-source-not-geometric');
   if (id === 75) return transformGeometry(source, identity()); // Card 75: geometry only; the colour formula is unspecified (questions.md Q10.1).
   if (isNumericParameterTransform(id)) {
     // Cards 18-20/23-26/29/31/33: the displacement/angle/ratio comes from a numeric parent, so the
@@ -224,8 +225,13 @@ function construct(o: ObjectInfo, parents: Geometry[], page: ContainerModel, byI
   if (coordinate !== undefined) return coordinate;
   const transformed = transform(o, p);
   if (transformed !== undefined) return transformed;
+  // 自由函数是带自变量的表达式容器，不是数值读数；只有 48 的 0x7000+i 才会执行正文。
+  if (o.constraintId === 0 && o.mainKind === 11 && o.genera === 57) {
+    const defined = evaluateFunctionObject(o);
+    return defined.ok ? { kind: 'function', function: defined.definition } : { status: defined.status, reason: defined.reason };
+  }
   if (isMeasureObject(o)) {
-    const measured = evaluateMeasure(o, p, page);
+    const measured = evaluateMeasure(o, p, page, byIndex);
     return measured.ok
       ? { kind: 'measure', measurement: measured.measurement }
       : { status: measured.status, reason: measured.reason };

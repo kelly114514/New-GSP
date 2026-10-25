@@ -14,7 +14,7 @@ export interface RenderStyle {
   /** Native style/label fields remain preserved; unverified fields use viewer defaults. */
   nativeStyleVerified: boolean;
 }
-export type DrawItem = Exclude<Geometry, { kind: 'measure' | 'coordinate-system' }> & {
+export type DrawItem = Exclude<Geometry, { kind: 'measure' | 'coordinate-system' | 'function' }> & {
   index: number;
   color: string;
   label: string | undefined;
@@ -54,7 +54,7 @@ export function buildPageDrawList(page: ContainerModel, evaluation: PageGeometry
   for (const result of evaluation.objects) {
     if (result.status !== 'ok') continue;
     // 数值对象没有几何，只出现在 dump 的 kind="measure" 里。
-    if (result.kind === 'measure' || result.kind === 'coordinate-system') continue;
+    if (result.kind === 'measure' || result.kind === 'coordinate-system' || result.kind === 'function') continue;
     const o = byIndex.get(result.objectIndex);
     if (o === undefined) continue;
     const text = o.label?.text;

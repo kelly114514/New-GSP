@@ -241,7 +241,7 @@ describe('2311 expression evaluation: literals, units, syntax', () => {
     expect(evalTokens(fn(LN, 0))).toMatchObject({ ok: false, reason: expect.stringMatching(/^value-undefined/) });
     expect(evalTokens(fn(LOG, 0x1001, 5))).toMatchObject({ ok: false, reason: expect.stringMatching(/^value-undefined/) });
     expect(evalTokens(fn(ASIN, 2))).toMatchObject({ ok: false, reason: expect.stringMatching(/^value-undefined/) });
-    expect(evalTokens([0x7000, 1, RPAREN])).toMatchObject({ ok: false, reason: 'expression-unsupported:0x7000' });
+    expect(evalTokens([0x7000, 1, RPAREN])).toMatchObject({ ok: false, reason: 'function-call-unavailable' });
     expect(evalTokens([1, 0x0102])).toMatchObject({ ok: false, reason: 'expression-unsupported:0x0102' });
     expect(evalTokens([0x000f])).toMatchObject({ ok: false, reason: 'expression-unsupported:0x000f' });
     expect(evalTokens([PARENT0], CM_PAGE, [])).toMatchObject({ ok: false, reason: 'expression-unsupported:0x6000' });
@@ -503,7 +503,7 @@ describe('48 calculations and numeric free objects', () => {
   });
 
   it('refuses function definitions, parent slots in free objects and unknown arithmetic', () => {
-    expect(failureAt([freeNumber(1, [0x000f], 57)], 1).reason).toBe('function-object-unverified');
+    expect(failureAt([freeNumber(1, [0x000f], 57)], 1).reason).toBe('function-mode-unverified');
     expect(failureAt([freeNumber(1, [PARENT0], 79)], 1).reason).toBe('expression-unsupported:0x6000');
     expect(failureAt([freeNumber(1, [1, DIV, 0], 79)], 1).reason).toMatch(/^value-infinite/);
   });
