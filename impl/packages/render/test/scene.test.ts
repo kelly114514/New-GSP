@@ -42,4 +42,16 @@ describe('COLORREF and evaluated page scene', () => {
     expect(list.items[0]).toMatchObject({ label: '甲' });
     expect(list.items[1]).toMatchObject({ label: undefined });
   });
+  it('ignores a coordinate-system container while retaining its independently drawn axes', () => {
+    const page = loadSample('segment.gsp').pages[0]!;
+    const list = buildPageDrawList(page, { pageIndex: 1, objects: [
+      { objectIndex: 1, constraintId: 58, status: 'ok', exists: true, kind: 'line', geometry: { a: [100, 100], b: [110, 100] }, parameterizationKnown: true },
+      { objectIndex: 2, constraintId: 58, status: 'ok', exists: true, kind: 'line', geometry: { a: [100, 100], b: [100, 80] }, parameterizationKnown: true },
+      { objectIndex: 3, constraintId: 61, status: 'ok', exists: true, kind: 'coordinate-system', geometry: { origin: [100, 100], u: [10, 0], v: [0, -20] } },
+    ] });
+    expect([...list.drawnIndices]).toEqual([1, 2]);
+    expect(list.items.map((item) => item.kind)).toEqual(['line', 'line']);
+    expect(list.bounds).toEqual({ minX: 100, minY: 80, maxX: 110, maxY: 100 });
+    expect(list.unsupportedIndices).toEqual([]);
+  });
 });

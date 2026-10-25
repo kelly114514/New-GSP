@@ -92,7 +92,7 @@ def main():
     assertions_all_pass = 0
     for key, stats in per_case.items():
         name, case = by_key[key]
-        if stats.get('incorrect_result') or stats.get('missing_or_invalid_result') or stats.get('unimplemented_self'):
+        if any(count for category, count in stats.items() if category != 'passed'):
             continue
         assertions_all_pass += 1
         if args.dump_dir is None:
