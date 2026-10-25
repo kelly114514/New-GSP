@@ -2,7 +2,7 @@
 
 TypeScript 单仓（npm workspaces），桌面外壳是 Tauri 2，只面向 Windows 10 及以上。洁净室规则见 [CLAUDE.md](CLAUDE.md)，范围和里程碑见仓库根目录的 [PLAN.md](../PLAN.md)。
 
-当前进度：**M1 core：.gsp 无损读写**已完成（见下文“core：.gsp 无损读写”）；**M1 只读查看器**已接入（见下文“只读查看器”）。
+当前进度：**M1 core：.gsp 无损读写**已完成（见下文“core：.gsp 无损读写”）；查看器已接入 **M3 第一批编辑闭环：打开 → 拖动自由点 → 撤销/重做 → 另存为 → 重开**。本批不包含新建构造、删除、文本/属性编辑或新增页面，产品契约见 `spec/features/m3-editor-closure.md`。
 
 ## 目录
 
@@ -93,15 +93,22 @@ node packages/core/scripts/gsp-dump.ts <file.gsp> [--summary] [--hex-limit N] [-
 - core 不带 DOM 库，`text.ts` 通过 `globalThis` 取 `TextDecoder`/`TextEncoder`，用局部结构类型而不是全局声明，避免与 DOM 库或 `@types/node` 的声明冲突；Node 24（完整 ICU）和 WebView2 都有 gbk/big5。
 - 测试文件（`test/`）沿用无扩展名导入（由 vitest 解析）。
 
-## 只读查看器（M1）
+## 查看器与自由点编辑闭环（M3 第一批）
 
 `npm run dev` 或安装包里：**文件 → 打开…**（Ctrl+O）选一个 .gsp。读取失败时顶部显示中文错误（含原因和字节偏移），保留之前打开的文档。
 
 - 页签：每页一个；页名为空时显示“第 N 页”。工具区不作为页，只在状态栏计数。
 - 对象列表（右侧）：当前页每个对象一行，显示序号、约束 ID、描述（描述模板的 `^A` 等标记换成 `〈A〉`）、主类、genera、父序号、标签和自由点坐标。点列表行或画布上的对象会高亮。
-- 画布：只画两类对象。自由点（有 2201 坐标）画成按 COLORREF 着色的小圆，带标签；约束 2 的线段且两个父对象都是自由点时画成连线。其它对象（中点、圆、交点……）M1 不画，计入“暂不支持”。
+- 画布：由现有几何求值结果绘制已支持对象；自由点拖动后重算依赖对象（包括基准样本的中点）。不支持的对象继续保留存档内容并计入“暂不支持”。
 - 操作：拖动空白处平移，滚轮以光标为中心缩放，“适合窗口”按钮或打开文件时自动适合窗口（最多放大 2 倍）。
-- 状态栏：文件名、布局版本（4/5）、页数、工具区数、当前页对象数、已绘制 / 暂不支持数。
+- 自由点编辑：布局 5 文件中拖动自由点即时预览；松开提交一步，移回起点不提交。Escape、pointercancel 或丢失指针捕获恢复拖动起点；派生点没有新增拖动入口。
+- 编辑 → 撤销（Ctrl+Z）/重做（Ctrl+R）：一份文档共享跨页历史，执行后定位到操作所在页；撤销后新编辑清空重做分支。输入控件保留原生编辑快捷键。
+- 文件 → 另存为…（Ctrl+Shift+S）：原生对话框只列 `.gsp`，调用现有 `writeGsp` 写入确定快照。取消或失败保留路径与检查点；保存期间后续编辑仍显示未保存。打开与保存互斥，重复操作不会覆盖状态。
+- 修改状态：按当前写出字节与最近成功打开/保存的字节检查点比较；标题文件名后显示 `*`，状态栏显示“未保存修改”。原打开路径和最近保存路径分别保留。
+- 打开另一文件：取消/读取失败/解析失败保留原文档与历史；替换未保存文档前提供“放弃修改并打开”与“取消”。本批尚未增加窗口关闭前的未保存提示。
+- 状态栏：文件名、修改与文件操作状态、布局版本（4/5）、页数、工具区数、当前页对象数、已绘制 / 暂不支持数。
+
+文档控制器在 `packages/app/src/model/editor.ts`；事务与保存测试覆盖基准样本 `midpoint.gsp` 的 `(211,147) → (251,174)`、派生中点、跨页历史、字节检查点、异步保存、重开、未知记录和未修改页保留。普通浏览器预览中的原生文件操作显示可恢复中文错误。
 
 绘制描述和视图的纯函数在 `packages/render`（`buildPageDrawList`、`fitView`、`zoomAt`、`hitTest`、`drawPageScene`），单测用基准样本 `samples/baseline/samples/*.gsp`。
 
@@ -140,10 +147,11 @@ $env:GSP_CORPUS_DIR = 'D:\somewhere\gsp-files'; npm test
 - **安装包**：只出 NSIS（`bundle.targets = ["nsis"]`），默认按当前用户安装（`installMode = currentUser`，不需要管理员权限），安装语言简体中文和英文（按系统语言选）。
 - **WebView2**：`embedBootstrapper`。把约 1.8 MB 的微软 WebView2 引导程序直接打进安装包，目标机器没有运行时（部分 Windows 10）时由它联网安装；相比默认的 `downloadBootstrapper` 少一次“安装时先去下载引导程序”，更不容易被网络环境卡住，代价是安装包大 1.8 MB。Windows 11 自带运行时，不会触发。要完全离线可改成 `offlineInstaller`（安装包增加约 127 MB）。
 - **C 运行库**：`src-tauri/.cargo/config.toml` 让 MSVC 目标静态链接 CRT，干净的 Windows 10 不需要先装 VC++ 运行库。
-- **插件与权限**（`src-tauri/capabilities/default.json`，只对 `main` 窗口）：`core:default`、`dialog:allow-open`（只开“打开文件”，没有保存、消息框）、`fs:allow-read-file`（只开读文件，没有静态路径范围）。dialog 选中的文件会被临时加入 fs 读取范围，所以前端只能读用户在对话框里选过的文件。以后需要写文件（保存）、保存对话框、文件关联启动时读文件，再按需加权限，不要直接上 `fs:default`。
+- **插件与权限**（`src-tauri/capabilities/default.json`，只对 `main` 窗口）：`core:default`、`dialog:allow-open`、`dialog:allow-save`、`fs:allow-read-file`、`fs:allow-write-file`，没有静态路径范围。dialog 选中的文件会被临时加入 fs 范围，仅支持读写用户选定的文件；没有开放 `fs:default`、全盘路径范围或消息框权限。
 - **CSP**：`default-src 'self'`，另允许 Tauri IPC（`ipc:` 和 `http://ipc.localhost`）。在 Tauri 窗口里加载外部脚本或连外网都会被拦。
 - 前端 `packages/app/src/platform/openGsp.ts` 里的 `openGspFile()` 把 dialog + fs 串起来（选 .gsp、读字节），由“文件 → 打开…”和 Ctrl+O 调用。
-- `capabilities/default.json` 另有 `core:window:allow-set-title`，只为把窗口标题设成 `GSP-plus - <文件名>`。
+- `packages/app/src/platform/saveGsp.ts` 选择 `.gsp` 保存路径并写入快照字节，由“文件 → 另存为…”和 Ctrl+Shift+S 调用。
+- `capabilities/default.json` 另有 `core:window:allow-set-title`，只为把窗口标题设成 `GSP-plus - <文件名>`，有未保存修改时追加 ` *`。
 - Rust 工具链用本机的 nightly（msvc）；`Cargo.lock` 入库，`target/` 和 `src-tauri/gen/` 不入库。构建 Tauri 需要 Visual Studio 2022 生成工具；第一次打 NSIS 包会从 GitHub 下载 NSIS，还会从 go.microsoft.com 下载 WebView2 引导程序（之后有缓存）。
 
 ## CI

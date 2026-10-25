@@ -5,12 +5,19 @@ import type { MenuLabel } from '../menus';
 export interface MenuBarProps {
   /** 文件 → 打开… 。 */
   onOpenFile: () => void;
+  onSaveAs: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canOpen: boolean;
+  canSave: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 /**
- * 顶部菜单栏。只有“文件”有下拉内容（打开…）；其它菜单名暂时只是标签。
+ * 文件操作与文档历史；其它菜单名暂时只是标签。
  */
-export function MenuBar({ onOpenFile }: MenuBarProps) {
+export function MenuBar({ onOpenFile, onSaveAs, onUndo, onRedo, canOpen, canSave, canUndo, canRedo }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<MenuLabel | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
@@ -33,7 +40,14 @@ export function MenuBar({ onOpenFile }: MenuBarProps) {
   return (
     <nav className="menubar" role="menubar" aria-label="主菜单" ref={navRef}>
       {MENU_LABELS.map((label) => {
-        const isFile = label === '文件';
+        const hasMenu = label === '文件' || label === '编辑';
+        const actions = label === '文件' ? [
+          { name: '打开…', key: 'Ctrl+O', enabled: canOpen, run: onOpenFile },
+          { name: '另存为…', key: 'Ctrl+Shift+S', enabled: canSave, run: onSaveAs },
+        ] : [
+          { name: '撤销', key: 'Ctrl+Z', enabled: canUndo, run: onUndo },
+          { name: '重做', key: 'Ctrl+R', enabled: canRedo, run: onRedo },
+        ];
         const open = openMenu === label;
         return (
           <div key={label} className="menubar__group">
@@ -41,28 +55,30 @@ export function MenuBar({ onOpenFile }: MenuBarProps) {
               type="button"
               className="menubar__item"
               role="menuitem"
-              aria-haspopup={isFile ? 'menu' : undefined}
-              aria-expanded={isFile ? open : undefined}
+              aria-haspopup={hasMenu ? 'menu' : undefined}
+              aria-expanded={hasMenu ? open : undefined}
               onClick={() => {
-                if (isFile) setOpenMenu(open ? null : label);
+                if (hasMenu) setOpenMenu(open ? null : label);
               }}
             >
               {label}
             </button>
-            {isFile && open && (
+            {hasMenu && open && (
               <div className="menu" role="menu">
-                <button
+                {actions.map((action) => <button
+                  key={action.name}
                   type="button"
                   role="menuitem"
                   className="menu__item"
+                  disabled={!action.enabled}
                   onClick={() => {
                     setOpenMenu(null);
-                    onOpenFile();
+                    action.run();
                   }}
                 >
-                  <span>打开…</span>
-                  <kbd>Ctrl+O</kbd>
-                </button>
+                  <span>{action.name}</span>
+                  <kbd>{action.key}</kbd>
+                </button>)}
               </div>
             )}
           </div>

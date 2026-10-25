@@ -3,6 +3,8 @@ import { versionInfo } from '@gsp-plus/render';
 export interface StatusBarProps {
   /** 文件名；没有打开文件时为 null。 */
   fileName: string | null;
+  dirty: boolean;
+  busy: 'open' | 'save' | null;
   layout: number | null;
   pageCount: number;
   toolCount: number;
@@ -16,6 +18,8 @@ export interface StatusBarProps {
 
 export function StatusBar({
   fileName,
+  dirty,
+  busy,
   layout,
   pageCount,
   toolCount,
@@ -27,6 +31,8 @@ export function StatusBar({
   return (
     <footer className="statusbar" role="status">
       <span className="statusbar__item">文件：{fileName ?? '未打开'}</span>
+      {fileName !== null && <span className="statusbar__item">{dirty ? '未保存修改 *' : '已保存'}</span>}
+      {busy !== null && <span className="statusbar__item">{busy === 'save' ? '正在另存为…' : '正在打开…'}</span>}
       {layout !== null && (
         <>
           <span className="statusbar__item">布局版本：{layout}</span>

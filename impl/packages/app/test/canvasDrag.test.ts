@@ -27,4 +27,14 @@ describe('free point canvas dragging', () => {
     expect(beginFreePointDrag(scene, view, 311, 214)).toBeNull();
     expect(beginFreePointDrag(scene, view, 0, 0)).toBeNull();
   });
+  it('returning to the pointerdown position restores exact original doubles at a fractional view scale', () => {
+    const model = readDocumentModel(parseGsp(new Uint8Array(readFileSync(samples + 'midpoint.gsp'))));
+    const scene = buildPageDrawList(model.pages[0]!);
+    const view = { scale: 1.337, offsetX: -19.17, offsetY: 24.59 };
+    const p = worldToScreen(view, 211, 147);
+    const drag = beginFreePointDrag(scene, view, p.x + 1.3, p.y - 0.7)!;
+    expect(freePointDragTarget(drag, view, p.x + 1.3, p.y - 0.7)).toEqual({ x: 211, y: 147 });
+    const moved = freePointDragTarget(drag, view, p.x + 2.3, p.y - 0.7);
+    expect(moved.x).not.toBe(211);
+  });
 });

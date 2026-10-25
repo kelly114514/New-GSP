@@ -15,6 +15,7 @@ export interface OpenedFile {
  * 仅在 Tauri 窗口内可用，普通浏览器里调用会抛错。
  */
 export async function openGspFile(): Promise<OpenedFile | null> {
+  if (!('__TAURI_INTERNALS__' in window)) throw new Error('浏览器预览不支持原生打开文件，请在桌面应用中操作');
   const path = await open({
     multiple: false,
     directory: false,
