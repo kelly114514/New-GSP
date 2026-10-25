@@ -149,7 +149,7 @@ r5 正式集合 1430 例、12818 条原版断言：通过 **11950**（基线 119
 
 编辑器完成“打开 → 拖动自由点 → 撤销/重做 → 另存为 → 重开”闭环：一次拖动一步历史、取消恢复起点、跨页历史、字节检查点修改状态、原生另存为对话框、保存失败与取消保留状态、重开保留几何与未知记录、未修改文档逐字节一致。撤销粒度是项目选定规则，未声称与原版逐操作一致；新建构造、删除、文本/属性、窗口关闭提示不在本批。
 
-实现 526 项测试通过（app 54、core 440、render 32），三工作区 typecheck 通过，工具 57 项单测通过；本机 Windows 11 桌面构建与 NSIS 安装包已产出，Windows 10 干净环境安装仍未验证，单列不阻塞。完整证据见`spec/acceptance/m5-batch3.md`、`m5-batch3-coordinates.md`、`m5-batch3-functions.md`。
+实现 526 项测试通过（app 54、core 440、render 32），三工作区 typecheck 通过，工具 71 项单测通过；本机 Windows 11 桌面构建与 NSIS 安装包已产出，Windows 10 干净环境安装仍未验证，单列不阻塞。完整证据见`spec/acceptance/m5-batch3.md`、`m5-batch3-coordinates.md`、`m5-batch3-functions.md`。
 
 ### 6.2 上一批：M4 第一批（2026-10-24）
 

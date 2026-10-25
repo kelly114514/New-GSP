@@ -52,7 +52,9 @@ node tools/m5_batch1_dump.ts oracle/m5-batch3-coordinates/index.json oracle/work
 
 覆盖率（`impl-audit.json`）：对象 ok **213174 / 344417（61.9%）**，基线 211866；完全支持的活动页 **39 / 1430**，与基线相同（剩余页仍有轨迹、迭代、按钮等未实现对象）。这两个数不能推成全文件或 M5 已完成。
 
-测试与检查：`npm run typecheck` 三个工作区通过；`npm test` **526 项**（app 54、core 440、render 32，0 跳过）；工具单测 **57 项**通过（含本批新增的 `test_m5_batch3_audit.py`、`test_m5_batch3_coords.py`、`test_m5_functions.py`、`test_m5_merge_cases.py`）。桌面 `tauri build --debug` 产出 NSIS 安装包；Windows 11 本机安装与启动验证沿用已有记录，Windows 10 干净环境仍未验证，单列不阻塞本轮。
+已有期望逐项审查：r5 索引内的原版期望**改变 0、删除 0**（`m5_merge_cases.py` 对重复对象冲突直接报错，未用实现值覆盖）。实现单元测试有 4 处旧期望随规格放开而调整，全部登记在此，无其它改动：`core/test/coordinates.test.ts` 的 59 水平轴由 `parameterizationKnown:false` 改为 `true`，并把原来"59/60 一律拒绝"的用例拆成"水平 59 接受、竖直 59 与 60 仍拒绝"两条；`core/test/measure.test.ts` 的 `[0x7000,1,RPAREN]` 由 `expression-unsupported:0x7000` 改为 `function-call-unavailable`，`[0x000F]` 由 `function-object-unverified` 改为 `function-mode-unverified`（同一身份下先判模式）。四处都对应本批新语义，未放宽任何数值容差。
+
+测试与检查：`npm run typecheck` 三个工作区通过；`npm test` **526 项**（app 54、core 440、render 32，0 跳过）；工具单测 **71 项**通过、0 跳过（`test_emf_match` 14、`test_m5_measures` 11、`test_m5_numeric_hints` 4、`test_m5_coords` 17、`test_m5_batch3_audit` 4、`test_m5_batch3_coords` 10、`test_m5_functions` 8、`test_m5_merge_cases` 3；每个文件按 CI 方式从仓库根单独运行，本机有 oracle 时证据保真用例不跳过）。桌面 `tauri build --debug` 产出 NSIS 安装包；Windows 11 本机安装与启动验证沿用已有记录，Windows 10 干净环境仍未验证，单列不阻塞本轮。
 
 ## 5. 编辑器闭环验收
 
@@ -65,7 +67,7 @@ node tools/m5_batch1_dump.ts oracle/m5-batch3-coordinates/index.json oracle/work
 
 本批不含新建构造、删除、文本/属性、多选、新增页面和窗口关闭前提示，均未实现。
 
-## 4. 可复跑步骤
+## 6. 可复跑步骤
 
 从原始检出根目录执行；Python为`tools/oracle/.venv/Scripts/python.exe`。全程离线，不启动原版。
 
