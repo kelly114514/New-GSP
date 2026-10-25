@@ -45,4 +45,4 @@
 
 编辑器下一批：新建构造、删除、文本/属性、多选、新增页面、窗口关闭前未保存提示；需要先补对应写出规格。
 
-复跑命令与产物路径见 `spec/acceptance/m5-batch3.md` §4；本轮所有原样输出在 `oracle/work/m5-batch3/`（`impl-report.json`、`impl-summary.json`、`impl-audit.json`、`unified-report.json`、`fn-report.json`、`coord-report.json`、`r5-verify.json`）。`oracle/` 不入库，复跑需要同批离线导出。
+复跑命令与产物路径见 `spec/acceptance/m5-batch3.md` §4（交付验收）与 §6（基线固定/快照校验）本轮所有原样输出在 `oracle/work/m5-batch3/`（`impl-report.json`、`impl-summary.json`、`impl-audit.json`、`unified-report.json`、`fn-report.json`、`coord-report.json`、`r5-verify.json`）。`oracle/` 不入库，复跑需要同批离线导出。
