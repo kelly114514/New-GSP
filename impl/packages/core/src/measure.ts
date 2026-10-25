@@ -8,13 +8,17 @@
  * 舍入结果为 0 时不输出负号（`-0.004` 在 digits=2 得 `0.00`，但在 digits=5 仍是 `-0.00400`）。
  */
 
+import { ARC_ANGLE_TOLERANCE, mathAngle, wrapAngle } from './arc.ts';
 import { readU16, readU32 } from './bytes.ts';
 import { coordinateOf } from './coordinates.ts';
-import type { Geometry, PointGeometry } from './geometry.ts';
+import type { ArcGeometry, Geometry, PointGeometry } from './geometry.ts';
 import type { XY } from './geometry.ts';
 import { fontNameOf } from './model.ts';
 import type { ContainerModel, ObjectInfo } from './model.ts';
 import { evaluateExpression } from './numeric/expression.ts';
+import type { CallableParent, NumericParent } from './numeric/expression.ts';
+import { CALL_TOKEN_FIRST, CALL_TOKEN_LAST, FUNCTION_ARGUMENT_TOKEN, decodeFunctionRecord } from './numeric/function.ts';
+import type { FunctionDefinition } from './numeric/function.ts';
 import { angleUnitScale, baseUnitScale, unitTextFor } from './numeric/units.ts';
 import type { Dimension, PageNumericPreferences } from './numeric/units.ts';
 
@@ -42,6 +46,17 @@ export interface MeasureGeometry {
   kind: 'measure';
   measurement: NumericReading;
 }
+
+/** 可调用的函数定义（约束 0 / 主类 11 / genera 57）：没有 measurement，也没有默认数值。 */
+export interface FunctionGeometry {
+  kind: 'function';
+  callable: true;
+  definition: FunctionDefinition;
+}
+
+export type FunctionOutcome =
+  | { ok: true; definition: FunctionDefinition }
+  | { ok: false; status: 'unsupported'; reason: string };
 
 export type MeasureOutcome =
   | { ok: true; measurement: NumericReading }
@@ -216,16 +231,20 @@ function angleReading(radians: number, o: ObjectInfo, page: ContainerModel, digi
   return makeReading(radians / angleUnitScale(prefs.angleUnit), 'angle', digits, page, o);
 }
 
-/** 约束 48：父槽的值取未舍入的显示单位值。 */
-function numericParents(o: ObjectInfo, parents: readonly Geometry[]): { value: number; dimension: Dimension }[] | MeasureOutcome {
-  const values: { value: number; dimension: Dimension }[] = [];
+/**
+ * 约束 48 的完整、有序父表：数值父取未舍入的显示单位值，函数父给出可调用定义，
+ * 其它几何父在进入函数规则之前就按父类型报 `numeric-value-required`。
+ */
+function calcParents(o: ObjectInfo, parents: readonly Geometry[]): (NumericParent | CallableParent)[] | MeasureOutcome {
+  const slots: (NumericParent | CallableParent)[] = [];
   for (let i = 0; i < o.parents.length; i++) {
     const g = parentOf(parents, i);
     if ('ok' in g) return g;
-    if (g.kind !== 'measure') return unsupported(`parent:${o.parents[i]}:numeric-value-required`);
-    values.push({ value: g.measurement.internal.displayRaw, dimension: g.measurement.internal.dimension });
+    if (g.kind === 'function') slots.push({ callable: g.definition });
+    else if (g.kind === 'measure') slots.push({ value: g.measurement.internal.displayRaw, dimension: g.measurement.internal.dimension });
+    else return unsupported(`parent:${o.parents[i]}:numeric-value-required`);
   }
-  return values;
+  return slots;
 }
 
 function evaluateCalc(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel): MeasureOutcome {
@@ -233,11 +252,12 @@ function evaluateCalc(o: ObjectInfo, parents: readonly Geometry[], page: Contain
   if (payload === undefined) return unsupported('missing-2311');
   const decoded = decodeExpression(payload);
   if (isOutcome(decoded)) return decoded;
-  const values = numericParents(o, parents);
+  const values = calcParents(o, parents);
   if (!Array.isArray(values)) return values;
   const result = evaluateExpression(decoded.tokens, { parents: values, page: page.numericPreferences });
   if (!result.ok) return unsupported(result.reason);
   // 卡片 48：genera 与表达式推得的量纲必须一致才出读数；任一不成立都不猜单位（Q9.1）。
+  // 函数调用的结果同样要过这一关，不因“它是函数”绕过。
   const generaDimension = GENERA_DIMENSIONS.get(o.genera);
   if (generaDimension === undefined || generaDimension !== result.dimension) {
     return unsupported('dimension-mismatch-unverified');
@@ -245,8 +265,69 @@ function evaluateCalc(o: ObjectInfo, parents: readonly Geometry[], page: Contain
   return makeReading(result.value, generaDimension, decoded.digits, page, o, { generaDimension });
 }
 
+/** 约束 0 / 主类 11 / genera 57：自由函数定义（识别不看名字）。 */
+export function isFunctionObject(o: ObjectInfo): boolean {
+  return o.constraintId === 0 && o.mainKind === 11 && o.genera === 57;
+}
+
+/**
+ * 自由函数定义（2311 模式 0）求值成“可调用”：不带实参不执行正文，不假设 x=0。
+ * 模式 1/2/3 及其它模式字显式未支持；正文里的未支持 token 与量纲边界在调用时才报。
+ */
+export function evaluateFunctionDefinition(o: ObjectInfo, page: ContainerModel): FunctionOutcome {
+  const payload = expressionRecord(o);
+  if (payload === undefined) return { ok: false, status: 'unsupported', reason: 'missing-2311' };
+  const decoded = decodeFunctionRecord(payload);
+  if (!decoded.ok) return { ok: false, status: 'unsupported', reason: decoded.reason };
+  if (decoded.mode !== 0) return { ok: false, status: 'unsupported', reason: 'function-mode-unverified' };
+  return {
+    ok: true,
+    definition: {
+      objectIndex: o.index,
+      mode: 0,
+      tokens: decoded.tokens,
+      usesArgument: decoded.tokens.includes(FUNCTION_ARGUMENT_TOKEN),
+      page: page.numericPreferences,
+    },
+  };
+}
+
+/** 其它函数族（约束 70、71 等）：不借用自由函数规则。 */
+const OTHER_FUNCTION_FAMILY_CONSTRAINTS = new Set([70, 71]);
+
+/**
+ * 48 的 `0x7000+i` 调用槽指向“本身没有可调用结果”的父时的专门分类（先于普通的父阻塞传播）：
+ * 模式 1/2/3 的自由函数 → function-mode-unverified；62 按钮 → function-parent-not-callable；
+ * 约束 70/71 或其它 genera 57 → function-callee-unverified。其余失败仍按祖先阻塞。
+ */
+export function calleeFailure(
+  o: ObjectInfo,
+  byIndex: ReadonlyMap<number, ObjectInfo>,
+  resultOf: (index: number) => { status: string; reason?: string } | undefined,
+): { status: 'unsupported'; reason: string } | undefined {
+  if (o.constraintId !== 48) return undefined;
+  const payload = expressionRecord(o);
+  if (payload === undefined) return undefined;
+  const decoded = decodeExpression(payload);
+  if (isOutcome(decoded)) return undefined;
+  for (const token of decoded.tokens) {
+    if (token < CALL_TOKEN_FIRST || token > CALL_TOKEN_LAST) continue;
+    const parentIndex = o.parents[token - CALL_TOKEN_FIRST];
+    const parent = parentIndex === undefined ? undefined : byIndex.get(parentIndex);
+    const result = parentIndex === undefined ? undefined : resultOf(parentIndex);
+    if (parent === undefined || result?.status !== 'unsupported') continue;
+    let reason: string | undefined;
+    if (isFunctionObject(parent)) reason = result.reason === 'function-mode-unverified' ? result.reason : undefined;
+    else if (parent.constraintId === 62) reason = 'function-parent-not-callable';
+    else if (OTHER_FUNCTION_FAMILY_CONSTRAINTS.has(parent.constraintId) || parent.genera === 57) reason = 'function-callee-unverified';
+    if (reason !== undefined) return { status: 'unsupported', reason };
+  }
+  return undefined;
+}
+
 function evaluateNumericFreeObject(o: ObjectInfo, page: ContainerModel): MeasureOutcome {
-  if (o.genera === 57) return unsupported('function-object-unverified');
+  // 函数定义不是数值，由 evaluateFunctionDefinition 处理；这里不会收到。
+  if (isFunctionObject(o)) return unsupported('function-object-not-a-measure');
   const payload = expressionRecord(o);
   if (payload === undefined) return unsupported('missing-2311');
   const decoded = decodeExpression(payload);
@@ -366,7 +447,63 @@ function measureRatio(o: ObjectInfo, parents: readonly Geometry[], page: Contain
  * 所有度量对象的统一入口。`parents` 与 `o.parents` 在成功求值时一一对应
  *（上游失败的情形由 geometry 的依赖传播先截断）。
  */
-function measureCoordinate(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel): MeasureOutcome {
+/** 94 边界子集的容差：边长下限、点到边界距离、并列距离（px），以及同一逻辑值的合并（参数）。 */
+const POLYGON_MIN_EDGE = 1e-10;
+const BOUNDARY_TOLERANCE = 1e-7;
+const SAME_VALUE_TOLERANCE = 1e-9;
+
+/**
+ * 卡片 94：P 在原生多边形边界上时的逻辑值 = 累计边长 / 周长（不是 (i+s)/n）。
+ * 取最近候选；距离差 ≤1e-7 的并列候选逻辑值相差 ≤1e-9 才合并（非接缝顶点），
+ * 否则（含闭合接缝 V0 的 0 与 1、重边多解）一律未支持，不任取第一边。
+ */
+function polygonBoundaryValue(p: XY, vertices: readonly XY[]): number | { reason: string } {
+  const n = vertices.length;
+  const lengths: number[] = [];
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const length = distance(vertices[i]!, vertices[(i + 1) % n]!);
+    if (!(length > POLYGON_MIN_EDGE) || !Number.isFinite(length)) return { reason: 'point-value-94-polygon-degenerate-edge' };
+    lengths.push(length);
+    total += length;
+  }
+  const candidates: { distance: number; value: number }[] = [];
+  let before = 0;
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i]!, b = vertices[(i + 1) % n]!, length = lengths[i]!;
+    const ex = b[0] - a[0], ey = b[1] - a[1];
+    const s = Math.min(1, Math.max(0, ((p[0] - a[0]) * ex + (p[1] - a[1]) * ey) / (length * length)));
+    candidates.push({ distance: Math.hypot(p[0] - (a[0] + s * ex), p[1] - (a[1] + s * ey)), value: (before + s * length) / total });
+    before += length;
+  }
+  const nearest = Math.min(...candidates.map((c) => c.distance));
+  if (!Number.isFinite(nearest)) return { reason: 'point-value-94-non-finite-projection' };
+  if (nearest > BOUNDARY_TOLERANCE) return { reason: 'point-value-94-point-off-boundary-unverified' };
+  const tied = candidates.filter((c) => c.distance <= nearest + BOUNDARY_TOLERANCE).map((c) => c.value);
+  if (Math.max(...tied) - Math.min(...tied) > SAME_VALUE_TOLERANCE) return { reason: 'point-value-94-nearest-logical-value-ambiguous' };
+  return tied[0]!;
+}
+
+/**
+ * 卡片 94：P 在原生 80 普通弧上时的逻辑值 t，满足 P = C + r(cos(α+tω), −sin(α+tω))。
+ * 端点在 1e-7 px 内识别（B 端给 1，不是圆的 0 接缝）；离圆周、离弧、圆心、零扫角与整圆都未支持。
+ */
+function arcBoundaryValue(p: XY, arc: ArcGeometry['geometry']): number | { reason: string } {
+  const { center, radius, startAngle, sweepAngle, start, end } = arc;
+  const span = Math.abs(sweepAngle);
+  if (!(radius > 0) || !Number.isFinite(radius) || !Number.isFinite(span)
+    || span <= ARC_ANGLE_TOLERANCE || span >= 2 * Math.PI - ARC_ANGLE_TOLERANCE) return { reason: 'point-value-94-degenerate-arc' };
+  const offset = Math.hypot(p[0] - center[0], p[1] - center[1]);
+  if (!Number.isFinite(offset)) return { reason: 'point-value-94-non-finite-projection' };
+  if (Math.abs(offset - radius) > BOUNDARY_TOLERANCE) return { reason: 'point-value-94-point-off-arc-unverified' };
+  if (distance(p, start) <= BOUNDARY_TOLERANCE) return 0;
+  if (distance(p, end) <= BOUNDARY_TOLERANCE) return 1;
+  const phi = mathAngle(p[0] - center[0], p[1] - center[1]);
+  const t = wrapAngle(sweepAngle >= 0 ? phi - startAngle : startAngle - phi) / span;
+  return t > 1 ? { reason: 'point-value-94-point-off-arc-unverified' } : t;
+}
+
+function measureCoordinate(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel, byIndex?: ReadonlyMap<number, ObjectInfo>): MeasureOutcome {
   const id = o.constraintId;
   if (o.mainKind !== 7 || o.genera !== 51) return unsupported(`measure-${id}-object-type-unverified`);
   const payload = measureRecord(o);
@@ -395,6 +532,18 @@ function measureCoordinate(o: ObjectInfo, parents: readonly Geometry[], page: Co
       if (dx === 0 && dy === 0) return unsupported('point-value-94-circle-center-multiple-nearest-points');
       value = Math.atan2(dy, dx) / (2 * Math.PI);
       if (value < 0) value += 1;
+    } else if (second.kind === 'polygon') {
+      // 第三批子集：只认原生 8 多边形（变换像、75 恒等像不放开）。
+      if (byIndex?.get(o.parents[1] ?? -1)?.constraintId !== 8) return unsupported('point-value-94-polygon-parent-must-be-native-8');
+      const found = polygonBoundaryValue([first.geometry.x, first.geometry.y], second.geometry.vertices);
+      if (typeof found !== 'number') return unsupported(found.reason);
+      value = found;
+    } else if (second.kind === 'arc') {
+      // 第三批子集：只认原生 80 普通弧（79/81 与变换弧仍未支持）。
+      if (byIndex?.get(o.parents[1] ?? -1)?.constraintId !== 80) return unsupported('point-value-94-arc-parent-must-be-native-80');
+      const found = arcBoundaryValue([first.geometry.x, first.geometry.y], second.geometry);
+      if (typeof found !== 'number') return unsupported(found.reason);
+      value = found;
     } else return unsupported(`point-value-94-path-type-unverified:${second.kind}`);
     return makeReading(value, 'number', digits, page, o);
   }
@@ -407,8 +556,8 @@ function measureCoordinate(o: ObjectInfo, parents: readonly Geometry[], page: Co
   return makeReading(distance(coordinateOf(first, k), coordinateOf(second, k)), 'number', digits, page, o);
 }
 
-export function evaluateMeasure(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel): MeasureOutcome {
-  if ([65, 66, 86, 94].includes(o.constraintId)) return measureCoordinate(o, parents, page);
+export function evaluateMeasure(o: ObjectInfo, parents: readonly Geometry[], page: ContainerModel, byIndex?: ReadonlyMap<number, ObjectInfo>): MeasureOutcome {
+  if ([65, 66, 86, 94].includes(o.constraintId)) return measureCoordinate(o, parents, page, byIndex);
   if (o.constraintId === 0) {
     if (o.mainKind !== 11) return unsupported('free-object-main-kind');
     return evaluateNumericFreeObject(o, page);

@@ -10,6 +10,8 @@ export interface StatusBarProps {
   objectCount: number;
   drawnCount: number;
   unsupportedCount: number;
+  /** 有未保存修改（当前写出字节与最近打开/保存的检查点不同）。 */
+  dirty: boolean;
   /** 右侧的一句话状态。 */
   message: string;
 }
@@ -22,11 +24,13 @@ export function StatusBar({
   objectCount,
   drawnCount,
   unsupportedCount,
+  dirty,
   message,
 }: StatusBarProps) {
   return (
     <footer className="statusbar" role="status">
       <span className="statusbar__item">文件：{fileName ?? '未打开'}</span>
+      {fileName !== null && dirty && <span className="statusbar__item statusbar__item--dirty">有未保存修改</span>}
       {layout !== null && (
         <>
           <span className="statusbar__item">布局版本：{layout}</span>

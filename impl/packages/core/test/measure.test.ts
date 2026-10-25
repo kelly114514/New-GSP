@@ -502,8 +502,9 @@ describe('48 calculations and numeric free objects', () => {
     expect(reading.internal.magnitude).toBeCloseTo((24 / 2.54) * 96, 9);
   });
 
-  it('refuses function definitions, parent slots in free objects and unknown arithmetic', () => {
-    expect(failureAt([freeNumber(1, [0x000f], 57)], 1).reason).toBe('function-object-unverified');
+  it('refuses mode-4 function bodies, parent slots in free objects and unknown arithmetic', () => {
+    // genera 57 是函数；2311 +46=4（数值表达式形式）不是本批可调用的模式 0。
+    expect(failureAt([freeNumber(1, [0x000f], 57)], 1).reason).toBe('function-mode-unverified');
     expect(failureAt([freeNumber(1, [PARENT0], 79)], 1).reason).toBe('expression-unsupported:0x6000');
     expect(failureAt([freeNumber(1, [1, DIV, 0], 79)], 1).reason).toMatch(/^value-infinite/);
   });

@@ -14,7 +14,14 @@ export interface CanvasViewProps {
   onSelect: (index: number | null) => void;
   /** 没有内容时显示的提示。 */
   emptyText: string;
-  onMoveFreePoint?: (index: number, x: number, y: number) => void;
+  /** pointerdown 在自由点上：开始一次拖动事务。返回 false 表示不能拖动。 */
+  onFreePointDragStart?: (index: number) => boolean;
+  /** pointermove：预览新坐标。返回 false 表示事务已被取消（Escape、撤销等），本次手势不再拖动。 */
+  onFreePointDragMove?: (index: number, x: number, y: number) => boolean;
+  /** pointerup：提交（坐标没变则不产生历史）。 */
+  onFreePointDragEnd?: () => void;
+  /** pointercancel / 失去指针捕获：恢复起点。 */
+  onFreePointDragCancel?: () => void;
 }
 
 interface DragState {
@@ -24,6 +31,8 @@ interface DragState {
   lastY: number;
   moved: boolean;
   objectIndex: number | null;
+  /** 自由点拖动事务已在别处结束（Escape、撤销等）：余下的手势什么也不做。 */
+  dead: boolean;
   offsetX: number;
   offsetY: number;
 }
@@ -32,7 +41,16 @@ interface DragState {
  * 画布：只负责事件和尺寸，绘制交给 @gsp-plus/render。
  * 打开新页时“适合窗口”；拖动平移，滚轮缩放（以光标为中心）。
  */
-export function CanvasView({ scene, selectedIndex, onSelect, emptyText, onMoveFreePoint }: CanvasViewProps) {
+export function CanvasView({
+  scene,
+  selectedIndex,
+  onSelect,
+  emptyText,
+  onFreePointDragStart,
+  onFreePointDragMove,
+  onFreePointDragEnd,
+  onFreePointDragCancel,
+}: CanvasViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ scale: 1, offsetX: 0, offsetY: 0 });
@@ -130,9 +148,10 @@ export function CanvasView({ scene, selectedIndex, onSelect, emptyText, onMoveFr
           if (e.button !== 0) return;
           const p = localPoint(e);
           const s = sceneRef.current;
-          const freeDrag = onMoveFreePoint === undefined ? null : beginFreePointDrag(s, viewRef.current, p.x, p.y);
+          let freeDrag = onFreePointDragStart === undefined ? null : beginFreePointDrag(s, viewRef.current, p.x, p.y);
+          if (freeDrag !== null && onFreePointDragStart?.(freeDrag.objectIndex) !== true) freeDrag = null;
           dragRef.current = {
-            startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false,
+            startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, moved: false, dead: false,
             objectIndex: freeDrag?.objectIndex ?? null, offsetX: freeDrag?.offsetX ?? 0, offsetY: freeDrag?.offsetY ?? 0,
           };
           if (freeDrag !== null) onSelect(freeDrag.objectIndex);
@@ -140,13 +159,13 @@ export function CanvasView({ scene, selectedIndex, onSelect, emptyText, onMoveFr
         }}
         onPointerMove={(e) => {
           const drag = dragRef.current;
-          if (drag === null) return;
+          if (drag === null || drag.dead) return;
           if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < DRAG_THRESHOLD) return;
           drag.moved = true;
           if (drag.objectIndex !== null) {
             const p = localPoint(e);
             const target = freePointDragTarget({ ...drag, objectIndex: drag.objectIndex }, viewRef.current, p.x, p.y);
-            onMoveFreePoint?.(drag.objectIndex, target.x, target.y);
+            if (onFreePointDragMove?.(drag.objectIndex, target.x, target.y) !== true) drag.dead = true;
           } else viewRef.current = panView(viewRef.current, e.clientX - drag.lastX, e.clientY - drag.lastY);
           drag.lastX = e.clientX;
           drag.lastY = e.clientY;
@@ -156,13 +175,22 @@ export function CanvasView({ scene, selectedIndex, onSelect, emptyText, onMoveFr
           const drag = dragRef.current;
           dragRef.current = null;
           if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+          if (drag?.objectIndex != null) onFreePointDragEnd?.();
           if (drag === null || drag.moved) return;
           const s = sceneRef.current;
           const p = localPoint(e);
           onSelect(s === null ? null : hitTest(s, viewRef.current, p.x, p.y));
         }}
         onPointerCancel={() => {
+          const drag = dragRef.current;
           dragRef.current = null;
+          if (drag?.objectIndex != null) onFreePointDragCancel?.();
+        }}
+        onLostPointerCapture={() => {
+          // pointerup 里先清空了 dragRef，所以这里只会在手势中途丢失捕获时走到
+          const drag = dragRef.current;
+          dragRef.current = null;
+          if (drag?.objectIndex != null) onFreePointDragCancel?.();
         }}
       />
       {scene === null && <div className="canvas-empty">{emptyText}</div>}

@@ -60,3 +60,7 @@ jobs:
           python tools/test_m5_measures.py
           python tools/test_m5_numeric_hints.py
           python tools/test_m5_coords.py
+          python tools/test_m5_batch3_audit.py
+          python tools/test_m5_batch3_coords.py
+          python tools/test_m5_functions.py
+          python tools/test_m5_merge_cases.py

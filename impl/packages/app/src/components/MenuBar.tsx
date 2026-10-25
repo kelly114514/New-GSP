@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { MENU_LABELS } from '../menus';
-import type { MenuLabel } from '../menus';
+import { MENU_LABELS, menuItems } from '../menus';
+import type { MenuAvailability, MenuCommand, MenuLabel } from '../menus';
 
 export interface MenuBarProps {
-  /** 文件 → 打开… 。 */
-  onOpenFile: () => void;
+  availability: MenuAvailability;
+  /** 点击可用的菜单项。 */
+  onCommand: (command: MenuCommand) => void;
 }
 
 /**
- * 顶部菜单栏。只有“文件”有下拉内容（打开…）；其它菜单名暂时只是标签。
+ * 顶部菜单栏。“文件”（打开…、另存为…）和“编辑”（撤销、重做）有下拉内容，
+ * 无可用动作的项显示为禁用；其它菜单名暂时只是标签。
  */
-export function MenuBar({ onOpenFile }: MenuBarProps) {
+export function MenuBar({ availability, onCommand }: MenuBarProps) {
   const [openMenu, setOpenMenu] = useState<MenuLabel | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
@@ -33,7 +35,8 @@ export function MenuBar({ onOpenFile }: MenuBarProps) {
   return (
     <nav className="menubar" role="menubar" aria-label="主菜单" ref={navRef}>
       {MENU_LABELS.map((label) => {
-        const isFile = label === '文件';
+        const items = menuItems(label, availability);
+        const hasMenu = items.length > 0;
         const open = openMenu === label;
         return (
           <div key={label} className="menubar__group">
@@ -41,28 +44,33 @@ export function MenuBar({ onOpenFile }: MenuBarProps) {
               type="button"
               className="menubar__item"
               role="menuitem"
-              aria-haspopup={isFile ? 'menu' : undefined}
-              aria-expanded={isFile ? open : undefined}
+              aria-haspopup={hasMenu ? 'menu' : undefined}
+              aria-expanded={hasMenu ? open : undefined}
               onClick={() => {
-                if (isFile) setOpenMenu(open ? null : label);
+                if (hasMenu) setOpenMenu(open ? null : label);
               }}
             >
               {label}
             </button>
-            {isFile && open && (
+            {hasMenu && open && (
               <div className="menu" role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="menu__item"
-                  onClick={() => {
-                    setOpenMenu(null);
-                    onOpenFile();
-                  }}
-                >
-                  <span>打开…</span>
-                  <kbd>Ctrl+O</kbd>
-                </button>
+                {items.map((item) => (
+                  <button
+                    key={item.command}
+                    type="button"
+                    role="menuitem"
+                    className="menu__item"
+                    disabled={!item.enabled}
+                    aria-disabled={!item.enabled}
+                    onClick={() => {
+                      setOpenMenu(null);
+                      onCommand(item.command);
+                    }}
+                  >
+                    <span>{item.label}</span>
+                    <kbd>{item.shortcut}</kbd>
+                  </button>
+                ))}
               </div>
             )}
           </div>

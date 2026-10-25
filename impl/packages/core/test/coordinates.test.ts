@@ -101,7 +101,7 @@ describe('rectangular coordinate geometry and numeric values', () => {
       axis(5, 59, [1, 3], 1), axis(6, 59, [1, 4], 0, 1)];
     const evaluated = evaluatePageGeometry(page(objects));
     expect(result(evaluated, 4)).toMatchObject({ measurement: { displayValue: 3, internal: { magnitude: 96 } } });
-    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [0, 200], b: [200, 200] }, parameterizationKnown: false, axis: { origin: [100, 200], unit: [96, 0] } });
+    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', geometry: { a: [0, 200], b: [200, 200] }, parameterizationKnown: true, axis: { origin: [100, 200], unit: [96, 0] } });
     expect(result(evaluated, 6)).toMatchObject({ kind: 'line', geometry: { a: [100, 100], b: [100, 300] }, parameterizationKnown: false, axis: { origin: [100, 200], unit: [0, -96] } });
   });
 
@@ -206,13 +206,61 @@ describe('15 coordinate-axis path parameters', () => {
     expect(magnitude(evaluated, 10)).toBeCloseTo(-3.02, 12);
   });
 
-  it.each([59, 60])('rejects unverified native axis %i path parameters', (id) => {
-    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, id === 59 ? 2 : 3, [1, 2]),
-      axis(4, id, id === 59 ? [1, 3] : [3], 1), axis(5, id, id === 59 ? [1, 3] : [3], 0),
+  it('rejects unverified native axis 60 path parameters in both directions', () => {
+    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 3, [1, 2]),
+      axis(4, 60, [3], 1), axis(5, 60, [3], 0),
       axisPoint(6, 4, -0.25), axisPoint(7, 5, 0.75)];
     const evaluated = evaluatePageGeometry(page(objects));
     expect(result(evaluated, 6)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
     expect(result(evaluated, 7)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
+  });
+
+  // 实现测试（非原版断言）：M5 第三批只放开水平 59 的原生 200 px 参数基，竖直 59 仍未验证。
+  it('59 horizontal axis uses the native 200 px basis for 15; vertical 59 stays unsupported', () => {
+    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, 2, [1, 2]),
+      axis(4, 59, [1, 3], 1), axis(5, 59, [1, 3], 0),
+      axisPoint(6, 4, -0.25), axisPoint(7, 5, 0.75), axisPoint(8, 4, 1.82)];
+    const evaluated = evaluatePageGeometry(page(objects));
+    expect(result(evaluated, 4)).toMatchObject({ kind: 'line', parameterizationKnown: true, axis: { direction: 'horizontal', unit: [25, 0] } });
+    expect(result(evaluated, 5)).toMatchObject({ kind: 'line', parameterizationKnown: false, axis: { direction: 'vertical', unit: [0, -25] } });
+    // O.x + 200t - 100，与单位长度 25 无关；不夹取范围。
+    expect(result(evaluated, 6)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: -130, y: 30 } });
+    expect(result(evaluated, 8)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: 284, y: 30 } });
+    expect(result(evaluated, 7)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-path-parameter-unverified' });
+  });
+
+  // 实现测试：卡片 15 “坐标轴变换像上的路径点未验证”——任何 16–34/75 变换后的轴都不是已验证的直线基。
+  it.each([
+    ['16 translation', 16, [6, 3, 4]], ['34 reflection', 34, [6, 10]], ['75 identity', 75, [6]],
+  ] as const)('15 on the %s image of a horizontal axis is unsupported, for 58 and 59 alike', (_name, id, imageParents) => {
+    for (const axisId of [58, 59]) {
+      const objects = [pt(1, 100, 200), pt(2, 110, 200), pt(3, 100, 150), pt(4, 130, 260), obj(5, 2, [1, 2]),
+        axisId === 58 ? axis(6, 58, [1, 2], 1) : axis(6, 59, [1, 5], 1),
+        { ...obj(7, id, [...imageParents]), mainKind: 2, genera: 12 },
+        pt(8, 0, 0), pt(9, 100, 50), obj(10, 63, [8, 9]),
+        axisPoint(11, 7, 0.25, 12), axisPoint(12, 6, 0.25, 38)];
+      const evaluated = evaluatePageGeometry(page(objects));
+      const line = result(evaluated, 7);
+      expect(line).toMatchObject({ status: 'ok', kind: 'line', parameterizationKnown: false, transformedAxis: true });
+      expect((line as { axis?: unknown }).axis).toBeUndefined();
+      expect(result(evaluated, 11)).toMatchObject({ status: 'unsupported', exists: null, reason: 'axis-image-path-parameter-unverified' });
+      // 原轴本身不受影响：水平 58/59 的 15 照常出点。
+      expect(result(evaluated, 12)).toMatchObject({ status: 'ok', kind: 'point', geometry: { x: 50, y: 200 } });
+    }
+  });
+
+  it('5/6 derived from a transformed axis, and a second transform of it, stay unverified; ordinary lines keep their flag', () => {
+    const objects = [pt(1, 100, 200), pt(2, 110, 200), obj(3, 2, [1, 2]), axis(4, 59, [1, 3], 1), pt(5, 50, 60),
+      { ...obj(6, 75, [4]), mainKind: 2, genera: 12 }, { ...obj(7, 75, [6]), mainKind: 2, genera: 12 },
+      { ...obj(8, 6, [5, 6]), mainKind: 2, genera: 46 }, axisPoint(9, 8, 0.25, 46),
+      { ...obj(10, 6, [5, 4]), mainKind: 2, genera: 46 }, axisPoint(11, 10, 0.25, 46)];
+    const evaluated = evaluatePageGeometry(page(objects));
+    expect(result(evaluated, 7)).toMatchObject({ kind: 'line', parameterizationKnown: false, transformedAxis: true });
+    expect(result(evaluated, 8)).toMatchObject({ kind: 'line', parameterizationKnown: false });
+    expect(result(evaluated, 9)).toMatchObject({ status: 'unsupported', reason: 'path-direction-and-unit-unverified' });
+    // 过原轴的平行线不是轴像，水平 59 的基仍然成立。
+    expect(result(evaluated, 10)).toMatchObject({ kind: 'line', parameterizationKnown: true });
+    expect(result(evaluated, 11)).toMatchObject({ status: 'ok', kind: 'point' });
   });
 
   it('puts the 58 line on the native 200 px basis O -/+ 100e for both directions, independent of the unit', () => {
@@ -258,8 +306,8 @@ describe('15 coordinate-axis path parameters', () => {
     expect(result(evaluated, 11)).toMatchObject({ status: 'ok', geometry: { x: 50, y: 60 } });
   });
 
-  it.each([59, 60])('5/6 through a point on a %i axis have parameterizationKnown false and their 15 is unsupported', (id) => {
-    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, id === 59 ? 2 : 3, [1, 2]), axis(4, id, id === 59 ? [1, 3] : [3], 1), pt(5, 50, 60),
+  it.each([['59 vertical', 59, 0], ['60 horizontal', 60, 1], ['60 vertical', 60, 0]] as const)('5/6 through a point on a %s axis have parameterizationKnown false and their 15 is unsupported', (_name, id, direction) => {
+    const objects = [pt(1, 20, 30), pt(2, 20, 55), obj(3, id === 59 ? 2 : 3, [1, 2]), axis(4, id, id === 59 ? [1, 3] : [3], direction), pt(5, 50, 60),
       { ...obj(6, 5, [5, 4]), mainKind: 2, genera: 47 }, { ...obj(7, 6, [5, 4]), mainKind: 2, genera: 46 },
       axisPoint(8, 6, 0.25, 47), axisPoint(9, 7, 0.25, 46)];
     const evaluated = evaluatePageGeometry(page(objects));

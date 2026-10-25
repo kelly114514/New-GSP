@@ -1,46 +1,52 @@
 import { buildPageDrawList } from '@gsp-plus/render';
-import { PageGeometryEvaluator } from '@gsp-plus/core';
-import type { DocumentModel } from '@gsp-plus/core';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { CanvasView } from './components/CanvasView';
 import { MenuBar } from './components/MenuBar';
 import { ObjectPanel } from './components/ObjectPanel';
 import { PageTabs } from './components/PageTabs';
 import { StatusBar } from './components/StatusBar';
-import { loadGspDocument } from './model/load';
+import { EditorController } from './model/editorController';
 import { objectRows, pageTabTitle } from './model/objectRows';
-import { openGspFile } from './platform/openGsp';
+import { isTextInputElement, shortcutAction } from './model/shortcuts';
+import { windowTitleFor } from './model/title';
+import type { MenuCommand } from './menus';
+import { createFilePlatform } from './platform/filePlatform';
 import { setWindowTitle } from './platform/windowTitle';
 
-interface OpenDocument {
+/** 等待用户在“放弃修改 / 取消”对话框里做选择。 */
+interface DiscardRequest {
   fileName: string;
-  model: DocumentModel;
-}
-
-/** 路径的最后一段（Windows 反斜杠和正斜杠都认）。 */
-function baseName(path: string): string {
-  const parts = path.split(/[\\/]/);
-  return parts[parts.length - 1] || path;
+  resolve: (discard: boolean) => void;
 }
 
 export function App() {
-  const [doc, setDoc] = useState<OpenDocument | null>(null);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState('就绪');
-  const busyRef = useRef(false);
+  const [discardRequest, setDiscardRequest] = useState<DiscardRequest | null>(null);
+  const discardRef = useRef<DiscardRequest | null>(null);
+  const [controller] = useState(
+    () =>
+      new EditorController(
+        createFilePlatform(
+          (fileName) =>
+            new Promise<boolean>((resolve) => {
+              const request = { fileName, resolve };
+              discardRef.current = request;
+              setDiscardRequest(request);
+            }),
+        ),
+      ),
+  );
+  const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  const { doc, pageIndex, selected, revision, dirty } = state;
 
-  const [revision, setRevision] = useState(0);
   const page = doc?.model.pages[pageIndex];
-  const evaluator = useMemo(() => page === undefined ? null : new PageGeometryEvaluator(page), [page]);
-  const scene = useMemo(() => page === undefined || evaluator === null ? null : buildPageDrawList(page, evaluator.evaluate()), [page, evaluator, revision]);
-  const moveFreePoint = (index: number, x: number, y: number) => {
-    if (doc === null || evaluator === null) return;
-    evaluator.moveFreePoint(doc.model.doc, index, x, y);
-    setRevision((r) => r + 1);
-    setMessage('已移动自由点');
-  };
+  const evaluator = useMemo(
+    () => (doc === null ? null : controller.evaluatorFor(pageIndex)),
+    [controller, doc, pageIndex],
+  );
+  const scene = useMemo(
+    () => (page === undefined || evaluator === null ? null : buildPageDrawList(page, evaluator.evaluate())),
+    [page, evaluator, revision],
+  );
   const rows = useMemo(
     () => (page === undefined || scene === null ? [] : objectRows(page, scene.drawnIndices, scene.evaluation)),
     [page, scene],
@@ -50,56 +56,57 @@ export function App() {
     [doc],
   );
 
-  const openFile = useCallback(async () => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    try {
-      const opened = await openGspFile();
-      if (opened === null) return; // 用户取消
-      const result = loadGspDocument(opened.bytes);
-      if (!result.ok) {
-        // 失败时保留之前打开的文档
-        setError(result.message);
-        setMessage('打开失败');
-        return;
-      }
-      const fileName = baseName(opened.path);
-      setDoc({ fileName, model: result.model });
-      setPageIndex(0);
-      setSelected(null);
-      setError(null);
-      setMessage(`已打开 ${fileName}`);
-    } catch (e) {
-      setError(`打开失败：${e instanceof Error ? e.message : String(e)}`);
-      setMessage('打开失败');
-    } finally {
-      busyRef.current = false;
-    }
-  }, []);
+  const answerDiscard = (discard: boolean) => {
+    const request = discardRef.current;
+    discardRef.current = null;
+    setDiscardRequest(null);
+    request?.resolve(discard);
+  };
 
-  // Ctrl+O
+  const runCommand = useCallback(
+    (command: MenuCommand) => {
+      switch (command) {
+        case 'open':
+          void controller.openFile();
+          break;
+        case 'saveAs':
+          void controller.saveAs();
+          break;
+        case 'undo':
+          controller.undo();
+          break;
+        case 'redo':
+          controller.redo();
+          break;
+      }
+    },
+    [controller],
+  );
+
+  // 快捷键：Ctrl+O 打开、Ctrl+Shift+S 另存为、Ctrl+Z 撤销、Ctrl+R 重做；Escape 取消进行中的拖动
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        void openFile();
+      if (discardRef.current !== null) return; // 确认框打开时不处理
+      if (e.key === 'Escape' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        controller.cancelDrag();
+        return;
       }
+      const action = shortcutAction(e, isTextInputElement(document.activeElement as HTMLElement | null));
+      if (action === null) return;
+      e.preventDefault(); // 也拦住 WebView 自带的 Ctrl+R 刷新，否则会丢掉当前文档
+      if (e.repeat) return;
+      runCommand(action);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [openFile]);
+  }, [controller, runCommand]);
 
   // 窗口标题
   useEffect(() => {
-    const title = doc === null ? 'GSP-plus' : `GSP-plus - ${doc.fileName}`;
+    const title = windowTitleFor(doc?.fileName ?? null, dirty);
     document.title = title;
     void setWindowTitle(title);
-  }, [doc]);
-
-  const selectPage = (index: number) => {
-    setPageIndex(index);
-    setSelected(null);
-  };
+  }, [doc?.fileName, dirty]);
 
   const emptyText =
     doc === null
@@ -109,30 +116,36 @@ export function App() {
         : '';
 
   const statusMessage =
-    selected !== null && rows.some((r) => r.index === selected)
+    selected !== null && rows.some((r) => r.index === selected) && !state.dragActive && state.busy === null
       ? `已选中对象 #${selected}`
-      : message;
+      : state.message;
 
   return (
     <div className="app">
-      <MenuBar onOpenFile={() => void openFile()} />
-      {error !== null && (
+      <MenuBar
+        availability={{ hasDocument: doc !== null, canUndo: state.canUndo, canRedo: state.canRedo, busy: state.busy !== null }}
+        onCommand={runCommand}
+      />
+      {state.error !== null && (
         <div className="banner" role="alert">
-          <span className="banner__text">{error}</span>
-          <button type="button" className="banner__close" aria-label="关闭提示" onClick={() => setError(null)}>
+          <span className="banner__text">{state.error}</span>
+          <button type="button" className="banner__close" aria-label="关闭提示" onClick={() => controller.dismissError()}>
             ×
           </button>
         </div>
       )}
       <div className="app__body">
         <section className="app__view">
-          <PageTabs titles={titles} current={pageIndex} onSelect={selectPage} />
+          <PageTabs titles={titles} current={pageIndex} onSelect={(i) => controller.selectPage(i)} />
           <div className="app__canvas">
             <CanvasView
               scene={scene}
               selectedIndex={selected}
-              onSelect={setSelected}
-              onMoveFreePoint={moveFreePoint}
+              onSelect={(i) => controller.select(i)}
+              onFreePointDragStart={(i) => controller.beginDrag(i)}
+              onFreePointDragMove={(i, x, y) => controller.moveDrag(i, x, y)}
+              onFreePointDragEnd={() => controller.endDrag()}
+              onFreePointDragCancel={() => controller.cancelDrag()}
               emptyText={emptyText}
             />
           </div>
@@ -140,7 +153,7 @@ export function App() {
         <ObjectPanel
           rows={rows}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={(i) => controller.select(i)}
           emptyText={doc === null ? '尚未打开文件。' : '这一页没有对象。'}
         />
       </div>
@@ -152,10 +165,27 @@ export function App() {
         objectCount={rows.length}
         drawnCount={scene?.drawnIndices.size ?? 0}
         unsupportedCount={scene?.unsupportedIndices.length ?? 0}
+        dirty={dirty}
         message={statusMessage}
       />
+      {discardRequest !== null && (
+        <div className="modal-backdrop">
+          <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby="discard-title">
+            <h2 className="modal__title" id="discard-title">
+              有未保存的修改
+            </h2>
+            <p className="modal__text">“{discardRequest.fileName}”有尚未保存的修改。打开另一个文件会丢弃这些修改。</p>
+            <div className="modal__actions">
+              <button type="button" className="modal__button modal__button--danger" onClick={() => answerDiscard(true)}>
+                放弃修改
+              </button>
+              <button type="button" className="modal__button" autoFocus onClick={() => answerDiscard(false)}>
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

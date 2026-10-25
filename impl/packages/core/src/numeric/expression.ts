@@ -6,12 +6,19 @@
  * 单位后缀 token（0x0100/0x0101/0x0201）把它前面的数字字面量换算进当前页面单位。
  */
 
+import { bodyHasUnitSuffix, bodyIsSinOfArgument } from './function.ts';
+import type { FunctionDefinition } from './function.ts';
 import { angleUnitScale, distanceUnitScale } from './units.ts';
 import type { Dimension, PageNumericPreferences } from './units.ts';
 
+/** 数值父槽：未舍入的页面显示单位值 + 量纲。 */
+export interface NumericParent { value: number; dimension: Dimension }
+/** 函数父槽：只能被 `0x7000+i` 调用，`0x6000+i` 不能把它读成数。 */
+export interface CallableParent { callable: FunctionDefinition }
+
 export interface NumericContext {
-  /** 父槽 i → 父数值（显示单位值 + 量纲）。 */
-  parents: readonly { value: number; dimension: Dimension }[];
+  /** 完整、有序的 2002 父表：父槽 i → 数值或可调用函数；不能先过滤再编号。 */
+  parents: readonly (NumericParent | CallableParent)[];
   page: PageNumericPreferences;
 }
 
@@ -123,11 +130,14 @@ function applyUnitSuffix(value: number, token: number, page: PageNumericPreferen
 class Parser {
   private readonly tokens: readonly number[];
   private readonly context: NumericContext;
+  /** 函数体求值时绑定的自变量 x（每次调用一个新的 Parser，局部环境互不共享）。 */
+  private readonly argument: NumericValue | undefined;
   private position = 0;
 
-  constructor(tokens: readonly number[], context: NumericContext) {
+  constructor(tokens: readonly number[], context: NumericContext, argument?: NumericValue) {
     this.tokens = tokens;
     this.context = context;
+    this.argument = argument;
   }
 
   parse(): NumericValue {
@@ -217,9 +227,14 @@ class Parser {
     if (token === E) { this.position++; return this.finishLiteral(Math.E, 'number'); }
     if (token >= FUNCTION_FIRST && token <= FUNCTION_LAST) return this.parseFunction(token);
     if (token >= PARENT_FIRST && token <= PARENT_LAST) return this.parseParent(token);
-    if (token >= CALL_FIRST && token <= CALL_LAST) unsupportedToken(token);
+    if (token >= CALL_FIRST && token <= CALL_LAST) return this.parseCall(token);
     if (SYMBOLIC_UNSUPPORTED_UNITS.has(token)) unsupportedToken(token);
-    if (token === FUNCTION_ARGUMENT_PLACEHOLDER) unsupportedToken(token);
+    if (token === FUNCTION_ARGUMENT_PLACEHOLDER) {
+      // 0x000F 只在函数体里是自变量；其它表达式里它绝不是数字 15，也不是父槽。
+      if (this.argument === undefined) unsupportedToken(token);
+      this.position++;
+      return { ...this.argument! };
+    }
     return unsupportedToken(token);
   }
 
@@ -268,7 +283,23 @@ class Parser {
     const slot = token - PARENT_FIRST;
     const parent = this.context.parents[slot];
     if (parent === undefined) return unsupportedToken(token);
+    // 函数容器不能被隐式换成数值。
+    if ('callable' in parent) return fail(`parent:${parent.callable.objectIndex}:numeric-value-required`);
     return { value: parent.value, dimension: parent.dimension };
+  }
+
+  /** `call-token argument-expression 12`：先求实参，再确认被调用父，最后在独立环境里求正文。 */
+  private parseCall(token: number): NumericValue {
+    this.position++;
+    const next = this.peek();
+    if (next === undefined || next === RPAREN) fail('expression-unsupported:syntax-call-missing-argument');
+    const argument = this.parseSum();
+    if (this.peek() !== RPAREN) fail('expression-unsupported:syntax-missing-rparen');
+    this.position++;
+    const callee = this.context.parents[token - CALL_FIRST];
+    if (callee === undefined) return unsupportedToken(token);
+    if (!('callable' in callee)) return fail('function-parent-not-callable');
+    return callFunction(callee.callable, argument);
   }
 
   private parseFunction(token: number): NumericValue {
@@ -279,6 +310,22 @@ class Parser {
     this.position++;
     return applyFunction(name, argument, this.context.page);
   }
+}
+
+/**
+ * 调用一个自由函数。实参取调用者的未舍入页面显示单位值，不先换成弧度或 px。
+ * 已核对的量纲子集：无量纲实参；角度实参只在正文严格为 `sin(x)` 时；其余显式未支持。
+ * 正文里 x 固定当无量纲数绑定（angle 实参进 sin(x) 后结果是 number，不继承 angle）。
+ */
+function callFunction(callee: FunctionDefinition, argument: NumericValue): NumericValue {
+  if (bodyHasUnitSuffix(callee.tokens)) fail('function-body-unit-unverified');
+  const dimensionKnown = argument.dimension === 'number' || (argument.dimension === 'angle' && bodyIsSinOfArgument(callee.tokens));
+  if (!dimensionKnown) fail('function-argument-dimension-unverified');
+  const body = new Parser(callee.tokens, { parents: [], page: callee.page }, { value: argument.value, dimension: 'number' });
+  const result = body.parse();
+  if (Number.isNaN(result.value)) undefinedValue('not-a-number');
+  if (!Number.isFinite(result.value)) infiniteValue('non-finite-result');
+  return result;
 }
 
 function applyFunction(name: (typeof FUNCTION_NAMES)[number], argument: NumericValue, page: PageNumericPreferences): NumericValue {

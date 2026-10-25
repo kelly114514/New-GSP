@@ -136,7 +136,7 @@ describe('M4 transformations across existing geometry', () => {
       } else if (g.kind === 'polygon') {
         expect(g.geometry.vertices).toHaveLength(3);
         g.geometry.vertices.forEach((v, i) => close(v, [c.p, c.a, c.b][i]!));
-      } else if (g.kind === 'measure' || g.kind === 'coordinate-system') {
+      } else if (g.kind === 'measure' || g.kind === 'function' || g.kind === 'coordinate-system') {
         throw new Error('a transform must produce drawable geometry');
       } else {
         close(g.geometry.center, c.p); expect(g.geometry.radius).toBeCloseTo(c.radius, 9);
