@@ -1,0 +1,667 @@
+{
+  "scope": "对比两份文件经新版解码后的模型和求值；只采样长数组前16项，数值相对容差1e-6。不比较原版运行时求值，不是像素对照。definition、numeric、appearance-or-settings 均须人工分类，可能包含原版规范化或新版解码差异。",
+  "nativeOpened": 68,
+  "nativeRejectedOrNoView": 12,
+  "constructionCases": 40,
+  "inputVariants": 80,
+  "counts": {
+    "appearance-or-settings": 12,
+    "definition": 18,
+    "equal": 38,
+    "missing": 12
+  },
+  "cases": [
+    {
+      "id": "01",
+      "phase": "initial",
+      "filename": "01-initial.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "01",
+      "phase": "moved",
+      "filename": "01-moved.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "02",
+      "phase": "initial",
+      "filename": "02-initial.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "02",
+      "phase": "moved",
+      "filename": "02-moved.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "03",
+      "phase": "initial",
+      "filename": "03-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 16,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "03",
+      "phase": "moved",
+      "filename": "03-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 16,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "04",
+      "phase": "initial",
+      "filename": "04-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "04",
+      "phase": "moved",
+      "filename": "04-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "05",
+      "phase": "initial",
+      "filename": "05-initial.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "05",
+      "phase": "moved",
+      "filename": "05-moved.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "06",
+      "phase": "initial",
+      "filename": "06-initial.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 1,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "06",
+      "phase": "moved",
+      "filename": "06-moved.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 1,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "07",
+      "phase": "initial",
+      "filename": "07-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 4
+    },
+    {
+      "id": "07",
+      "phase": "moved",
+      "filename": "07-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 4
+    },
+    {
+      "id": "08",
+      "phase": "initial",
+      "filename": "08-initial.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "08",
+      "phase": "moved",
+      "filename": "08-moved.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "09",
+      "phase": "initial",
+      "filename": "09-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 10,
+      "resultDifferenceCount": 18
+    },
+    {
+      "id": "09",
+      "phase": "moved",
+      "filename": "09-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 10,
+      "resultDifferenceCount": 18
+    },
+    {
+      "id": "10",
+      "phase": "initial",
+      "filename": "10-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "10",
+      "phase": "moved",
+      "filename": "10-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "11",
+      "phase": "initial",
+      "filename": "11-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "11",
+      "phase": "moved",
+      "filename": "11-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "12",
+      "phase": "initial",
+      "filename": "12-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 12,
+      "resultDifferenceCount": 4
+    },
+    {
+      "id": "12",
+      "phase": "moved",
+      "filename": "12-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 12,
+      "resultDifferenceCount": 4
+    },
+    {
+      "id": "13",
+      "phase": "initial",
+      "filename": "13-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "13",
+      "phase": "moved",
+      "filename": "13-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "14",
+      "phase": "initial",
+      "filename": "14-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 12,
+      "resultDifferenceCount": 9
+    },
+    {
+      "id": "14",
+      "phase": "moved",
+      "filename": "14-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 12,
+      "resultDifferenceCount": 9
+    },
+    {
+      "id": "15",
+      "phase": "initial",
+      "filename": "15-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "15",
+      "phase": "moved",
+      "filename": "15-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "16",
+      "phase": "initial",
+      "filename": "16-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "16",
+      "phase": "moved",
+      "filename": "16-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "17",
+      "phase": "initial",
+      "filename": "17-initial.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "17",
+      "phase": "moved",
+      "filename": "17-moved.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "18",
+      "phase": "initial",
+      "filename": "18-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "18",
+      "phase": "moved",
+      "filename": "18-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "19",
+      "phase": "initial",
+      "filename": "19-initial.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "19",
+      "phase": "moved",
+      "filename": "19-moved.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "20",
+      "phase": "initial",
+      "filename": "20-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 13,
+      "resultDifferenceCount": 6
+    },
+    {
+      "id": "20",
+      "phase": "moved",
+      "filename": "20-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 13,
+      "resultDifferenceCount": 6
+    },
+    {
+      "id": "21",
+      "phase": "initial",
+      "filename": "21-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 10,
+      "resultDifferenceCount": 2
+    },
+    {
+      "id": "21",
+      "phase": "moved",
+      "filename": "21-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 10,
+      "resultDifferenceCount": 2
+    },
+    {
+      "id": "22",
+      "phase": "initial",
+      "filename": "22-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "22",
+      "phase": "moved",
+      "filename": "22-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "23",
+      "phase": "initial",
+      "filename": "23-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "23",
+      "phase": "moved",
+      "filename": "23-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "24",
+      "phase": "initial",
+      "filename": "24-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "24",
+      "phase": "moved",
+      "filename": "24-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "25",
+      "phase": "initial",
+      "filename": "25-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "25",
+      "phase": "moved",
+      "filename": "25-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "26",
+      "phase": "initial",
+      "filename": "26-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "26",
+      "phase": "moved",
+      "filename": "26-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "27",
+      "phase": "initial",
+      "filename": "27-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "27",
+      "phase": "moved",
+      "filename": "27-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "28",
+      "phase": "initial",
+      "filename": "28-initial.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "28",
+      "phase": "moved",
+      "filename": "28-moved.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "29",
+      "phase": "initial",
+      "filename": "29-initial.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 2,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "29",
+      "phase": "moved",
+      "filename": "29-moved.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 2,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "30",
+      "phase": "initial",
+      "filename": "30-initial.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 3,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "30",
+      "phase": "moved",
+      "filename": "30-moved.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 3,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "31",
+      "phase": "initial",
+      "filename": "31-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "31",
+      "phase": "moved",
+      "filename": "31-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "32",
+      "phase": "initial",
+      "filename": "32-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "32",
+      "phase": "moved",
+      "filename": "32-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "33",
+      "phase": "initial",
+      "filename": "33-initial.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 4,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "33",
+      "phase": "moved",
+      "filename": "33-moved.gsp",
+      "severity": "appearance-or-settings",
+      "definitionDifferenceCount": 4,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "34",
+      "phase": "initial",
+      "filename": "34-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "34",
+      "phase": "moved",
+      "filename": "34-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "35",
+      "phase": "initial",
+      "filename": "35-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 118,
+      "resultDifferenceCount": 58
+    },
+    {
+      "id": "35",
+      "phase": "moved",
+      "filename": "35-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 118,
+      "resultDifferenceCount": 58
+    },
+    {
+      "id": "36",
+      "phase": "initial",
+      "filename": "36-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "36",
+      "phase": "moved",
+      "filename": "36-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "37",
+      "phase": "initial",
+      "filename": "37-initial.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 4
+    },
+    {
+      "id": "37",
+      "phase": "moved",
+      "filename": "37-moved.gsp",
+      "severity": "definition",
+      "definitionDifferenceCount": 5,
+      "resultDifferenceCount": 4
+    },
+    {
+      "id": "38",
+      "phase": "initial",
+      "filename": "38-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "38",
+      "phase": "moved",
+      "filename": "38-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "39",
+      "phase": "initial",
+      "filename": "39-initial.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "39",
+      "phase": "moved",
+      "filename": "39-moved.gsp",
+      "severity": "missing",
+      "reason": "没有另存文件",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "40",
+      "phase": "initial",
+      "filename": "40-initial.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    },
+    {
+      "id": "40",
+      "phase": "moved",
+      "filename": "40-moved.gsp",
+      "severity": "equal",
+      "definitionDifferenceCount": 0,
+      "resultDifferenceCount": 0
+    }
+  ]
+}

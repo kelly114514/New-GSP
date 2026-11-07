@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "主窗口文件操作",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:allow-save",
+    "dialog:allow-open",
+    "core:window:allow-destroy",
+    "core:window:allow-close",
+    "core:window:allow-set-title"
+  ]
+}

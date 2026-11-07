@@ -1,0 +1,904 @@
+[
+  {
+    "name": "文件",
+    "items": [
+      {
+        "id": 36864,
+        "name": "新建文件",
+        "access": "N",
+        "shortcut": "Ctrl+N"
+      },
+      {
+        "id": 36865,
+        "name": "打开…",
+        "access": "O",
+        "shortcut": "Ctrl+O"
+      },
+      {
+        "separator": true
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36868,
+        "name": "保存",
+        "access": "S",
+        "shortcut": "Ctrl+S"
+      },
+      {
+        "id": 36869,
+        "name": "另存为…",
+        "access": "A"
+      },
+      {
+        "id": 36870,
+        "name": "关闭",
+        "access": "C",
+        "shortcut": "Ctrl+W"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36871,
+        "name": "文档选项…",
+        "access": "D",
+        "shortcut": "Shift+Ctrl+D"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36872,
+        "name": "页面设置…",
+        "access": "G"
+      },
+      {
+        "id": 36873,
+        "name": "打印预览…",
+        "access": "V"
+      },
+      {
+        "id": 36874,
+        "name": "打印…",
+        "access": "P"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36875,
+        "name": "退出",
+        "access": "Q",
+        "shortcut": "Ctrl+Q"
+      }
+    ]
+  },
+  {
+    "name": "编辑",
+    "items": [
+      {
+        "id": 36876,
+        "name": "撤消",
+        "access": "U",
+        "shortcut": "Ctrl+Z"
+      },
+      {
+        "id": 36877,
+        "name": "重做",
+        "access": "R",
+        "shortcut": "Ctrl+R"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36878,
+        "name": "剪切",
+        "access": "T",
+        "shortcut": "Ctrl+X"
+      },
+      {
+        "id": 36879,
+        "name": "复制",
+        "access": "C",
+        "shortcut": "Ctrl+C"
+      },
+      {
+        "id": 36880,
+        "name": "粘贴",
+        "access": "P",
+        "shortcut": "Ctrl+V"
+      },
+      {
+        "id": 36881,
+        "name": "清除",
+        "access": "E",
+        "shortcut": "Del"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 68035,
+        "name": "操作类按钮",
+        "access": "B",
+        "children": [
+          {
+            "id": 36882,
+            "name": "隐藏/显示",
+            "access": "H"
+          },
+          {
+            "id": 36883,
+            "name": "动画…",
+            "access": "A"
+          },
+          {
+            "id": 36884,
+            "name": "移动…",
+            "access": "M"
+          },
+          {
+            "id": 36885,
+            "name": "系列…",
+            "access": "P"
+          },
+          {
+            "id": 36886,
+            "name": "声音"
+          },
+          {
+            "separator": true
+          },
+          {
+            "id": 36887,
+            "name": "链接…",
+            "access": "L"
+          },
+          {
+            "id": 36888,
+            "name": "滚动…",
+            "access": "S"
+          }
+        ]
+      },
+      {
+        "id": 36889,
+        "name": "全选",
+        "access": "A",
+        "shortcut": "Ctrl+A"
+      },
+      {
+        "id": 36890,
+        "name": "选择父对象",
+        "access": "N",
+        "shortcut": "Alt+↑"
+      },
+      {
+        "id": 36891,
+        "name": "选择子对象",
+        "access": "H",
+        "shortcut": "Alt+↓"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36892,
+        "name": "剪裁图片到多边形"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36893,
+        "name": "分离/合并",
+        "access": "S"
+      },
+      {
+        "id": 36894,
+        "name": "编辑定义…",
+        "access": "E",
+        "shortcut": "Ctrl+E"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36895,
+        "name": "属性…",
+        "access": "O",
+        "shortcut": "Alt+?"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36896,
+        "name": "参数选项…",
+        "access": "F"
+      }
+    ]
+  },
+  {
+    "name": "显示",
+    "items": [
+      {
+        "id": 68037,
+        "name": "点型",
+        "access": "P",
+        "children": [
+          {
+            "id": 36897,
+            "name": "最小",
+            "access": "D"
+          },
+          {
+            "id": 36898,
+            "name": "稍小",
+            "access": "S"
+          },
+          {
+            "id": 36899,
+            "name": "中等",
+            "access": "M"
+          },
+          {
+            "id": 36900,
+            "name": "最大",
+            "access": "L"
+          }
+        ]
+      },
+      {
+        "id": 68039,
+        "name": "线型",
+        "access": "N",
+        "children": [
+          {
+            "id": 36901,
+            "name": "极细",
+            "access": "H"
+          },
+          {
+            "id": 36902,
+            "name": "细线",
+            "access": "N"
+          },
+          {
+            "id": 36903,
+            "name": "中等",
+            "access": "M"
+          },
+          {
+            "id": 36904,
+            "name": "粗线",
+            "access": "K"
+          },
+          {
+            "separator": true
+          },
+          {
+            "id": 36905,
+            "name": "实线",
+            "access": "S"
+          },
+          {
+            "id": 36906,
+            "name": "虚线",
+            "access": "D"
+          },
+          {
+            "id": 36907,
+            "name": "点线",
+            "access": "O"
+          }
+        ]
+      },
+      {
+        "id": 68041,
+        "name": "颜色",
+        "access": "C",
+        "children": [
+          {
+            "id": 36908,
+            "name": "参数…",
+            "access": "P"
+          },
+          {
+            "id": 36909,
+            "name": "其它…",
+            "access": "O"
+          }
+        ]
+      },
+      {
+        "id": 68045,
+        "name": "文本",
+        "access": "X",
+        "children": [
+          {
+            "id": 32882,
+            "name": "粗体",
+            "access": "B",
+            "shortcut": "Ctrl+B"
+          },
+          {
+            "id": 32884,
+            "name": "斜体",
+            "access": "I",
+            "shortcut": "Ctrl+I"
+          },
+          {
+            "id": 32883,
+            "name": "下划线",
+            "access": "U",
+            "shortcut": "Ctrl+U"
+          },
+          {
+            "separator": true
+          },
+          {
+            "id": 32892,
+            "name": "增大尺寸",
+            "access": "C",
+            "shortcut": "Alt+>"
+          },
+          {
+            "id": 32893,
+            "name": "减小尺寸",
+            "access": "D",
+            "shortcut": "Alt+<"
+          },
+          {
+            "separator": true
+          }
+        ]
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36911,
+        "name": "隐藏对象",
+        "access": "H",
+        "shortcut": "Ctrl+H"
+      },
+      {
+        "id": 36912,
+        "name": "显示所有隐藏",
+        "access": "S",
+        "shortcut": "Shift+Ctrl+H"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36913,
+        "name": "显示标签",
+        "access": "B",
+        "shortcut": "Ctrl+K"
+      },
+      {
+        "id": 36914,
+        "name": "标签…",
+        "access": "L",
+        "shortcut": "Alt+/"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36915,
+        "name": "追踪",
+        "access": "R",
+        "shortcut": "Ctrl+T"
+      },
+      {
+        "id": 36916,
+        "name": "擦除追踪踪迹",
+        "access": "E",
+        "shortcut": "Shift+Ctrl+E"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36917,
+        "name": "动画",
+        "access": "A",
+        "shortcut": "Alt+`"
+      },
+      {
+        "id": 36918,
+        "name": "加速",
+        "access": "I",
+        "shortcut": "Alt+]"
+      },
+      {
+        "id": 36919,
+        "name": "减速",
+        "access": "D",
+        "shortcut": "Alt+["
+      },
+      {
+        "id": 36920,
+        "name": "停止动画",
+        "access": "S"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36921,
+        "name": "显示文本工具栏",
+        "access": "T",
+        "shortcut": "Shift+Ctrl+T"
+      },
+      {
+        "id": 36922,
+        "name": "显示运动控制台",
+        "access": "M"
+      },
+      {
+        "id": 36923,
+        "name": "隐藏工具箱",
+        "access": "O"
+      }
+    ]
+  },
+  {
+    "name": "构造",
+    "items": [
+      {
+        "id": 36924,
+        "name": "对象上的点",
+        "access": "P"
+      },
+      {
+        "id": 36925,
+        "name": "中点",
+        "access": "M",
+        "shortcut": "Ctrl+M"
+      },
+      {
+        "id": 36926,
+        "name": "交点",
+        "access": "I",
+        "shortcut": "Shift+Ctrl+I"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36927,
+        "name": "线段",
+        "access": "S",
+        "shortcut": "Ctrl+L"
+      },
+      {
+        "id": 36928,
+        "name": "射线",
+        "access": "Y"
+      },
+      {
+        "id": 36929,
+        "name": "直线",
+        "access": "L"
+      },
+      {
+        "id": 36930,
+        "name": "平行线",
+        "access": "E"
+      },
+      {
+        "id": 36931,
+        "name": "垂线",
+        "access": "D"
+      },
+      {
+        "id": 36932,
+        "name": "角平分线",
+        "access": "B"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36933,
+        "name": "以圆心和圆周上的点绘圆",
+        "access": "C"
+      },
+      {
+        "id": 36934,
+        "name": "以圆心和半径绘圆",
+        "access": "R"
+      },
+      {
+        "id": 36935,
+        "name": "圆上的弧",
+        "access": "A"
+      },
+      {
+        "id": 36936,
+        "name": "过三点的弧",
+        "access": "3"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36937,
+        "name": "内部",
+        "access": "N",
+        "shortcut": "Ctrl+P"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36938,
+        "name": "轨迹",
+        "access": "U"
+      }
+    ]
+  },
+  {
+    "name": "变换",
+    "items": [
+      {
+        "id": 36939,
+        "name": "标记中心",
+        "access": "N",
+        "shortcut": "Shift+Ctrl+F"
+      },
+      {
+        "id": 36940,
+        "name": "标记镜面",
+        "access": "M"
+      },
+      {
+        "id": 36941,
+        "name": "标记角度",
+        "access": "A"
+      },
+      {
+        "id": 36942,
+        "name": "标记比",
+        "access": "O"
+      },
+      {
+        "id": 36943,
+        "name": "标记向量",
+        "access": "V"
+      },
+      {
+        "id": 36944,
+        "name": "标记距离",
+        "access": "S"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36945,
+        "name": "平移…",
+        "access": "T"
+      },
+      {
+        "id": 36946,
+        "name": "旋转…",
+        "access": "R"
+      },
+      {
+        "id": 36947,
+        "name": "缩放…",
+        "access": "D"
+      },
+      {
+        "id": 36948,
+        "name": "反射",
+        "access": "F"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36949,
+        "name": "迭代…",
+        "access": "I"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36950,
+        "name": "创建自定义变换…",
+        "access": "C"
+      },
+      {
+        "id": 36951,
+        "name": "编辑自定义变换…",
+        "access": "E"
+      }
+    ]
+  },
+  {
+    "name": "度量",
+    "items": [
+      {
+        "id": 36953,
+        "name": "长度",
+        "access": "L"
+      },
+      {
+        "id": 36954,
+        "name": "距离",
+        "access": "D"
+      },
+      {
+        "id": 36955,
+        "name": "周长",
+        "access": "P"
+      },
+      {
+        "id": 36956,
+        "name": "圆周长",
+        "access": "C"
+      },
+      {
+        "id": 36957,
+        "name": "角度",
+        "access": "A"
+      },
+      {
+        "id": 36958,
+        "name": "面积",
+        "access": "E"
+      },
+      {
+        "id": 36959,
+        "name": "弧度角",
+        "access": "G"
+      },
+      {
+        "id": 36960,
+        "name": "弧长",
+        "access": "L"
+      },
+      {
+        "id": 36961,
+        "name": "半径",
+        "access": "R"
+      },
+      {
+        "id": 36962,
+        "name": "比",
+        "access": "O"
+      },
+      {
+        "id": 36963,
+        "name": "点的值",
+        "access": "V"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36964,
+        "name": "坐标",
+        "access": "T"
+      },
+      {
+        "id": 36965,
+        "name": "横坐标",
+        "access": "X"
+      },
+      {
+        "id": 36966,
+        "name": "纵坐标",
+        "access": "Y"
+      },
+      {
+        "id": 36967,
+        "name": "坐标距离",
+        "access": "I"
+      },
+      {
+        "id": 36968,
+        "name": "斜率",
+        "access": "S"
+      },
+      {
+        "id": 36969,
+        "name": "方程",
+        "access": "Q"
+      }
+    ]
+  },
+  {
+    "name": "数据",
+    "items": [
+      {
+        "id": 36970,
+        "name": "新建参数…",
+        "access": "W",
+        "shortcut": "Shift+Ctrl+P"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36971,
+        "name": "计算…",
+        "access": "U",
+        "shortcut": "Alt+="
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36972,
+        "name": "制表",
+        "access": "T"
+      },
+      {
+        "id": 36973,
+        "name": "添加表中数据…",
+        "access": "A"
+      },
+      {
+        "id": 36974,
+        "name": "删除表中数据…",
+        "access": "E"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36975,
+        "name": "新建函数…",
+        "access": "N",
+        "shortcut": "Ctrl+F"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36976,
+        "name": "定义导函数",
+        "access": "V"
+      },
+      {
+        "id": 36977,
+        "name": "定义绘图函数",
+        "access": "D"
+      }
+    ]
+  },
+  {
+    "name": "绘图",
+    "items": [
+      {
+        "id": 36978,
+        "name": "定义坐标系",
+        "access": "D"
+      },
+      {
+        "id": 36979,
+        "name": "标记坐标系",
+        "access": "M"
+      },
+      {
+        "id": 68057,
+        "name": "网格样式",
+        "access": "R",
+        "children": [
+          {
+            "id": 36980,
+            "name": "极坐标网格",
+            "access": "P"
+          },
+          {
+            "id": 36981,
+            "name": "方形网格",
+            "access": "S"
+          },
+          {
+            "id": 36982,
+            "name": "矩形网格",
+            "access": "S"
+          },
+          {
+            "separator": true
+          },
+          {
+            "id": 36983,
+            "name": "三角坐标轴",
+            "access": "T"
+          }
+        ]
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36984,
+        "name": "显示网格",
+        "access": "G"
+      },
+      {
+        "id": 36985,
+        "name": "格点",
+        "access": "O"
+      },
+      {
+        "id": 36986,
+        "name": "自动吸附网格",
+        "access": "S"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36987,
+        "name": "在轴上绘制点…",
+        "access": "V"
+      },
+      {
+        "id": 36988,
+        "name": "绘制点…",
+        "access": "P"
+      },
+      {
+        "id": 36989,
+        "name": "绘制表中数据…",
+        "access": "T"
+      },
+      {
+        "separator": true
+      },
+      {
+        "id": 36990,
+        "name": "绘制新函数…",
+        "access": "F",
+        "shortcut": "Ctrl+G"
+      },
+      {
+        "id": 36991,
+        "name": "绘制参数曲线…",
+        "access": "C"
+      }
+    ]
+  },
+  {
+    "name": "窗口",
+    "items": [
+      {
+        "id": 57650,
+        "name": "层叠窗口",
+        "access": "C"
+      },
+      {
+        "id": 57651,
+        "name": "平铺窗口",
+        "access": "T"
+      },
+      {
+        "separator": true
+      }
+    ]
+  },
+  {
+    "name": "帮助",
+    "items": [
+      {
+        "id": -1,
+        "name": "关于新版…",
+        "access": "A"
+      }
+    ]
+  }
+]
