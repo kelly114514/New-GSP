@@ -4,13 +4,13 @@ import * as G from '../core/geom';
 import type { Pt } from '../core/geom';
 import { hitAll, hitRect, hitRadii, nearestPointId, normRect, view as hitView, type Power, type Rect } from '../core/hit';
 import { isLine, projectToPath, projectOnPath, toSys, fromSys } from '../core/engine';
-import { byId, type Id, type Obj, type FontSpec, type TextRun } from '../core/model';
+import { byId, descendants, pageAutoSnap, type Id, type Obj, type FontSpec, type TextRun } from '../core/model';
 import { fontAt, replaceText, styleRange } from '../core/text-runs';
 import { Store } from '../core/store';
-import { toolInputFromHits, toolInputLabel, acceptsInput, applyTool, type Tool } from '../core/tooling';
-import { applyDisplay, clipStraight, drawPage, drawPoint, typeName, wrap, imageLoaded, embeddedButtonAt } from './render';
-import { DEFAULT_DISPLAY, type Page } from '../core/model';
-import type { Results } from '../core/engine';
+import { toolInputFromHits, toolInputLabel, acceptsInput, applyTool, automaticToolInputs, type Tool } from '../core/tooling';
+import { applyDisplay, clipStraight, drawPage, drawPoint, typeName, wrap, imageLoaded, embeddedButtonAt, strokeShape } from './render';
+import { DEFAULT_DISPLAY, pageDisplay, type DisplayPrefs, type Page } from '../core/model';
+import type { EvalCtx, Results } from '../core/engine';
 import type { App } from '../app';
 
 export type ToolId = 'move' | 'rotate' | 'scale' | 'point' | 'circle' | 'segment' | 'ray' | 'line' | 'poly-fill' | 'poly-both' | 'poly-edges' | 'text' | 'marker' | 'info' | 'custom';
@@ -33,7 +33,21 @@ interface Drag {
   boxes?: Map<Id, Pt>;
   /** 正在拖动坐标系的单位点。 */
   unit?: { sys: Id; point: Id };
+  background?: BackgroundDrag;
 }
+
+interface BackgroundDrag {
+  worker: Worker;
+  next?: Map<Id, Pt>;
+  shown?: Map<Id, Pt>;
+  running?: { positions: Map<Id, Pt>; results: Results; ctx: EvalCtx };
+  page: Page;
+  original: { ctx: EvalCtx; results: Results };
+  dialog?: HTMLDialogElement;
+  completion?: Promise<void>;
+  settle?: () => void;
+}
+
 
 /** 文字型对象：有自己的页面位置，拖动时只改位置，不牵动父对象。 */
 /** 双击标记指示动画时长（毫秒）。原版实测约 0.4–0.45 秒（连拍 10 帧，间隔约 40 ms）。 */
@@ -49,10 +63,12 @@ function visibleSpan(s: { a: Pt; b: Pt; ext: G.Extent }, r: Rect): [Pt, Pt] | un
   return t0 > t1 ? undefined : [{ x: s.a.x + dx * t0, y: s.a.y + dy * t0 }, { x: s.a.x + dx * t1, y: s.a.y + dy * t1 }];
 }
 const BOXY = new Set(['measure', 'table', 'text', 'button', 'image', 'func']);
-const isBoxy = (o: Obj) => BOXY.has(classOf(o));
+const isBoxy = (o: Obj) => BOXY.has(classOf(o)) && o.def.k !== 'image-clip' && o.def.k !== 'custom-image' && !(o.def.k === 'image' && o.def.placement);
 const boxAt = (o: Obj): Pt | undefined => (o.def.k === 'text' || o.def.k === 'button' || o.def.k === 'image' ? (o.def.k === 'text' && o.def.anchor !== undefined ? o.def.off : o.def.at) : o.at);
 
 export class DocView {
+  /** 打开文档时的程序默认值；之后修改“新建画板”默认值不改变已打开的旧文档。 */
+  readonly fallbackDisplay: DisplayPrefs;
   readonly el = document.createElement('div');
   readonly canvas = document.createElement('canvas');
   readonly trace = document.createElement('canvas');
@@ -91,6 +107,7 @@ export class DocView {
   tChanges = new Map<Id, number>();       // 动画运行时覆盖（不写入定义）
 
   constructor(public app: App, store: Store) {
+    this.fallbackDisplay = structuredClone(app.settings.display ?? DEFAULT_DISPLAY);
     this.store = store;
     this.el.className = 'docwin';
     this.title.className = 'doctitle';
@@ -120,6 +137,7 @@ export class DocView {
 
   dispose() {
     this.disposed = true;
+    this.stopBackgroundDrag();
     this.stopStore();
     imageLoaded.delete(this.onImageLoaded);
     this.resizeObserver.disconnect();
@@ -155,11 +173,17 @@ export class DocView {
       else if (o.at) grow(o.at.x, o.at.y);
     }
     this.barMin = { x: x0, y: y0 };
+    // 拖动时范围常常不变；写尺寸和滚动位置都会强制重新布局，没变就不写。
+    const b = this.barShown, h1 = Math.ceil(y1 - y0), w1 = Math.ceil(x1 - x0), top = this.scroll.y - y0, left = this.scroll.x - x0;
+    if (b.h === h1 && b.w === w1 && b.top === top && b.left === left) return;
     this.barSync = true;
-    this.sbVin.style.height = `${Math.ceil(y1 - y0)}px`; this.sbHin.style.width = `${Math.ceil(x1 - x0)}px`;
-    this.sbV.scrollTop = this.scroll.y - y0; this.sbH.scrollLeft = this.scroll.x - x0;
+    if (b.h !== h1) this.sbVin.style.height = `${h1}px`;
+    if (b.w !== w1) this.sbHin.style.width = `${w1}px`;
+    this.sbV.scrollTop = top; this.sbH.scrollLeft = left;
+    this.barShown = { h: h1, w: w1, top, left };
     this.barSync = false;
   }
+  private barShown = { h: -1, w: -1, top: NaN, left: NaN };
   private onBar() {
     if (this.disposed || this.barSync) return;
     const nx = this.barMin.x + this.sbH.scrollLeft, ny = this.barMin.y + this.sbV.scrollTop;
@@ -195,9 +219,10 @@ export class DocView {
 
   private paint() {
     const ctx = this.canvas.getContext('2d')!, page = this.store.page;
-    const prefs = this.store.doc.settings.display ?? this.app.settings.display ?? DEFAULT_DISPLAY;
+    const prefs = pageDisplay(this.store.doc, page, this.fallbackDisplay);
     applyDisplay(prefs);
-    this.box.style.background = prefs.background;
+    const background = page.background ?? prefs.background;
+    if (this.shownBackground !== background) this.box.style.background = this.shownBackground = background;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.setTransform(this.dpr, 0, 0, this.dpr, -this.scroll.x * this.dpr, -this.scroll.y * this.dpr);
@@ -207,8 +232,11 @@ export class DocView {
     this.paintTrace();
     this.paintOverlay();
     this.syncBars();
-    this.title.textContent = this.store.doc.name + (this.store.dirty ? ' *' : '');
+    const title = this.store.doc.name + (this.store.dirty ? ' *' : '');
+    if (this.shownTitle !== title) this.title.textContent = this.shownTitle = title;
   }
+  private shownBackground?: string;
+  private shownTitle?: string;
 
   // ------------- 追踪 -------------
   private paintTrace() {
@@ -226,6 +254,7 @@ export class DocView {
       if (s.k === 'pt' && s.p.x >= view.x0 - 5 && s.p.x <= view.x1 + 5 && s.p.y >= view.y0 - 5 && s.p.y <= view.y1 + 5) { ctx.beginPath(); ctx.arc(s.p.x, s.p.y, 2, 0, G.TAU); ctx.fill(); }
       else if (s.k === 'line') { const line = clipStraight({ ...s.s, ext: 'segment' }, view); if (line) { ctx.beginPath(); ctx.moveTo(line[0].x, line[0].y); ctx.lineTo(line[1].x, line[1].y); ctx.stroke(); } }
       else if (s.k === 'circle') { ctx.beginPath(); ctx.arc(s.c.c.x, s.c.c.y, s.c.r, 0, G.TAU); ctx.stroke(); }
+      else if (s.k === 'paths' || s.k === 'arc') strokeShape(ctx, o, s, false, false);
       ctx.restore();
     }
   }
@@ -313,7 +342,8 @@ export class DocView {
     return { kind: 'free', p: this.gridSnap(p) };
   }
   gridSnap(p: Pt): Pt {
-    const sys = this.store.page.objects.find(o => o.def.k === 'sys' && o.def.snap && o.def.showGrid);
+    if (!pageAutoSnap(this.store.page)) return p;
+    const sys = this.store.page.objects.find(o => o.def.k === 'sys' && o.def.showGrid);
     const sh = sys && this.store.results.get(sys.id)?.shape;
     if (sh?.k !== 'sys') return p;
     const c = toSys(sh, p); if (!c) return p;
@@ -344,7 +374,12 @@ export class DocView {
   }
 
   cancelDrag() {
-    if (this.store.inTransaction) this.store.cancel();
+    const st = this.store, bg = this.drag.background;
+    this.stopBackgroundDrag();
+    if (st.inTransaction) {
+      const original = bg?.page === st.page && bg.original.ctx === st.ctx && !this.app.anim.running ? bg.original.results : undefined;
+      st.cancel(original);
+    }
     this.drag = { ...this.drag, mode: 'none' };
     this.poly = [];
     this.pendingFirst = undefined;
@@ -353,7 +388,7 @@ export class DocView {
   }
 
   private onDown(e: PointerEvent) {
-    if (e.button === 2) return;
+    if (e.button === 2 || this.dragCompleting) return;
     this.overlay.setPointerCapture(e.pointerId);
     this.app.focusDoc(this);
     this.commitText();
@@ -378,9 +413,20 @@ export class DocView {
     if (tool === 'info') { this.infoAt(p); return; }
   }
 
+  /** 展开后的按钮可能超出原文本框，从最上层文本起按实际文字边界命中。 */
+  private hitEmbeddedText(p: Pt): Id | undefined {
+    const st = this.store, objects = st.page.objects, ctx = this.canvas.getContext('2d')!;
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const o = objects[i];
+      if (!o.hidden && !o.unselectable && o.def.k === 'text' && o.def.refs?.length
+        && embeddedButtonAt(ctx, st.page, st.results, o, p)) return o.id;
+    }
+  }
+
   private downSelect(p: Pt, shift: boolean) {
     const st = this.store;
-    const hits = hitAll(st.page, st.results, p, this.power);
+    const embedded = this.tool === 'move' ? this.hitEmbeddedText(p) : undefined;
+    const hits = embedded !== undefined ? [embedded] : hitAll(st.page, st.results, p, this.power);
     if (hits.length) {
       const id = hits[0], was = this.sel.includes(id);
       // 点与点以外的路径相交处：当场产生交点
@@ -423,6 +469,7 @@ export class DocView {
     const p = this.toPage(e);
     this.pointer = p;
     const d = this.drag;
+    if (this.dragCompleting) return;
     this.app.setCoordHint(p);
     if (d.mode === 'none' && !(e.buttons & 1)) { this.updateHover(p); if ((this.tool.startsWith('poly') && this.poly.length) || this.pendingFirst !== undefined) this.invalidate(); return; }
     d.cur = p;
@@ -436,12 +483,16 @@ export class DocView {
       case 'text-box': d.rect = normRect(d.start, p); this.invalidate(); break;
       case 'transform': this.transformDrag(p); break;
     }
-    this.invalidate();
+    if (!d.background) this.invalidate();
   }
 
   private updateHover(p: Pt) {
     const h = hitAll(this.store.page, this.store.results, p, this.power)[0];
-    if (h !== this.hoverId) { this.hoverId = this.tool === 'move' || this.tool === 'rotate' || this.tool === 'scale' || this.tool === 'info' ? undefined : h; this.overlay.style.cursor = h !== undefined && (this.tool === 'move' || this.tool === 'info') ? 'var(--cursor-on)' : 'default'; this.invalidate(); }
+    const tool = this.tool;
+    const id = tool === 'move' || tool === 'rotate' || tool === 'scale' || tool === 'info' ? undefined : h;
+    const cursor = h !== undefined && (tool === 'move' || tool === 'info') ? 'var(--cursor-on)' : 'default';
+    if (this.overlay.style.cursor !== cursor) this.overlay.style.cursor = cursor;
+    if (id !== this.hoverId) { this.hoverId = id; this.invalidate(); }
     if (this.tool === 'point' || this.tool === 'circle' || this.tool === 'segment' || this.tool === 'ray' || this.tool === 'line') {
       const s = this.snapAt(p), hid = s.kind === 'free' ? undefined : s.id;
       if (hid !== this.hoverId) { this.hoverId = hid; this.invalidate(); }
@@ -502,31 +553,33 @@ export class DocView {
       st.begin(this.dragName(clicked));
       for (const id of r.free) { const o = st.get(id)!; if (o.def.k === 'free') d.base!.set(id, { x: o.def.x, y: o.def.y }); }
       for (const id of r.path) { const o = st.get(id)!; if (o.def.k === 'onpath') d.baseT!.set(id, o.def.t); }
+      if (!r.path.size) this.startBackgroundDrag(r.free);
     }
     const dx = p.x - d.start.x, dy = p.y - d.start.y;
-    const direct = classOf(st.get(d.down.id)!) === 'point' && (st.get(d.down.id)!.def.k === 'onpath');
-    for (const [id, b] of d.base!) {
-      const at = d.base!.size === 1 && classOf(st.get(d.down.id)!) === 'point' ? this.gridSnap({ x: b.x + dx, y: b.y + dy }) : { x: b.x + dx, y: b.y + dy };
-      st.moveFree(id, at.x, at.y);
+    // 先合并自由点的变更，再把路径点投影到更新后的路径。
+    if (d.base!.size) {
+      const snap = d.base!.size === 1 && classOf(st.get(d.down.id)!) === 'point';
+      const positions = new Map<Id, Pt>();
+      for (const [id, b] of d.base!) {
+        const at = { x: b.x + dx, y: b.y + dy };
+        positions.set(id, snap ? this.gridSnap(at) : at);
+      }
+      this.moveFreePoints(positions);
     }
     for (const [id] of d.baseT!) {
       const o = st.get(id)!; if (o.def.k !== 'onpath') continue;
-      const path = st.results.get(o.def.path)?.shape;
-      const target = direct ? p : { x: p.x, y: p.y };
-      const pr = projectOnPath(st.page, st.results, o.def.path, target); void path;
-      if (pr) { st.update(id, { ...o.def, t: pr.t, ...(pr.abs ? { abs: true } : {}) }); }
+      const pr = projectOnPath(st.page, st.results, o.def.path, p, !!o.def.abs);
+      if (pr) { st.update(id, { ...o.def, t: pr.t, ...(o.def.edge !== undefined ? pr.side : undefined), ...(pr.abs ? { abs: true } : {}) }); }
     }
-    st.recompute([...d.base!.keys(), ...d.baseT!.keys()]);
-    void dy;
   }
   private moveBoxes(p: Pt) {
     const d = this.drag, st = this.store, dx = p.x - d.start.x, dy = p.y - d.start.y;
     for (const [id, b] of d.boxes!) {
       const o = st.get(id); if (!o) continue;
       const at = { x: b.x + dx, y: b.y + dy };
-      if (o.def.k === 'text' && o.def.anchor !== undefined) st.update(id, { ...o.def, off: at });
-      else if (o.def.k === 'image' && o.def.affine) { const m = [...o.def.affine] as import('../core/image').Affine; m[2] += at.x - o.def.at.x; m[5] += at.y - o.def.at.y; st.update(id, { ...o.def, at, affine: m }); }
-      else if (o.def.k === 'text' || o.def.k === 'button' || o.def.k === 'image') st.update(id, { ...o.def, at });
+      if (o.def.k === 'text' && o.def.anchor !== undefined) st.update(id, { ...o.def, off: at }, false);
+      else if (o.def.k === 'image' && o.def.affine) { const m = [...o.def.affine] as import('../core/image').Affine; m[2] += at.x - o.def.at.x; m[5] += at.y - o.def.at.y; st.update(id, { ...o.def, at, affine: m }, false); }
+      else if (o.def.k === 'text' || o.def.k === 'button' || o.def.k === 'image') st.update(id, { ...o.def, at }, false);
       else o.at = at;
     }
     st.recompute([...d.boxes!.keys()]);
@@ -537,21 +590,153 @@ export class DocView {
   private transformDrag(p: Pt) {
     const d = this.drag, st = this.store;
     if (!d.base || !d.center) return;
-    if (!st.inTransaction) st.begin(this.tool === 'rotate' ? '旋转' : '缩放');
+    if (!st.inTransaction) {
+      st.begin(this.tool === 'rotate' ? '旋转' : '缩放');
+      this.startBackgroundDrag(d.base.keys());
+    }
     const c = d.center;
     const a0 = G.angleOf(c, d.start), a1 = G.angleOf(c, p), k = G.dist(c, p) / Math.max(1e-6, G.dist(c, d.start));
-    for (const [id, b] of d.base) {
-      const np = this.tool === 'rotate' ? G.rotatePt(b, c, a1 - a0) : G.dilatePt(b, c, k);
-      st.moveFree(id, np.x, np.y);
+    const positions = new Map<Id, Pt>();
+    for (const [id, b] of d.base) positions.set(id, this.tool === 'rotate' ? G.rotatePt(b, c, a1 - a0) : G.dilatePt(b, c, k));
+    this.moveFreePoints(positions);
+  }
+
+  /** 只对依赖重型轨迹或迭代的自由点拖动启用。普通图形和依赖当前路径的投影继续同步计算。 */
+  private startBackgroundDrag(ids: Iterable<Id>) {
+    const st = this.store;
+    if (st.fullEvalMs < 40 || this.app.anim.running || st.ctx.posOverride?.size) return;
+    const affected = descendants(st.page, ids);
+    if (!st.page.objects.some(o => affected.has(o.id) && (o.def.k === 'locus' || o.def.k === 'iterate'))) return;
+    let worker: Worker;
+    try { worker = new Worker(new URL('./drag-worker.ts', import.meta.url), { type: 'module' }); }
+    catch { return; }
+    const bg: BackgroundDrag = { worker, page: st.page, original: { ctx: st.ctx, results: st.results } };
+    this.drag.background = bg;
+    worker.onmessage = (event: MessageEvent<Results>) => {
+      if (event.currentTarget !== bg.worker || this.drag.background !== bg || !bg.running) return;
+      const { positions, results, ctx } = bg.running;
+      bg.running = undefined;
+      if (st.page !== bg.page || !st.inTransaction) { this.stopBackgroundDrag(); return; }
+      if (st.results === results && st.ctx === ctx && (!bg.dialog || bg.next === positions)) {
+        this.applyFreePoints(positions);
+        st.results = event.data;
+        bg.shown = positions;
+        this.invalidate();
+      }
+      if (bg.dialog && bg.shown === bg.next) {
+        this.stopBackgroundDrag();
+        st.commit();
+      } else this.runBackgroundDrag(bg);
+    };
+    worker.onerror = e => {
+      e.preventDefault();
+      if (e.currentTarget !== bg.worker || this.drag.background !== bg) return;
+      const { next, dialog } = bg;
+      this.stopBackgroundDrag();
+      if (next && st.page === bg.page && st.inTransaction) {
+        this.moveFreePoints(next);
+        if (dialog) st.commit();
+        this.invalidate();
+      }
+    };
+  }
+
+  private applyFreePoints(positions: Map<Id, Pt>) {
+    for (const [id, at] of positions) this.store.moveFree(id, at.x, at.y, false);
+  }
+
+  private moveFreePoints(positions: Map<Id, Pt>) {
+    const bg = this.drag.background;
+    if (!bg) {
+      this.applyFreePoints(positions);
+      this.store.recompute(positions.keys());
+      return;
     }
-    st.recompute([...d.base.keys()]);
+    if (bg.next && [...positions].every(([id, at]) => {
+      const last = bg.next!.get(id);
+      return last?.x === at.x && last.y === at.y;
+    })) return;
+    bg.next = positions;
+    this.runBackgroundDrag(bg);
+  }
+
+  private runBackgroundDrag(bg: BackgroundDrag) {
+    const st = this.store, positions = bg.next;
+    if (bg.running || !positions || positions === bg.shown) return;
+    bg.running = { positions, results: st.results, ctx: st.ctx };
+    const page: Page = { ...st.page, objects: st.page.objects.map(o => {
+      const at = positions.get(o.id);
+      return at && o.def.k === 'free' ? { ...o, def: { k: 'free', ...at } } : o;
+    }) };
+    const posOverride = new Map(st.ctx.posOverride);
+    for (const id of positions.keys()) posOverride.delete(id);
+    bg.worker.postMessage({ page, ctx: { ...st.ctx, posOverride } });
+  }
+
+  get dragCompleting() { return !!this.drag.background?.dialog; }
+  get backgroundDragging() { return !!this.drag.background; }
+
+  private finishBackgroundDrag(bg: BackgroundDrag) {
+    if (bg.shown === bg.next) { this.stopBackgroundDrag(); this.store.commit(); return; }
+    const dialog = document.createElement('dialog');
+    dialog.className = 'dlg';
+    const message = document.createElement('div');
+    message.className = 'dlg-body';
+    message.textContent = '正在计算拖动后的图形…';
+    const cancel = document.createElement('button');
+    cancel.textContent = '取消';
+    cancel.onclick = () => this.cancelDrag();
+    dialog.addEventListener('cancel', e => { e.preventDefault(); this.cancelDrag(); });
+    dialog.append(message, cancel);
+    bg.dialog = dialog;
+    bg.completion = new Promise(resolve => { bg.settle = resolve; });
+    document.body.append(dialog);
+    dialog.showModal();
+
+    // 松手后只等最终落点。中途帧仍在算时，释放旧 Worker 并直接算最终帧。
+    if (bg.running && bg.running.positions !== bg.next) {
+      const old = bg.worker;
+      try {
+        const worker = new Worker(new URL('./drag-worker.ts', import.meta.url), { type: 'module' });
+        worker.onmessage = old.onmessage;
+        worker.onerror = old.onerror;
+        bg.worker = worker;
+        old.terminate();
+        bg.running = undefined;
+        this.runBackgroundDrag(bg);
+      } catch { /* 旧 Worker 仍可接着处理最终帧。 */ }
+    }
+  }
+
+  private stopBackgroundDrag() {
+    const bg = this.drag.background;
+    if (!bg) return;
+    this.drag.background = undefined;
+    bg.worker.terminate();
+    bg.dialog?.remove();
+    bg.settle?.();
+  }
+
+  /** 从系统标题栏关闭时，也要等松手时的最后一次提交。 */
+  async waitForDrag() {
+    await this.drag.background?.completion;
   }
 
   private onUp(e: PointerEvent) {
+    if (this.dragCompleting) return;
     const d = this.drag, p = this.toPage(e), st = this.store;
     try { this.overlay.releasePointerCapture(e.pointerId); } catch { /* 已释放 */ }
     const tool = this.tool;
     if (tool === 'move' || tool === 'rotate' || tool === 'scale') {
+      if (d.background && d.moved && G.dist(d.cur, p) > 0) {
+        if (d.mode === 'object') this.dragObjects(p);
+        else if (d.mode === 'transform') this.transformDrag(p);
+      }
+      if (d.background) {
+        d.mode = 'none';
+        this.finishBackgroundDrag(d.background);
+        return;
+      }
       if ((tool === 'rotate' || tool === 'scale') && d.mode === 'transform' && !d.moved) { this.finishSelectClick(d, e); }
       else if (d.mode === 'object') {
         const pressed = d.down && !d.moved ? st.get(d.down.id) : undefined;
@@ -658,7 +843,7 @@ export class DocView {
     for (const input of tool.inputs) {
       const candidates = this.sel.filter(id => !picks.includes(id)).filter(id => {
         const o = st.get(id);
-        return !!o && acceptsInput(input.kind, o, st.results) && (input.kind !== 'axis' || st.page.objects.some(s => s.def.k === 'sys' && [s.def.axisX, s.def.axisY].includes(id)));
+        return !!o && acceptsInput(input.kind, o, st.results, input.unit) && (input.kind !== 'axis' || st.page.objects.some(s => s.def.k === 'sys' && [s.def.axisX, s.def.axisY].includes(id)));
       });
       if (candidates.length !== 1) { void this.app.dlg.message('无法唯一匹配所有前提条件，请逐一点选或调整选择。'); return; }
       picks.push(candidates[0]);
@@ -667,11 +852,10 @@ export class DocView {
     this.runTool(tool);
     this.app.updateStatus();
   }
-  /** 页面已有坐标系时，“坐标系”前提由原版自动匹配到最近的坐标系，不提示（真实鼠标逐工具实测）。 */
   fillAutoInputs(tool: Tool) {
-    const systems = this.store.page.objects.filter(o => o.def.k === 'sys');
-    if (!systems.length) return;
-    tool.inputs.forEach((inp, i) => { if (inp.kind === 'system' && this.toolPicks[i] === undefined) this.toolPicks[i] = systems.at(-1)!.id; });
+    const automatic = automaticToolInputs(tool, this.store.page, this.store.results);
+    automatic.forEach((id, i) => { if (id !== undefined && this.toolPicks[i] === undefined) this.toolPicks[i] = id; });
+    return automatic;
   }
   /** 下一个还没匹配的前提条件序号；全部匹配时为 undefined。 */
   nextToolInput(tool: Tool): number | undefined {
@@ -685,14 +869,14 @@ export class DocView {
   private customClick(p: Pt) {
     const tool = this.app.customTool, st = this.store;
     if (!tool) { this.app.status.textContent = '先从自定义工具菜单里选一个工具'; return; }
-    this.fillAutoInputs(tool);
+    const automatic = this.fillAutoInputs(tool);
     if (this.nextToolInput(tool) === undefined) { this.runTool(tool); this.app.updateStatus(); return; }
-    const used = this.toolPicks.filter((id): id is Id => id !== undefined);
+    const used = this.toolPicks.filter((id, i): id is Id => id !== undefined && id !== automatic[i]);
     const hits = hitAll(st.page, st.results, p, this.power);
     let slot = -1, id: Id | undefined;
     tool.inputs.forEach((inp, i) => {
       if (slot >= 0 || this.toolPicks[i] !== undefined || inp.kind === 'point') return;
-      const found = toolInputFromHits(inp.kind, hits, st.page, st.results, used);
+      const found = toolInputFromHits(inp.kind, hits, st.page, st.results, used, inp.unit);
       if (found !== undefined) { slot = i; id = found; }
     });
     if (slot < 0) {
@@ -847,8 +1031,8 @@ export class DocView {
       } else if (text !== o.def.text || JSON.stringify(te.runs) !== JSON.stringify(te.originalRuns ?? [{ text: o.def.text, font: o.def.font }])) {
         const ctx = this.canvas.getContext('2d')!, f = o.def.font;
         ctx.font = `${f.italic ? 'italic ' : ''}${f.bold ? 'bold ' : ''}${f.size}px ${f.name}`;
-        const lines = wrap(ctx, text, o.def.w - 6), h = Math.max(24, lines.length * f.size * 1.3 + 8);
-        const w = Math.min(o.def.w, Math.max(...lines.map(l => ctx.measureText(l).width)) + 10);
+        const lines = wrap(ctx, text, o.def.w - 6), h = Math.round(Math.max(24, lines.length * f.size * 1.3 + 8));
+        const w = Math.round(Math.min(o.def.w, Math.max(...lines.map(l => ctx.measureText(l).width)) + 10));
         const def = o.def;
         const runs = te.runs.length === 1 && JSON.stringify(te.runs[0].font) === JSON.stringify(def.font) ? undefined : te.runs;
         st.run('编辑说明', () => st.update(te.id, { ...def, text, runs, h, w: Math.max(30, w) }));

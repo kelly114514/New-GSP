@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { encode } from 'fast-png';
 import { Store } from '../src/core/store';
 import { evalFunction } from '../src/core/engine';
 import { imageCorners } from '../src/core/image';
 import { decodeFile, encodeFile, encodeNgsp } from '../src/gsp/codec';
-import { bitmapProfile } from '../src/core/bitmap-profile';
 import { hitAll } from '../src/core/hit';
-import { rotateBy, reflectBy, translateBy } from '../src/core/construct';
+import { createSystem, rotateBy, reflectBy, translateBy } from '../src/core/construct';
 
 const image = (st: Store) => st.add({ k: 'image', data: 'test', mime: 'image/png', at: { x: 100, y: 100 }, w: 80, h: 40 });
 describe('动态导函数与图片', () => {
@@ -50,10 +50,43 @@ describe('动态导函数与图片', () => {
   expect(m?.k === 'box' && m.image?.corners[0].x).toBeCloseTo(-100 + 96 / 2.54);
   expect(decodeFile(encodeNgsp(st.doc), 'x.ngsp').doc).toEqual(st.doc);
  });
- it('位图列取样忽略白色与透明像素，保留分断', () => {
-  const rgba = new Uint8ClampedArray(4 * 3 * 4).fill(255);
-  for (const [x,y] of [[0,0],[1,1],[3,2]]) { const i=(y*4+x)*4; rgba[i]=0;rgba[i+1]=0;rgba[i+2]=0; }
-  expect(bitmapProfile(rgba,4,3)).toEqual([[{x:0,y:0},{x:1/3,y:0.5}],[{x:1,y:1}]]);
+ it('原版图片函数读写保留白色、透明空列、取高阈值和旋转后的上边界', () => {
+  const st = new Store(), sys = createSystem(st, { x: 0, y: 0 });
+  const width = 12, height = 8, rgba = new Uint8Array(width * height * 4);
+  const paint = (left: number, right: number, top: number, bottom: number, alpha: number) => {
+    for (let y = top; y < bottom; y++) for (let x = left; x < right; x++) rgba.set([255, 255, 255, alpha], (y * width + x) * 4);
+  };
+  paint(1, 4, 0, 1, 191);
+  paint(1, 4, 3, 6, 255);
+  paint(7, 11, 1, 2, 192);
+  paint(7, 11, 4, 6, 255);
+  const data = Buffer.from(encode({ width, height, data: rgba, channels: 4 })).toString('base64');
+  const image = st.add({ k: 'image', data, mime: 'image/png', at: { x: 100, y: 100 }, w: 48, h: 32 });
+  const func = st.add({ k: 'picfunc', stroke: image.id, sys: sys.id, height: true }, { at: { x: 10, y: 5 }, label: 'f' });
+  const saved = encodeFile(st.doc, undefined);
+  if (!saved.ok) throw new Error(saved.reason);
+  const opened = new Store(decodeFile(saved.bytes, '图片高度.gsp').doc);
+  const unit = 96 / 2.54;
+  const heightAt = (x: number) => {
+    const y = evalFunction(opened.page, opened.results, func.id, x / unit);
+    return y === undefined ? undefined : -y * unit;
+  };
+  expect(opened.get(func.id)?.def).toMatchObject({ height: true, stroke: image.id, sys: sys.id });
+  expect(heightAt(114)).toBeCloseTo(118);
+  expect(heightAt(124)).toBeUndefined();
+  expect(heightAt(138)).toBeCloseTo(110);
+  if (image.def.k !== 'image') throw new Error('图片缺失');
+  opened.update(image.id, { ...image.def, affine: [-48, 0, 148, 0, -32, 132] });
+  opened.recompute();
+  expect(heightAt(110)).toBeCloseTo(106);
+  expect(heightAt(134)).toBeCloseTo(106);
+ });
+ it('旧新版课件继续使用已保存的笔迹取样', () => {
+  const st = new Store(), sys = createSystem(st, { x: 100, y: 200 });
+  const source = image(st);
+  const func = st.add({ k: 'picfunc', stroke: source.id, sys: sys.id, profile: [[{ x: 0, y: 0.75 }, { x: 1, y: 0.75 }]] });
+  const opened = new Store(decodeFile(encodeNgsp(st.doc), '旧笔迹.ngsp').doc);
+  expect(evalFunction(opened.page, opened.results, func.id, 1)).toBeCloseTo(70 / (96 / 2.54));
  });
  it('归一化仿射矩阵保留方向及负尺度', () => {
   expect(imageCorners({ at: { x: 0, y: 0 }, w: 1, h: 1, affine: [0, -30, 100, 40, 0, 30] })).toEqual([{ x: 100, y: 30 }, { x: 100, y: 70 }, { x: 70, y: 70 }, { x: 70, y: 30 }]);

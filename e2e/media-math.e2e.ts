@@ -1,6 +1,39 @@
 import { expect, test } from '@playwright/test';
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.waitForFunction(() => !!(window as any).__app); });
 
+test('打开原版课件后执行已记录的按钮并保留轨迹追踪', async ({ page }) => {
+  const fixture = await page.evaluate(async () => {
+    const url = '/src/gsp/codec.ts', { encodeGsp } = await import(/* @vite-ignore */ url);
+    const st = (window as any).__app.active.store;
+    const point = (x: number, y: number) => st.add({ k: 'free', x, y }).id;
+    const a = point(200, 130), b = point(360, 130), c = point(200, 360);
+    const horizontal = st.add({ k: 'seg', a, b }).id, vertical = st.add({ k: 'seg', a, b: c }).id;
+    const driver = st.add({ k: 'onpath', path: horizontal, t: 0.5 }).id;
+    const moving = st.add({ k: 'onpath', path: vertical, t: 0.25 }).id;
+    const image = st.add({ k: 'translate', src: driver, by: { mode: 'vector', from: a, to: moving } }).id;
+    st.add({ k: 'locus', driver, out: image, samples: 40 }, { trace: true });
+    const button = (action: object, y: number) => st.add({ k: 'button', action, text: '测试', at: { x: 45, y }, w: 60, h: 25 }).id;
+    st.page.startupButtons = [button({ type: 'animate', targets: [moving], speed: 'medium', direction: 'bounce' }, 20),
+      button({ type: 'hideshow', targets: [b], mode: 'hide', fade: false, select: false }, 60)];
+    const bytes = encodeGsp(st.doc);
+    return { data: btoa(String.fromCharCode(...bytes)), moving, hidden: b };
+  });
+  const chooser = page.waitForEvent('filechooser');
+  await page.evaluate(() => { void (window as any).__app.openFile(); });
+  await (await chooser).setFiles({ name: '打开时执行.gsp', mimeType: 'application/octet-stream', buffer: Buffer.from(fixture.data, 'base64') });
+  await expect.poll(() => page.evaluate(({ moving, hidden }) => {
+    const v = (window as any).__app.active;
+    if (v.store.doc.name !== '打开时执行' || !v.store.get(hidden)?.hidden || !v.store.ctx.tOverride?.has(moving)) return 0;
+    const { width, height } = v.trace;
+    const pixels: Uint8ClampedArray = v.trace.getContext('2d').getImageData(0, 0, width, height).data;
+    let rows = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) if (pixels[(y * width + x) * 4 + 3]) { rows++; break; }
+    }
+    return rows;
+  }, fixture)).toBeGreaterThan(4);
+});
+
 test('导函数保留来源，修改原式后高阶导函数同步', async ({ page }) => {
   const values = await page.evaluate(async () => {
     const app = (window as any).__app, st = app.active.store;
@@ -21,13 +54,14 @@ test('图片函数读取像素并随源图片位置变化', async ({ page }) => 
     const { createSystem } = await import(/* @vite-ignore */ construct), { evalFunction } = await import(/* @vite-ignore */ engine);
     createSystem(st, { x: 100, y: 200 });
     const canvas = document.createElement('canvas'); canvas.width = canvas.height = 9;
-    const ctx = canvas.getContext('2d')!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 9, 9); ctx.fillStyle = '#000'; for (let i = 0; i < 9; i++) ctx.fillRect(i, i, 1, 1);
+    const ctx = canvas.getContext('2d')!; ctx.fillStyle = '#fff'; for (let i = 0; i < 9; i++) ctx.fillRect(i, i, 1, 1);
     const cm = 96 / 2.54, image = st.add({ k: 'image', data: canvas.toDataURL().split(',')[1], mime: 'image/png', at: { x: 100, y: 200 - cm }, w: cm, h: cm });
     app.active.setSel([image.id]); await app.exec(36977);
     const func = st.page.objects.at(-1);
     const before = evalFunction(st.page, st.results, func.id, 0.5);
+    const calc = st.add({ k: 'calc', expr: app.parseText(app.active, `${func.label}(0.5)`) });
     st.update(image.id, { ...image.def, at: { x: 100, y: 200 - 2 * cm } }); st.recompute();
-    return { type: func.def.k, before, after: evalFunction(st.page, st.results, func.id, 0.5) };
+    return { type: func.def.k, before, after: st.results.get(calc.id)?.shape?.q.v };
   });
   expect(result.type).toBe('picfunc'); expect(result.before).toBeCloseTo(0.5); expect(result.after).toBeCloseTo(1.5);
 });
@@ -40,7 +74,7 @@ test('反射图片命令生成动态依赖，并保留多边形裁剪', async ({
     const image = st.add({ k: 'image', data: 'test', mime: 'image/png', at: { x: 300, y: 100 }, w: 100, h: 200, clip: clip.id });
     app.active.marks.mirror = mirror.id; app.active.setSel([image.id]); await app.exec(36948);
     const reflected = st.page.objects.at(-1), shape = st.results.get(reflected.id)?.shape;
-    return { kind: reflected.def.k, src: reflected.def.src, image: image.id, x: shape.image.corners[1].x, clip: shape.image.clip };
+    return { kind: reflected.def.k, src: reflected.def.src, image: image.id, x: shape.image.corners[1].x, clip: shape.image.clips?.[0] };
   });
   expect(result.kind).toBe('reflect'); expect(result.src).toBe(result.image); expect(result.x).toBe(200);
   expect(result.clip).toEqual([{ x: 300, y: 100 }, { x: 300, y: 300 }, { x: 200, y: 200 }]);

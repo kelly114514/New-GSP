@@ -1,10 +1,12 @@
 /** 构造与变换：把选择转成新对象。所有函数须在 store.run 事务内调用。 */
-import { isAxisLine, isCirc, isLine, isPt, pathPointAt, projectOnPath, type Shape } from './engine';
+import { isCirc, isLine, isPt, pathPointAt, pathUsesPixelDistance, polygonEdgeAt, projectOnPath, type Shape } from './engine';
 import * as G from './geom';
 import type { Pt } from './geom';
 import { CM } from './expr';
 import { remapDef } from './remap';
-import { byId, isArcDef, isCircleDef, isInteriorDef, isMeasureDef, isPathDef, isPointDef, isStraightDef, parentsOf, ancestors, descendants, type AngleBy, type Def, type Id, type Obj, type RatioBy, type TranslateBy } from './model';
+import { byId, isArcDef, isCircleDef, isInteriorDef, isMeasureDef, isPathDef, isPointDef, isStraightDef, parentsOf, ancestors, descendants, type AngleBy, type Def, type Id, type Obj, type Page, type RatioBy, type TranslateBy } from './model';
+import { imagePixelSize } from './image';
+import { defaultWarpSamples } from './warp';
 import type { Store } from './store';
 
 export type ObjClass = 'point' | 'straight' | 'circle' | 'arc' | 'interior' | 'locus' | 'plot' | 'measure' | 'table' | 'sys' | 'text' | 'button' | 'image' | 'stroke' | 'func' | 'unknown';
@@ -23,14 +25,14 @@ export function classOf(o: Obj): ObjClass {
   if (d.k === 'sys') return 'sys';
   if (d.k === 'text') return 'text';
   if (d.k === 'button') return 'button';
-  if (d.k === 'image') return 'image';
-  if (d.k === 'stroke') return 'stroke';
+  if (d.k === 'image' || d.k === 'image-clip' || d.k === 'custom-image') return 'image';
+  if (d.k === 'stroke' || d.k === 'segment-mark' || d.k === 'angle-mark') return 'stroke';
   if (d.k === 'func' || d.k === 'picfunc') return 'func';
   return 'unknown';
 }
 
 export interface Marks {
-  center?: Id; mirror?: Id; vector?: [Id, Id]; angle?: [Id, Id, Id]; distance?: Id; ratio?: { segs: [Id, Id] } | { m: Id } | { pts: [Id, Id, Id] };
+  center?: Id; mirror?: Id; vector?: [Id, Id]; angle?: [Id, Id, Id] | { m: Id }; distance?: Id; ratio?: { segs: [Id, Id] } | { m: Id } | { pts: [Id, Id, Id] };
 }
 
 const shape = (st: Store, id: Id): Shape | undefined => st.results.get(id)?.shape;
@@ -64,7 +66,10 @@ export function constructIntersections(st: Store, a: Id, b: Id): Obj[] {
   const out: Obj[] = [];
   for (let branch = 0; branch < 2; branch++) {
     const probe = st.add({ k: 'inter', a, b, branch });
-    if (st.results.get(probe.id)?.status === 'ok') out.push(probe);
+    const current = shape(st, probe.id), first = out[0] && shape(st, out[0].id);
+    // 相切时两条分支都可求值，但新建交点只建一个。
+    const same = isPt(current) && isPt(first) && current.p.x === first.p.x && current.p.y === first.p.y;
+    if (st.results.get(probe.id)?.status === 'ok' && !same) out.push(probe);
     else { st.page.objects.pop(); st.page.nextId--; st.recompute(); break; }
   }
   return out;
@@ -91,10 +96,19 @@ export function constructPointOnPath(st: Store, pathId: Id, at?: Pt): Obj | unde
   const path = shape(st, pathId);
   if (!path) return undefined;
   let t: number, abs = false;
-  if (at) { const pr = projectOnPath(st.page, st.results, pathId, at); if (!pr) return undefined; t = pr.t; abs = !!pr.abs; }
+  if (at) {
+    const pr = projectOnPath(st.page, st.results, pathId, at);
+    if (!pr) return undefined;
+    if (pr.side) return st.add({ k: 'onpath', path: pathId, t: pr.side.t, edge: pr.side.edge });
+    t = pr.t; abs = !!pr.abs;
+  }
   else t = path.k === 'circle' || path.k === 'disk' ? Math.PI * 0.8 : path.k === 'line' ? (path.s.ext === 'segment' ? 0.5 : 0.5) : path.k === 'poly' ? 0.1 : 0.5;
+  if (path.k === 'poly') {
+    const side = polygonEdgeAt(path.pts, t);
+    return st.add({ k: 'onpath', path: pathId, t: side.t, edge: side.edge });
+  }
   if (path.k === 'line' && path.s.ext === 'segment') t = Math.min(0.999, Math.max(0.001, t));
-  if (!at && path.k === 'line' && isAxisLine(st.page, pathId)) { t *= Math.hypot(path.s.b.x - path.s.a.x, path.s.b.y - path.s.a.y); abs = true; }   // 默认位置：离原点半个单位
+  if (!at && path.k === 'line' && pathUsesPixelDistance(st.page, pathId)) { t *= G.dist(path.s.a, path.s.b); abs = true; }
   return st.add({ k: 'onpath', path: pathId, t, ...(abs ? { abs: true } : {}) });
 }
 
@@ -115,6 +129,20 @@ export interface TransformSpec {
   point(st: Store, src: Id): Obj;
 }
 
+/** 追踪图片及其内置变换，保留暂时无定义的图片类型。 */
+function isPicture(page: Page, id: Id): boolean {
+  const seen = new Set<Id>();
+  while (!seen.has(id)) {
+    seen.add(id);
+    const d = byId(page, id)?.def;
+    if (!d) return false;
+    if (d.k === 'image' || d.k === 'image-clip' || d.k === 'custom-image') return true;
+    if (d.k !== 'translate' && d.k !== 'rotate' && d.k !== 'dilate' && d.k !== 'reflect') return false;
+    id = d.src;
+  }
+  return false;
+}
+
 /** 对一组对象做变换：点直接变换，线/圆/多边形先变换其定义点再按原类型重建。 */
 export function transformObjects(st: Store, ids: Id[], mk: (src: Id) => Def | Id): Obj[] {
   const memo = new Map<Id, Id>(), created: Obj[] = [];
@@ -131,7 +159,7 @@ export function transformObjects(st: Store, ids: Id[], mk: (src: Id) => Def | Id
     const o = byId(st.page, id); if (!o) return undefined;
     const d = o.def;
     let nd: Def | undefined;
-    if (d.k === 'image') return imgPoint(id);
+    if (isPicture(st.page, id)) return imgPoint(id);
     if (isPointDef(d)) return imgPoint(id);
     if (d.k === 'seg' || d.k === 'ray' || d.k === 'line') nd = { k: d.k, a: imgPoint(d.a), b: imgPoint(d.b) };
     else if (d.k === 'circle') nd = { k: 'circle', c: imgPoint(d.c), p: imgPoint(d.p) };
@@ -150,6 +178,17 @@ export function transformObjects(st: Store, ids: Id[], mk: (src: Id) => Def | Id
 }
 
 /** 自定义变换要重放的那串构造：象点的祖先里依赖于原象点的部分（按创建顺序，含象点）。 */
+/** 图片对象最初来源的像素尺寸（取样变换的默认采样数用）。 */
+function picturePixels(p: Page, id: Id): { w: number; h: number } {
+  for (let k = 0, cur = id; k < 64; k++) {
+    const d = byId(p, cur)?.def;
+    if (!d) break;
+    if (d.k === 'image') return imagePixelSize(d.data, d.mime) ?? { w: d.w, h: d.h };
+    if (d.k === 'image-clip' || d.k === 'custom-image' || d.k === 'translate' || d.k === 'rotate' || d.k === 'dilate' || d.k === 'reflect') cur = d.src; else break;
+  }
+  return { w: 0, h: 0 };
+}
+
 export function customChain(st: Store, tf: { src: Id; img: Id }): Obj[] | undefined {
   const p = st.page;
   if (!byId(p, tf.src) || !byId(p, tf.img)) return undefined;
@@ -162,7 +201,20 @@ export function customChain(st: Store, tf: { src: Id; img: Id }): Obj[] | undefi
 export function applyCustomTransform(st: Store, tf: { src: Id; img: Id }, targets: Id[]): Obj[] {
   const chain = customChain(st, tf);
   if (!chain) throw new Error('这个自定义变换依赖的对象已经不存在');
+  // 原版参考手册：两点之间只经过内置变换时，图片得到普通变换图片；否则得到取样变换的图片（方法 96）。
+  const fromSrc = descendants(st.page, [tf.src]);
+  let prev = tf.src;
+  const builtIn = chain.every(c => {
+    const d = c.def;
+    if (d.k !== 'translate' && d.k !== 'rotate' && d.k !== 'dilate' && d.k !== 'reflect') return false;
+    if (d.src !== prev || parentsOf(d).slice(1).some(x => x === tf.src || fromSrc.has(x))) return false;
+    prev = c.id; return true;
+  });
   return transformObjects(st, [...targets].reverse(), t => {
+    if (!builtIn && isPicture(st.page, t)) {
+      const px = picturePixels(st.page, t);
+      return { k: 'custom-image', src: t, pre: tf.src, img: tf.img, body: chain.map(c => c.id), samples: defaultWarpSamples(px.w, px.h), distortion: 0.6 };
+    }
     const map = new Map<Id, Id>([[tf.src, t]]);
     for (const c of chain) { const n = st.add(remapDef(structuredClone(c.def), map), { style: { ...c.style }, hidden: false }); map.set(c.id, n.id); }
     return map.get(tf.img)!;
@@ -173,7 +225,7 @@ export function marksUsable(st: Store, m: Marks): { center: boolean; mirror: boo
   const has = (id?: Id) => id !== undefined && !!st.get(id);
   return {
     center: has(m.center), mirror: has(m.mirror), vector: !!m.vector && has(m.vector[0]) && has(m.vector[1]),
-    angle: !!m.angle && m.angle.every(has), distance: has(m.distance), ratio: !!m.ratio && ('m' in m.ratio ? has(m.ratio.m) : 'pts' in m.ratio ? m.ratio.pts.every(has) : m.ratio.segs.every(has)),
+    angle: !!m.angle && (Array.isArray(m.angle) ? m.angle.every(has) : has(m.angle.m)), distance: has(m.distance), ratio: !!m.ratio && ('m' in m.ratio ? has(m.ratio.m) : 'pts' in m.ratio ? m.ratio.pts.every(has) : m.ratio.segs.every(has)),
   };
 }
 

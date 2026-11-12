@@ -18,7 +18,7 @@ export interface Style {
 export type Def =
   // 点
   | { k: 'free'; x: number; y: number }
-  | { k: 'onpath'; path: Id; t: number; abs?: boolean }   // abs：坐标轴上的点，t 是离原点的页面像素数（拖动单位点时点保持在页面上的位置，原版行为）                          // 线上的点；t 沿路径的参数（圆为弧度，弧/内部为 0..1 周长比）
+  | { k: 'onpath'; path: Id; t: number; abs?: boolean; edge?: number }   // edge 存在时 t 是该边的比例。abs 表示线上的页面像素。
   | { k: 'mid'; seg: Id }
   | { k: 'inter'; a: Id; b: Id; branch: number; alternate?: true } // 原版工具的线圆、圆圆求交在首选分支无定义时尝试另一支
   | { k: 'translate'; src: Id; by: TranslateBy }
@@ -39,17 +39,18 @@ export type Def =
   | { k: 'arc-circle'; circle: Id; a: Id; b: Id }
   | { k: 'arc3'; a: Id; b: Id; c: Id }
   | { k: 'arc-center'; c: Id; a: Id; b: Id }
-  | { k: 'axis-line'; axis: 'x' | 'y'; origin?: Id; unit: Id; mode: 'distance' | 'circle' }
+  | { k: 'axis-line'; axis: 'x' | 'y'; origin?: Id; unit: Id; mode: 'distance' | 'circle'; pi?: true }
   | { k: 'axis-unit'; axis: Id; origin?: Id; distance?: number; direction: 'x' | 'y' }
   | { k: 'colorize'; src: Id; params: Id[]; mode: 'color' | 'gray' | 'rgb' | 'hsv'; cycle: 'none' | 'one' | 'two'; from: number; to: number }
   | { k: 'custom-point'; src: Id; pre: Id; img: Id; body: Id[] }
-  | { k: 'angle-mark'; a: Id; v: Id; b: Id; count: number }
+  | { k: 'angle-mark'; a: Id; v: Id; b: Id; count: number; mode?: AngleMarkMode; appearance?: { size: number; flags: number; reserved: number; fill: number } }
+  | { k: 'segment-mark'; seg: Id; t: number; count: number; mode: 'tick' | 'arrow' | 'filled' }
   // 区域
   | { k: 'poly'; pts: Id[] }
   | { k: 'circle-int'; circle: Id }
   | { k: 'arc-int'; arc: Id; mode: 'sector' | 'segment' }
   // 轨迹与函数图像
-  | { k: 'locus'; driver: Id; out: Id; samples: number; path?: Id } // 工具可沿独立路径采样，驱动点本身不必依附于该路径
+  | { k: 'locus'; driver: Id; out: Id; samples: number; path?: Id; pathRange?: [number, number]; colored?: true; parameter?: { range: [number, number]; shapes?: true } }
   | { k: 'plot'; func: Id; sys: Id; lo?: number; hi?: number; samples: number }
   // 参数曲线：点 (f(t), g(t))（polar 时是 (r, α)，α 无单位时按弧度），t 在 lo..hi 取样
   | { k: 'pcurve'; fx: Id; fy: Id; sys: Id; lo: number; hi: number; polar: boolean; samples: number }
@@ -59,17 +60,21 @@ export type Def =
   | { k: 'param'; name: string; value: number; unit: UnitKind; showEdit: boolean }
   | { k: 'calc'; expr: Expr; unit: UnitKind }
   // 绘图函数（图片函数）：手绘的一笔在坐标系里的 y(x)（原版采集 probe_pic：方法 122）
-  | { k: 'picfunc'; stroke: Id; sys: Id; profile?: Pt[][] }
+  | { k: 'picfunc'; stroke: Id; sys: Id; profile?: Pt[][]; height?: true; heightRaster?: string }
   | { k: 'func'; name: string; expr: Expr; param: string; derivativeOf?: Id; form?: FuncForm; symbol?: boolean }   // form 缺省为 y=f(x)；symbol：显示成“y = …”而不是“f(x) = …”
   | { k: 'table'; cols: Id[]; rows: number[][]; showEdit?: boolean }
-  | { k: 'sys'; origin: Id; unitX: Id; unitY: Id; axisX: Id; axisY: Id; grid: GridStyle; showGrid: boolean; snap: boolean; shift?: number }
+  | { k: 'sys'; origin: Id; unitX: Id; unitY: Id; axisX: Id; axisY: Id; grid: GridStyle; showGrid: boolean; snap: boolean; gridPoints?: true; shift?: number; piX?: true; piY?: true }
   // 杂项
-  | { k: 'text'; text: string; at: Pt; w: number; h: number; anchor?: Id; off?: Pt; font: FontSpec; runs?: TextRun[]; refs?: Id[] }   // 附着在点上时位置 = 点 + off；文字里的 k 显示 refs[k] 的数值
+  | { k: 'text'; text: string; at: Pt; w: number; h: number; anchor?: Id; off?: Pt; font: FontSpec; runs?: TextRun[]; refs?: Id[]; math?: import('../gsp/richtext').RichNode; mathText?: string }   // math：含分数、上下标、根号的原版标记结构，text 未改动（等于 mathText）时按它排版   // 附着在点上时位置 = 点 + off；文字里的 k 显示 refs[k] 的数值
   | { k: 'button'; action: ButtonAction; text: string; at: Pt; w: number; h: number }
-  | { k: 'image'; data: string; mime: string; at: Pt; w: number; h: number; affine?: import('./image').Affine; clip?: Id }
+  | { k: 'image'; data: string; mime: string; at: Pt; w: number; h: number; affine?: import('./image').Affine; clip?: Id; placement?: ImagePlacement }
+  | { k: 'image-clip'; src: Id; clip: Id; size: [number, number, number, number] }
+  // 自定义变换作用于图片（原版方法 96）：在源图片上取样，把驱动点 pre 放到各取样位置，象点 img 的位置就是该处像素的去处。
+  // samples 是采样数，distortion 是允许失真度（0 无 … 1 全部）。
+  | { k: 'custom-image'; src: Id; pre: Id; img: Id; body: Id[]; samples: number; distortion: number }
   | { k: 'stroke'; pts: Pt[] }
   // 迭代：pre 是前像（点或数值），maps[j][i] 是第 j 个映射里 pre[i] 的初象，body 是前像的后代里目标和初象依赖的那部分（顺序不重要）
-  | { k: 'iterate'; pre: Id[]; maps: Id[][]; body: Id[]; depth: { fixed: number } | { param: Id }; finalOnly?: boolean; salt?: number }
+  | { k: 'iterate'; pre: Id[]; maps: Id[][]; body: Id[]; depth: { fixed: number } | { param: Id }; finalOnly?: boolean; salt?: number; random?: true }   // random：前像中的路径点每层取随机位置
   // 迭代象：迭代 iter 把 src 在各次迭代里的像都画出来
   | { k: 'iterimg'; src: Id; iter: Id }
   // 迭代数据表：第一列是迭代序号（列名固定是 n，原版互读时用参数 k 验证过），其后每列是一个数值初象在各层状态下的值（原版采集 probe_itertable：方法 92）
@@ -84,19 +89,23 @@ export type TranslateBy =
   | { mode: 'vector'; from: Id; to: Id }
   | { mode: 'polar'; dist: Num; angle: Num }                         // 固定值（cm / 度）或度量 ID
   | { mode: 'rect'; dx: number; dy: number; dxBy?: Id; dyBy?: Id };   // dxBy/dyBy：水平/垂直距离取自标记距离
-export type AngleBy = { mode: 'fixed'; deg: number } | { mode: 'marked'; a: Id; v: Id; b: Id } | { mode: 'value'; m: Id };
+export type AngleBy = { mode: 'fixed'; deg: number } | { mode: 'marked'; a: Id; v: Id; b: Id } | { mode: 'value'; m: Id } | { mode: 'mark'; m: Id };
+export type AngleMarkMode = 'minor' | 'reflex' | 'ccw' | 'cw';
+export type ImagePlacement =
+  | { kind: 'center'; center: Id; sx: number; sy: number; angle: number }
+  | { kind: 'corners'; pts: [Id, Id] | [Id, Id, Id] };
 export type RatioBy = { mode: 'fixed'; num: number; den: number } | { mode: 'marked'; a: Id; b: Id; c?: Id } | { mode: 'value'; m: Id };
 export type GridStyle = 'square' | 'rect' | 'polar' | 'tri';
 export type FuncForm = 'y=f(x)' | 'x=f(y)' | 'r=f(t)' | 't=f(r)';
 
 export type MeasureKind =
-  | 'length' | 'distance' | 'perimeter' | 'circumference' | 'angle' | 'area' | 'arcangle' | 'arclength' | 'radius' | 'ratio' | 'pointvalue'
+  | 'length' | 'distance' | 'perimeter' | 'circumference' | 'angle' | 'markedangle' | 'area' | 'arcangle' | 'arclength' | 'radius' | 'ratio' | 'pointvalue'
   | 'coords' | 'abscissa' | 'ordinate' | 'coorddist' | 'coordradius' | 'coordangle' | 'slope' | 'equation';
 
 export type ButtonAction =
   | { type: 'hideshow'; targets: Id[]; mode: 'toggle' | 'show' | 'hide'; first?: 'hide' | 'show'; fade?: boolean; select?: boolean }   // toggle 时 first 是当前将执行的动作；fade/select 缺省为 true（原版默认）
   | { type: 'animate'; targets: Id[]; speed: 'slow' | 'medium' | 'fast' | number; direction: 'forward' | 'backward' | 'bounce' | 'random'; once?: boolean; stopMode?: 'toggle' }
-  | { type: 'move'; from: Id; to: Id; pairs?: [Id, Id][]; speed: 'slow' | 'medium' | 'fast' | 'high'; toInitial?: boolean }
+  | { type: 'move'; from: Id; to: Id; pairs?: [Id, Id][]; speed: 'slow' | 'medium' | 'fast' | 'high'; toInitial?: boolean; legacyFinal?: true }
   | { type: 'link'; page: number; url?: string }      // url 存在时是超链接按钮（page 无意义）
   | { type: 'scroll'; point: Id; where: 'topleft' | 'center' }
   | { type: 'sound'; funcs: Id[] }      // 声音按钮：函数当波形播放（原版采集 probe_misc2：A=8）
@@ -105,6 +114,11 @@ export type ButtonAction =
 export interface FontSpec { name: string; size: number; bold: boolean; italic: boolean; underline: boolean; color: string }
 /** 文本段按顺序拼接后等于 text；样式完整保存，避免受默认字体后续修改影响。 */
 export interface TextRun { text: string; font: FontSpec }
+/** 私用区标记中的数字是 refs 下标。A 显示标签，D 显示带运算符的数值。 */
+export const TEXT_REF = /(\d+)(?::([AD]))?/g;
+export const VALUE_DISPLAYS = ['expression', 'number', 'equals', 'label'] as const;
+export type ValueDisplay = typeof VALUE_DISPLAYS[number];
+export const AUTO_MEASURE_NAME = /^m\[\d+\]$/;
 
 export interface Obj {
   id: Id;
@@ -123,11 +137,19 @@ export interface Obj {
   colorBy?: ColorBy;
   /** 显示精度（小数位数）；来自文件的参数、计算。缺省用文档选项。 */
   decimals?: number;
+  /** 原版度量和计算的数值显示方式。 */
+  valueDisplay?: ValueDisplay;
   /** 度量值、参数、计算、表格等文字型对象在页面上的位置。 */
   at?: Pt;
+  /** 数值、按钮和表格的独立字体；不支持原版编码时由保存完整性检查保护。 */
+  font?: FontSpec;
   anim?: AnimDef;               // 此对象上的动画设置（路径点/参数）
   /** 来自文件的原始记录，供编码层原样写回（未知字段）。 */
   src?: unknown;
+}
+
+export function defaultValueDisplay(o: Obj): ValueDisplay {
+  return o.label && (o.hidden || o.toolLabel || !AUTO_MEASURE_NAME.test(o.label)) ? 'label' : 'expression';
 }
 
 export interface CustomTransform { name: string; src: Id; img: Id }
@@ -139,9 +161,17 @@ export interface Page {
   objects: Obj[];
   nextId: Id;
   labelCounter: number;      // 点标签的分配序号（不回收）
+  /** 原版页级自动吸附；未设置时兼容早期新版课件中坐标系的 snap。 */
+  autoSnap?: boolean;
+  /** 原版可为不同页面保存不同的显示设置；未提供的项目继承文档设置。 */
+  display?: Partial<DisplayPrefs>;
   /** 自定义变换：由原象点 src 到象点 img 的一串构造，可以重放到别的对象上（原版采集：文件里记 9009）。 */
   transforms?: CustomTransform[];
+  /** 原版文件打开时触发的操作按钮，按文件记录顺序。 */
+  startupButtons?: Id[];
   scroll: Pt;
+  /** 本页绘图区背景色（原版每页有自己的颜色表 10020，第 7 项）；缺省用文档显示设置。 */
+  background?: string;
 }
 
 export interface DocSettings {
@@ -173,12 +203,18 @@ export interface DisplayPrefs {
   otherPrec: number;
   background: string; selected: string;
   mathItalic: boolean;
-  /** 来自文件的页面设置（单位、精度、文本样式）。重新编码不写，原样保存保留；用户改过后去掉这个标记。 */
+  /** 显示设置来自原版文件；未找到可靠记录的数学标签斜体选项继承程序默认值。用户修改后去掉标记。 */
   fromFile?: boolean;
   /** 与出厂样式不同的那些项；没有的类别按原样画。 */
   textStyles?: Partial<Record<TextCat, Partial<TextStyle>>>;
 }
 export const DEFAULT_DISPLAY: DisplayPrefs = { angleUnit: 'deg', anglePrec: 2, distUnit: 'cm', distPrec: 2, otherPrec: 2, background: '#ffffff', selected: '#d000d0', mathItalic: true };
+
+export function pageDisplay(doc: Doc, page: Page, fallback: DisplayPrefs = DEFAULT_DISPLAY): DisplayPrefs {
+  const source = doc.settings.display;
+  // 原版文本样式表记录的是标签字体的斜体，不能据此推断程序的“数学标签用斜体”选项。
+  return { ...DEFAULT_DISPLAY, ...fallback, ...source, ...(source?.fromFile ? { mathItalic: fallback.mathItalic } : {}), ...page.display };
+}
 
 /** 文档内嵌的自定义工具：文件里的 1002…1003 记录原样保存（base64），要用时再解析；序号都是工具内部的 1 起序号。 */
 export interface EmbeddedTool { name: string; prereq: number[]; comment?: string; data: string; legacy?: true }
@@ -212,6 +248,7 @@ export function defaultStyle(def: Def): Style {
     case 'locus': return { ...base, color: DEFAULT_COLORS.locus };
     case 'plot': return { ...base, color: DEFAULT_COLORS.plot };
     case 'pcurve': return { ...base, color: '#800080' };
+    case 'button': return { ...base, color: '#ff8000' };   // 原版新建按钮的缺省颜色（全库按钮对象头里最常见的值）
     case 'iterate': return { ...base, color: '#ff00ff', pointSize: 1 };
     default: return base;
   }
@@ -223,22 +260,47 @@ export function newDoc(name = '未命名1'): Doc {
 }
 
 export const page = (d: Doc) => d.pages[d.current];
-export const byId = (p: Page, id: Id) => p.objects.find(o => o.id === id);
+export const pageAutoSnap = (p: Page): boolean => p.autoSnap ?? p.objects.some(o => o.def.k === 'sys' && o.def.snap);
+/**
+ * 按 ID 取对象。求值和绘制每帧调用很多次，线性查找会让大课件的拖动变成 O(n²)，所以按数组建索引。
+ * 对象数组会被就地 push/pop/替换：长度变了就重建；命中后再核对 ID；没命中时退回线性查找，保证结果与 find 一致。
+ */
+const idIndex = new WeakMap<Obj[], { len: number; at: Map<Id, number> }>();
+export function byId(p: Page, id: Id): Obj | undefined {
+  const objs = p.objects;
+  let ix = idIndex.get(objs);
+  if (!ix || ix.len !== objs.length) {
+    const at = new Map<Id, number>();
+    for (let i = objs.length - 1; i >= 0; i--) at.set(objs[i].id, i);   // 倒序：重复 ID 时第一个优先，和 find 相同
+    idIndex.set(objs, ix = { len: objs.length, at });
+  }
+  const i = ix.at.get(id);
+  if (i !== undefined && objs[i].id === id) return objs[i];
+  return objs.find(o => o.id === id);
+}
 
 /** 一个定义直接依赖的对象 ID（顺序与文件中父对象顺序一致）。 */
 export function parentsOf(d: Def): Id[] {
   switch (d.k) {
-    case 'free': case 'param': case 'text': case 'button': case 'image': case 'stroke': case 'unknown': return d.k === 'text' ? (d.anchor ? [d.anchor, ...(d.refs ?? [])] : d.refs ?? []) : d.k === 'button' ? buttonRefs(d.action) : [];
+    case 'free': case 'param': case 'text': case 'button': case 'stroke': case 'unknown': return d.k === 'text' ? (d.anchor ? [d.anchor, ...(d.refs ?? [])] : d.refs ?? []) : d.k === 'button' ? buttonRefs(d.action) : [];
+    case 'image': {
+      const placement = d.placement;
+      const pts = placement?.kind === 'center' ? [placement.center] : placement?.pts ?? [];
+      return d.clip === undefined ? pts : [...pts, d.clip];
+    }
+    case 'image-clip': return [d.src, d.clip];
+    case 'custom-image': return [d.src, d.pre, d.img, ...d.body];
     case 'onpath': return [d.path];
     case 'mid': return [d.seg];
     case 'inter': return [d.a, d.b];
     case 'translate': return [d.src, ...(d.by.mode === 'vector' ? [d.by.from, d.by.to] : []), ...(d.by.mode === 'polar' ? [d.by.dist, d.by.angle].flatMap(n => ('m' in n ? [n.m] : 'pts' in n ? n.pts : [])) : []), ...(d.by.mode === 'rect' ? [d.by.dxBy, d.by.dyBy].filter((x): x is Id => x !== undefined) : [])];
-    case 'rotate': return [d.src, d.center, ...(d.angle.mode === 'marked' ? [d.angle.a, d.angle.v, d.angle.b] : d.angle.mode === 'value' ? [d.angle.m] : [])];
+    case 'rotate': return [d.src, d.center, ...(d.angle.mode === 'marked' ? [d.angle.a, d.angle.v, d.angle.b] : 'm' in d.angle ? [d.angle.m] : [])];
     case 'dilate': return [d.src, d.center, ...(d.ratio.mode === 'marked' ? [d.ratio.a, d.ratio.b, ...(d.ratio.c !== undefined ? [d.ratio.c] : [])] : d.ratio.mode === 'value' ? [d.ratio.m] : [])];
     case 'reflect': return [d.src, d.mirror];
     case 'colorize': return [d.src, ...d.params];
     case 'custom-point': return [d.src, d.pre, d.img, ...d.body];
     case 'angle-mark': return [d.a, d.v, d.b];
+    case 'segment-mark': return [d.seg];
     case 'axis-line': return [...(d.origin !== undefined ? [d.origin] : []), d.unit];
     case 'axis-unit': return [d.axis, ...(d.origin !== undefined ? [d.origin] : [])];
     case 'plotxy': return [d.x, d.y, d.sys];

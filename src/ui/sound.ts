@@ -16,7 +16,7 @@ export function zeroCrossings(f: (x: number) => number | undefined): number {
   }
   return n;
 }
-export const valueFn = (v: DocView, id: Id) => (x: number) => evalFunction(v.store.page, v.store.results, id, x);
+export const valueFn = (v: DocView, id: Id) => (x: number) => evalFunction(v.store.page, v.store.results, id, x, v.store.ctx.angleUnit);
 /** 没有明显振荡（零点少于 10 个）就很可能不是可听的函数，建立按钮前要问一声。 */
 export const isAudible = (v: DocView, ids: Id[]) => ids.some(id => zeroCrossings(valueFn(v, id)) >= 10);
 

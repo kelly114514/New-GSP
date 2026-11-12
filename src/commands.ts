@@ -1,18 +1,20 @@
 /** 命令注册表：菜单、快捷键、右键、工具按钮共用。queryCommand 给出名称/可用/勾选，executeCommand 执行。 */
 import type { Store } from './core/store';
+import { imagePixelSize } from './core/image';
 import {
   classOf, constructArcOnCircle, constructBisector, constructIntersections, constructLines, constructLocus, constructMidpoints, constructParallelPerp, constructPointOnPath,
   applyCustomTransform, customChain, constructInterior, createSystem, dilateBy, findSys, intersectionCount, labelMeasured, reflectBy, rotateBy, translateBy,
 } from './core/construct';
 import { derive, q } from './core/expr';
-import { functionExpression } from './core/engine';
+import { evaluateExpression, functionExpression } from './core/engine';
 import type { Obj, Id, MeasureKind, Def } from './core/model';
-import { descendants, isPathDef, parentsOf } from './core/model';
+import { ancestors, descendants, isPathDef, pageAutoSnap, parentsOf } from './core/model';
 import { typeName } from './ui/render';
 import { canBePreimage, changeDepth } from './core/iterate';
 import { runIteration } from './ui/iterate';
 import { isAudible } from './ui/sound';
-import { sampleBitmap } from './ui/bitmap-function';
+import { bitmapAsPng } from './ui/bitmap-function';
+import { readHeightMask } from './core/image-height';
 import type { App } from './app';
 import type { DocView } from './ui/docview';
 
@@ -78,7 +80,7 @@ function setStyleCmd(patch: (c: Ctx) => Partial<Obj['style']>, name: string, fil
   };
 }
 
-const pointSized = (s: Sel) => s.pts;
+const pointSized = (s: Sel) => [...s.pts, ...s.objs.filter(o => o.def.k === 'iterimg')];
 const lineTyped = (s: Sel) => [...s.straights, ...s.circles, ...s.arcs, ...s.locus, ...s.plots];
 
 function addMeasure(c: Ctx, m: MeasureKind, refs: Id[], name: string): Obj | undefined {
@@ -137,7 +139,8 @@ function collinear3(st: Store, pts: Obj[]): boolean {
 // ---------------- 文件 ----------------
 def(36864, { run: c => c.app.newDocument() });
 def(36865, { run: c => c.app.openFile() });
-def(36868, { enabled: c => c.view.store.dirty || !c.view.path, run: async c => { await c.app.save(c.view, false); } });
+// 原版在新建且尚无改动的空白文档中将“保存”置灰；首次落盘使用“另存为”。
+def(36868, { enabled: c => c.view.store.dirty, run: async c => { await c.app.save(c.view, false); } });
 def(36869, { run: async c => { await c.app.save(c.view, true); } });
 def(36870, { run: async c => { await c.app.closeDocument(c.view); } });
 def(36871, { run: c => c.app.dlg.docOptions(c.view) });
@@ -162,18 +165,49 @@ def(36891, { enabled: (c, s) => s.objs.some(o => c.view.store.page.objects.some(
 def(36892, {
   name: (_c, s) => (s.interiors.length ? `剪裁图片到${typeName(s.interiors[0]).replace('内部', '')}` : '剪裁图片到多边形'),
   enabled: (_c, s) => s.images.length === 1 && s.interiors.some(o => o.def.k === 'poly') && s.n === 2,
-  run: (c, s) => { const img = s.images[0], poly = s.interiors.find(o => o.def.k === 'poly')!; c.view.store.run('剪裁图片', () => { if (img.def.k === 'image') c.view.store.update(img.id, { ...img.def, clip: poly.id }); }); },
+  // 原版：隐藏源图片，新增方法 108 的剪裁图片（父对象 [源图片, 多边形内部]，2316 = [源宽, 源高, 剪裁宽, 剪裁高] 像素）
+  run: (c, s) => {
+    const st = c.view.store, img = s.images[0], poly = s.interiors.find(o => o.def.k === 'poly')!;
+    let made: Obj | undefined;
+    st.run('剪裁图片', () => {
+      const shape = st.results.get(img.id)?.shape, mask = st.results.get(poly.id)?.shape;
+      const root = (() => { let d = img.def; for (let k = 0; k < 32 && d.k !== 'image'; k++) { const next = 'src' in d ? st.get(d.src as Id) : undefined; if (!next) break; d = next.def; } return d.k === 'image' ? d : undefined; })();
+      const px = root ? imagePixelSize(root.data, root.mime) ?? { w: root.w, h: root.h } : { w: 0, h: 0 };
+      let cw = px.w, ch = px.h;
+      if (shape?.k === 'box' && shape.image && mask?.k === 'poly') {
+        // 剪裁尺寸：多边形与图片相交部分的外包矩形，换算到源图片像素
+        const [p0, p1, , p3] = shape.image.corners, ex = { x: p1.x - p0.x, y: p1.y - p0.y }, ey = { x: p3.x - p0.x, y: p3.y - p0.y }, det = ex.x * ey.y - ex.y * ey.x;
+        if (Math.abs(det) > 1e-9) {
+          const uv = mask.pts.map(p => ({ u: ((p.x - p0.x) * ey.y - (p.y - p0.y) * ey.x) / det, v: (ex.x * (p.y - p0.y) - ex.y * (p.x - p0.x)) / det }));
+          const clamp = (t: number) => Math.min(1, Math.max(0, t));
+          cw = Math.max(1, Math.round((clamp(Math.max(...uv.map(q => q.u))) - clamp(Math.min(...uv.map(q => q.u)))) * px.w));
+          ch = Math.max(1, Math.round((clamp(Math.max(...uv.map(q => q.v))) - clamp(Math.min(...uv.map(q => q.v)))) * px.h));
+        }
+      }
+      made = st.add({ k: 'image-clip', src: img.id, clip: poly.id, size: [px.w, px.h, cw, ch] }, { style: { ...img.style }, hidden: false });
+      img.hidden = true;
+    });
+    if (made) c.view.setSel([made.id]);
+  },
 });
+export function mergeTextSource(s: Sel): Obj | undefined {
+  if (s.n !== 2 || s.pts.length !== 1) return undefined;
+  if (s.texts.length) return s.texts[0];
+  // 数值快照里，先选点再选参数可用，先选度量再选点为灰。
+  const last = s.objs[1];
+  return s.numeric.includes(last) || s.funcs.includes(last) ? last : undefined;
+}
+
 def(36893, {
   name: (c, s) => {
-    if (c.shift && s.n === 2 && s.texts.length === 1 && s.pts.length === 1) return '合并文本到点';
+    if (c.shift && mergeTextSource(s)) return '合并文本到点';
     if (s.n === 2 && s.pts.length === 2) return '合并点';
     if (s.n === 2 && s.pts.length === 1 && s.paths.length === 1) return `合并点到${typeName(s.paths[0])}`;
     if (s.n === 1 && s.onpath.length === 1) return `从${typeName(c.view.store.get((s.onpath[0].def as { path: Id }).path)!)}分离点`;
     if (c.shift && s.n === 1 && s.pts.length === 1 && ['rotate', 'reflect', 'dilate', 'translate'].includes(s.pts[0].def.k)) return '从定义分离点';
     return '分离/合并';
   },
-  enabled: (c, s) => (s.n === 2 && s.pts.length === 2 && s.pts.some(p => p.def.k === 'free')) || (s.n === 2 && s.pts.length === 1 && s.paths.length === 1 && s.pts[0].def.k === 'free') || (s.n === 1 && s.onpath.length === 1) || (c.shift && s.n === 1 && s.pts.length === 1 && ['rotate', 'reflect', 'dilate', 'translate'].includes(s.pts[0].def.k)) || (c.shift && s.n === 2 && s.texts.length === 1 && s.pts.length === 1),
+  enabled: (c, s) => (s.n === 2 && s.pts.length === 2 && s.pts.some(p => p.def.k === 'free') && !ancestors(c.view.store.page, [s.pts[0].id]).has(s.pts[1].id) && !ancestors(c.view.store.page, [s.pts[1].id]).has(s.pts[0].id)) || (s.n === 2 && s.pts.length === 1 && s.paths.length === 1 && s.pts[0].def.k === 'free') || (s.n === 1 && s.onpath.length === 1) || (c.shift && s.n === 1 && s.pts.length === 1 && ['rotate', 'reflect', 'dilate', 'translate'].includes(s.pts[0].def.k)) || (c.shift && !!mergeTextSource(s)),
   run: (c, s) => c.app.splitMerge(c.view, s, c.shift),
 });
 def(36894, {
@@ -201,7 +235,7 @@ def(36888, { enabled: (_c, s) => s.n === 1 && s.pts.length === 1, run: (c, s) =>
 def(36890 + 0, commands.get(36890)!);
 
 // ---------------- 显示 ----------------
-[36897, 36898, 36899, 36900].forEach((id, i) => def(id, { ...setStyleCmd(() => ({ pointSize: i }), '点型', pointSized), checked: (_c, s) => s.pts.length > 0 && s.pts.every(p => p.style.pointSize === i) }));
+[36897, 36898, 36899, 36900].forEach((id, i) => def(id, { ...setStyleCmd(() => ({ pointSize: i }), '点型', pointSized), checked: (_c, s) => pointSized(s).length > 0 && pointSized(s).every(p => p.style.pointSize === i) }));
 [36901, 36902, 36903, 36904].forEach((id, i) => def(id, { ...setStyleCmd(() => ({ width: i }), '线型', lineTyped), checked: (_c, s) => lineTyped(s).length > 0 && lineTyped(s).every(p => p.style.width === i) }));
 (['solid', 'dash', 'dot'] as const).forEach((d, i) => def(36905 + i, { ...setStyleCmd(() => ({ dash: d }), '线型', lineTyped), checked: (_c, s) => lineTyped(s).length > 0 && lineTyped(s).every(p => p.style.dash === d) }));
 def(36908, {
@@ -215,17 +249,23 @@ def(36908, {
 });
 def(36909, { enabled: (_c, s) => s.n > 0 && !s.objs.every(o => o.def.k === 'image'), run: async (c, s) => { const col = await c.app.dlg.color(s.objs[0].style.color); if (col) c.view.store.run('颜色', () => c.view.store.setStyle(s.objs.map(o => o.id), { color: col })); } });
 def(68057, { run: () => undefined }); def(68037, { run: () => undefined }); def(68039, { run: () => undefined }); def(68041, { run: () => undefined }); def(68045, { run: () => undefined });
+export const fontTargets = (s: Sel) => s.objs.filter(o => ['text', 'measure', 'param', 'calc', 'func', 'picfunc', 'button', 'table', 'itertable'].includes(o.def.k));
 for (const [id, key] of [[32882, 'bold'], [32884, 'italic'], [32883, 'underline']] as const) {
-  def(id, { enabled: (c, s) => !!c.view.textEdit || s.texts.length > 0, checked: (_c, s) => s.texts.length > 0 && s.texts.every(o => o.def.k === 'text' && o.def.font[key]), run: c => c.app.toggleFont(c.view, key) });
+  def(id, { enabled: (c, s) => !!c.view.textEdit || fontTargets(s).length > 0, checked: (_c, s) => fontTargets(s).length > 0 && fontTargets(s).every(o => o.def.k === 'text' ? o.def.font[key] : !!o.font?.[key]), run: c => c.app.toggleFont(c.view, key) });
 }
-def(32892, { enabled: (c, s) => !!c.view.textEdit || s.texts.length > 0, run: c => c.app.fontSize(c.view, 2) });
-def(32893, { enabled: (c, s) => !!c.view.textEdit || s.texts.length > 0, run: c => c.app.fontSize(c.view, -2) });
+def(32892, { enabled: (c, s) => !!c.view.textEdit || fontTargets(s).length > 0, run: c => c.app.fontSize(c.view, 2) });
+def(32893, { enabled: (c, s) => !!c.view.textEdit || fontTargets(s).length > 0, run: c => c.app.fontSize(c.view, -2) });
 def(36911, {
   name: (_c, s) => (s.n ? `隐藏${s.sameType ?? '对象'}` : '隐藏对象'),
   enabled: (_c, s) => s.n > 0,
   run: (c, s) => { const ids = s.objs.map(o => o.id); c.view.store.run(`隐藏${s.sameType ?? '对象'}`, () => c.view.store.setHidden(ids, true)); c.view.setSel([]); },
 });
-def(36912, { enabled: c => c.view.store.page.objects.some(o => o.hidden), run: c => { c.view.store.run('显示所有隐藏', () => c.view.store.setHidden(c.view.store.page.objects.map(o => o.id), false)); } });
+function hiddenUserObjects(st: Store): Obj[] {
+  // 方形坐标系的纵向单位点默认隐藏，是内部构造对象，不算“隐藏对象”；显示全部隐藏也不能改动它。
+  const implicit = new Set(st.page.objects.flatMap(o => o.def.k === 'sys' ? [o.def.unitY] : []));
+  return st.page.objects.filter(o => o.hidden && !implicit.has(o.id));
+}
+def(36912, { enabled: c => hiddenUserObjects(c.view.store).length > 0, run: c => { const hidden = hiddenUserObjects(c.view.store); c.view.store.run('显示所有隐藏', () => c.view.store.setHidden(hidden.map(o => o.id), false)); } });
 def(36913, {
   name: (_c, s) => (s.geo.length && s.geo.every(o => o.labelShown) ? '隐藏标签' : '显示标签'),
   enabled: (_c, s) => s.geo.length > 0,
@@ -238,14 +278,14 @@ def(36913, {
 });
 def(36914, {
   name: (c, s) => (s.n === 0 ? (c.shift ? '重设下一标签…' : '标签…') : `${s.sameType ?? '对象'}的标签…`),
-  enabled: (c, s) => (s.n > 0 && !s.objs.some(o => ['image', 'table', 'sys'].includes(o.def.k))) || (s.n === 0 && c.shift),
+  enabled: (c, s) => s.n ? !s.objs.some(o => ['image', 'table', 'sys'].includes(o.def.k)) : c.shift && c.view.store.page.objects.length > 0,
   run: (c, s) => c.app.dlg.label(c.view, s),
 });
 def(36915, {
   name: (_c, s) => (s.geo.length && s.geo.every(o => o.trace) ? '取消追踪' : '追踪'),
-  enabled: (_c, s) => s.geo.length > 0,
-  checked: (_c, s) => s.geo.length > 0 && s.geo.every(o => o.trace),
-  run: (c, s) => { const on = !s.geo.every(o => o.trace); c.view.store.run('追踪', () => { for (const o of s.geo) o.trace = on; }); },
+  enabled: (_c, s) => s.geo.length > 0 || s.objs.some(o => o.def.k === 'iterimg'),
+  checked: (_c, s) => [...s.geo, ...s.objs.filter(o => o.def.k === 'iterimg')].every(o => o.trace),
+  run: (c, s) => { const targets = [...s.geo, ...s.objs.filter(o => o.def.k === 'iterimg')]; const on = !targets.every(o => o.trace); c.view.store.run('追踪', () => { for (const o of targets) o.trace = on; }); },
 });
 def(36916, { enabled: c => c.view.hasTraces, run: c => c.view.eraseTraces() });
 /** 动画命令（原版采集 probe_animstate）：有动画在跑且没有选择时，四个命令管全部（暂停动画、全部加速、全部减速、停止所有运动）；
@@ -253,7 +293,7 @@ def(36916, { enabled: c => c.view.hasTraces, run: c => c.view.eraseTraces() });
 const animSel = (c: Ctx, s: Sel) => s.n > 0 && c.app.anim.involves(c.view, s.objs);
 def(36917, {
   name: (c, s) => (s.n === 0 && c.app.anim.running ? (c.app.anim.paused ? '继续动画' : '暂停动画') : animSel(c, s) ? '动画' : '动画'),
-  enabled: (c, s) => (s.n === 0 ? c.app.anim.running : !animSel(c, s) && (s.geo.length > 0 || s.syss.length > 0 || s.objs.some(o => o.def.k === 'param'))),
+  enabled: (c, s) => (s.n === 0 ? c.app.anim.running : !animSel(c, s) && (s.geo.length > 0 || s.syss.length > 0 || s.objs.some(o => o.def.k === 'param' || o.def.k === 'iterimg'))),
   run: (c, s) => (s.n === 0 ? c.app.anim.setPaused(!c.app.anim.paused) : c.app.anim.toggle(c.view, s.objs.filter(o => o.def.k !== 'measure' && o.def.k !== 'calc'))),
 });
 def(36918, { name: (_c, s) => (s.n === 0 ? '全部加速' : '加速'), enabled: (c, s) => (s.n === 0 ? c.app.anim.running : animSel(c, s)), run: (c, s) => (s.n === 0 ? c.app.anim.speedUp(1.5) : c.app.anim.speedFor(c.view, s.objs, 1.5)) });
@@ -289,7 +329,33 @@ for (const [id, kind, label] of [[36930, 'parallel', '平行线'], [36931, 'perp
 }
 def(36932, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 3, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造角平分线', () => { m = constructBisector(c.view.store, s.pts[0].id, s.pts[1].id, s.pts[2].id); }); if (m) c.view.setSel([m.id]); } });
 def(36933, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 2, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造圆', () => { m = c.view.store.add({ k: 'circle', c: s.pts[0].id, p: s.pts[1].id }); }); if (m) c.view.setSel([m.id]); } });
-def(36934, { enabled: (_c, s) => s.n === 2 && s.pts.length === 1 && s.segs.length === 1, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造圆', () => { m = c.view.store.add({ k: 'circle-seg', c: s.pts[0].id, seg: s.segs[0].id }); }); if (m) c.view.setSel([m.id]); } });
+function circleRadii(st: Store, selected: Obj[]): Obj[] {
+  return selected.filter(o => {
+    if (o.def.k === 'seg') return true;
+    const value = st.results.get(o.id)?.shape;
+    // 计算结果可能从操作数继承长度单位，以求值结果为准。
+    return value?.k === 'num' && value.q.u === 'distance' && Number.isFinite(value.q.v) && value.q.v >= 0;
+  });
+}
+def(36934, {
+  enabled: (c, s) => {
+    const centers = s.pts.length;
+    if (!centers || centers === s.n) return false;
+    const radii = circleRadii(c.view.store, s.objs).length;
+    return centers + radii === s.n && (centers === 1 || radii === 1);
+  },
+  run: (c, s) => {
+    const st = c.view.store, radii = circleRadii(st, s.objs);
+    const made: Id[] = [];
+    st.run('构造圆', () => {
+      for (const center of s.pts) for (const radius of radii) {
+        made.push(st.add({ k: 'circle-seg', c: center.id, seg: radius.id }, {}, false).id);
+      }
+      st.recompute(made);
+    });
+    c.view.setSel(made);
+  },
+});
 def(36935, {
   enabled: (_c, s) => s.n === 3 && s.circles.length === 1 && s.pts.length === 2,
   run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造弧', () => { m = constructArcOnCircle(c.view.store, s.circles[0].id, s.pts[0].id, s.pts[1].id); s.circles[0].style.dash = 'dash'; }); if (m) c.view.setSel([m.id]); },
@@ -316,7 +382,8 @@ function locusPair(c: Ctx, s: Sel): [Id, Id] | undefined {
 // ---------------- 变换 ----------------
 def(36939, { enabled: (_c, s) => s.pts.length > 0, run: (c, s) => { c.view.marks.center = s.pts[0].id; c.app.flashStatus('已标记中心'); } });
 def(36940, { enabled: (_c, s) => s.straights.length > 0, run: (c, s) => { c.view.marks.mirror = s.straights[0].id; c.app.flashStatus('已标记镜面'); } });
-def(36941, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 3, run: (c, s) => { c.view.marks.angle = [s.pts[0].id, s.pts[1].id, s.pts[2].id]; c.app.flashStatus('已标记角度'); } });
+const angleMeasure = (s: Sel) => s.objs.find(o => o.def.k === 'measure' && ['angle', 'arcangle', 'coordangle'].includes(o.def.m));
+def(36941, { enabled: (_c, s) => (allOf(s, s.pts) && s.n === 3) || !!angleMeasure(s), run: (c, s) => { const m = angleMeasure(s); c.view.marks.angle = m ? { m: m.id } : [s.pts[0].id, s.pts[1].id, s.pts[2].id]; c.app.flashStatus('已标记角度'); } });
 def(36942, {
   name: (_c, s) => (s.segs.length === 2 ? '标记线段比' : unitlessLast(s) ? '标记比值' : '标记比'),
   enabled: (c, s) => (s.n === 2 && s.segs.length === 2) || (s.n === 3 && s.pts.length === 3 && collinear3(c.view.store, s.pts)) || unitlessLast(s),
@@ -331,7 +398,8 @@ function unitlessLast(s: Sel): boolean {
   return o.def.k === 'measure' && o.def.m === 'ratio';
 }
 def(36943, { enabled: (_c, s) => s.pts.length >= 2, run: (c, s) => { c.view.marks.vector = [s.pts[0].id, s.pts[1].id]; c.app.flashStatus('已标记向量'); } });
-def(36944, { enabled: (_c, s) => s.n >= 1 && s.objs.every(o => o.def.k === 'measure' && ['distance', 'length', 'radius', 'circumference'].includes((o.def as { m: string }).m)), run: (c, s) => { c.view.marks.distance = s.objs[0].id; c.app.flashStatus('已标记距离'); } });
+const distanceMeasure = (s: Sel) => s.objs.find(o => o.def.k === 'measure' && ['distance', 'length', 'radius', 'circumference'].includes(o.def.m));
+def(36944, { enabled: (_c, s) => !!distanceMeasure(s), run: (c, s) => { c.view.marks.distance = distanceMeasure(s)!.id; c.app.flashStatus('已标记距离'); } });
 /** 可以被平移/旋转/缩放/反射的几何对象：函数图像不行（它由函数定义）。 */
 const transformable = (s: Sel) => [...s.geo.filter(o => o.def.k !== 'plot' && o.def.k !== 'pcurve'), ...s.images];
 def(36945, {
@@ -403,10 +471,11 @@ def(36951, { enabled: c => !!c.view.store.page.transforms?.length, run: c => c.a
 for (let k = 0; k < 32; k++) {
   def(CMD_CUSTOM + k, {
     name: c => c.view.store.page.transforms?.[k]?.name ?? '',
-    enabled: (c, s) => { const t = c.view.store.page.transforms?.[k]; return !!t && s.geo.length > 0 && !!customChain(c.view.store, t); },
+    enabled: (c, s) => { const t = c.view.store.page.transforms?.[k]; return !!t && (s.geo.length > 0 || s.images.length > 0) && !!customChain(c.view.store, t); },
     run: (c, s) => {
       const st = c.view.store, t = st.page.transforms![k]; let made: Obj[] = [];
-      st.run(t.name, () => { made = applyCustomTransform(st, t, s.geo.map(o => o.id)); });
+      const targets = s.objs.filter(o => s.geo.includes(o) || s.images.includes(o)).map(o => o.id);
+      st.run(t.name, () => { made = applyCustomTransform(st, t, targets); });
       c.view.setSel(made.map(o => o.id));
     },
   });
@@ -427,7 +496,20 @@ def(36959, measureCmd('arcangle', '弧度角', arcSel, arcRefs, false));
 def(36960, measureCmd('arclength', '弧长', arcSel, arcRefs, false));
 def(36961, measureCmd('radius', '半径', (_c, s) => s.n > 0 && s.objs.every(o => ['circle', 'arc'].includes(classOf(o))), s => s.objs.map(o => o.id), true));
 def(36962, measureCmd('ratio', '比', (_c, s) => s.n === 2 && s.segs.length === 2, s => s.segs.map(o => o.id)));
-def(36963, measureCmd('pointvalue', '点的值', (_c, s) => s.n > 0 && s.onpath.length === s.n, s => s.onpath.map(o => o.id), true));
+def(36963, {
+  name: () => '点的值',
+  enabled: (c, s) => (s.n > 0 && s.onpath.length === s.n) || (c.shift && s.paths.length === 1 && s.pts.length > 0 && s.n === s.pts.length + 1),
+  run: (c, s) => {
+    const st = c.view.store, made: Id[] = [];
+    st.run('度量点的值', () => {
+      for (const p of s.pts) {
+        const path = s.paths[0]?.id ?? (p.def.k === 'onpath' ? p.def.path : undefined);
+        if (path !== undefined) made.push(st.add({ k: 'measure', m: 'pointvalue', refs: [p.id, path] }, { at: c.app.nextTextPos(c.view) }).id);
+      }
+    });
+    c.view.setSel(made);
+  },
+});
 def(36964, measureCmd('coords', '坐标', (_c, s) => allOf(s, s.pts), s => s.pts.map(o => o.id), true));
 def(36965, measureCmd('abscissa', '横坐标', (_c, s) => allOf(s, s.pts), s => s.pts.map(o => o.id), true));
 def(36966, measureCmd('ordinate', '纵坐标', (_c, s) => allOf(s, s.pts), s => s.pts.map(o => o.id), true));
@@ -470,7 +552,9 @@ def(36971, {
     const r = await c.app.dlg.calc(c.view, undefined);
     if (!r) return;
     let m: Obj | undefined;
-    c.view.store.run('新建计算', () => { m = c.view.store.add({ k: 'calc', expr: r.expr, unit: 'none' }, { at: c.app.nextTextPos(c.view) }); });
+    // 计算的类型号就是结果单位（无单位 / 距离 / 角度），按当前值定下来；求不出值时按无单位。
+    const st = c.view.store, unit = evaluateExpression(st.page, st.results, r.expr, st.ctx.angleUnit)?.u ?? 'none';
+    st.run('新建计算', () => { m = st.add({ k: 'calc', expr: r.expr, unit }, { at: c.app.nextTextPos(c.view) }); });
     if (m) c.view.setSel([m.id]);
   },
 });
@@ -500,17 +584,25 @@ def(36977, {
   run: async (c, s) => {
     const st = c.view.store, stroke = s.objs[0]; let made: Obj | undefined;
     const shape = st.results.get(stroke.id)?.shape;
-    let profile: import('./core/geom').Pt[][] | undefined;
+    let heightRaster: string | undefined;
     if (shape?.k === 'box' && shape.image) {
-      try { profile = await sampleBitmap(shape.image.data, shape.image.mime); } catch { c.app.dlg.message('不能读取这张图片的像素。'); return; }
-      if (!profile.some(p => p.length > 1)) { c.app.dlg.message('图片中没有可用的有色笔迹。'); return; }
+      try {
+        if (shape.image.mime !== 'image/png') heightRaster = await bitmapAsPng(shape.image.data, shape.image.mime);
+      } catch { c.app.dlg.message('不能读取这张图片的像素。'); return; }
+      const mask = readHeightMask(heightRaster ?? shape.image.data);
+      if (!mask) { c.app.dlg.message('不能读取这张图片的像素。'); return; }
+      if (mask.solid && !(shape.image.clips?.length) &&
+        !await c.app.dlg.confirm('这张图片的边界是实心矩形。继续按它的上边界定义函数吗？')) return;
       if (!st.get(stroke.id)) return;
     }
     st.run('定义绘图函数', () => {
       const sys = findSys(st) ?? createSystem(st);
       const used = new Set(st.page.objects.filter(o => o.def.k === 'func' || o.def.k === 'picfunc').map(o => (o.def.k === 'func' ? o.def.name : o.label)));
       const name = [...'fghijklmn'].find(ch => !used.has(ch)) ?? 'f';
-      made = st.add({ k: 'picfunc', stroke: stroke.id, sys: sys.id, ...(profile ? { profile } : {}) }, { at: c.app.nextTextPos(c.view), label: name });
+      made = st.add({ k: 'picfunc', stroke: stroke.id, sys: sys.id,
+        ...(shape?.k === 'box' && shape.image ? { height: true as const } : {}),
+        ...(heightRaster ? { heightRaster } : {}),
+      }, { at: c.app.nextTextPos(c.view), label: name });
     });
     if (made) c.view.setSel([made.id]);
   },
@@ -530,8 +622,8 @@ def(36984, {
   name: (c, s) => { void s; const sys = findSys(c.view.store); return c.shift ? (sys ? '隐藏坐标系' : '显示坐标系') : sys && sys.def.k === 'sys' && sys.def.showGrid ? '隐藏网格' : '显示网格'; },
   run: (c, s) => { void s; c.app.toggleGrid(c.view, c.shift); },
 });
-def(36985, { checked: c => { const s = findSys(c.view.store); return !!s && s.def.k === 'sys' && s.def.snap; }, run: c => c.app.toggleSnap(c.view) });
-def(36986, { enabled: c => !!findSys(c.view.store), checked: c => c.app.settings.autoSnap, run: c => { c.app.settings.autoSnap = !c.app.settings.autoSnap; c.app.saveSettings(); } });
+def(36985, { checked: c => { const s = findSys(c.view.store); return !!s && s.def.k === 'sys' && !!s.def.gridPoints; }, run: c => c.app.toggleGridPoints(c.view) });
+def(36986, { enabled: c => !!findSys(c.view.store), checked: c => pageAutoSnap(c.view.store.page), run: c => c.app.toggleAutoSnap(c.view) });
 def(36987, { name: (_c, s) => (s.paths.length === 1 ? `在${typeName(s.paths[0])}上绘制点…` : '在轴上绘制点…'), run: (c, s) => c.app.dlg.plotOnPath(c.view, s) });
 def(36988, { name: (_c, s) => (s.n === 2 && s.numeric.length === 2 ? '绘制点(x，y)' : '绘制点…'), run: (c, s) => c.app.plotPoint(c.view, s) });
 def(36989, { enabled: (_c, s) => s.n === 1 && s.tables.length === 1 && s.tables[0].def.k === 'table', run: (c, s) => c.app.plotTable(c.view, s.tables[0]) });
@@ -562,8 +654,13 @@ for (const [id, k] of [[CMD_ITER_UP, 1], [CMD_ITER_DOWN, -1]] as const) {
 for (const [id, k] of [[CMD_RES_UP, 2], [CMD_RES_DOWN, 0.5]] as const) {
   def(id, {
     name: () => (k > 1 ? '提高分辨率' : '降低分辨率'),
-    enabled: (_c, s) => s.n > 0 && s.objs.every(o => o.def.k === 'plot' || o.def.k === 'locus' || o.def.k === 'pcurve'),
-    run: (c, s) => c.view.store.run(k > 1 ? '提高分辨率' : '降低分辨率', () => { for (const o of s.objs) if (o.def.k === 'plot' || o.def.k === 'locus' || o.def.k === 'pcurve') c.view.store.update(o.id, { ...o.def, samples: Math.max(20, Math.min(4000, Math.round(o.def.samples * k))) }); }),
+    enabled: (_c, s) => s.n > 0 && s.objs.every(o => o.def.k === 'plot' || o.def.k === 'locus' || o.def.k === 'pcurve' || o.def.k === 'custom-image'),
+    run: (c, s) => c.view.store.run(k > 1 ? '提高分辨率' : '降低分辨率', () => {
+      for (const o of s.objs) {
+        if (o.def.k === 'plot' || o.def.k === 'locus' || o.def.k === 'pcurve') c.view.store.update(o.id, { ...o.def, samples: Math.max(20, Math.min(4000, Math.round(o.def.samples * k))) });
+        else if (o.def.k === 'custom-image') c.view.store.update(o.id, { ...o.def, samples: Math.max(4, Math.min(1000000, Math.round(o.def.samples * k))) });   // 取样变换图片的采样数（范围为新版设定）
+      }
+    }),
   });
 }
 for (const [id, k] of [[CMD_VAL_UP, 1], [CMD_VAL_DOWN, -1]] as const) {

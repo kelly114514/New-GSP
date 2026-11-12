@@ -21,7 +21,7 @@ await page.evaluate(async () => {
     const W = 1785, H = 954, z = 1.5, sc = pg.scroll ?? { x: 0, y: 0 };
     const view = { x0: sc.x, y0: sc.y, x1: sc.x + W / z, y1: sc.y + H / z };
     applyDisplay(doc.settings?.display ?? DD.DEFAULT_DISPLAY);
-    const res = evaluatePage(pg, undefined, undefined, { view });
+    const res = evaluatePage(pg, undefined, undefined, { view, angleUnit: doc.settings.display?.angleUnit });
     const c = document.createElement('canvas'); c.width = W; c.height = H;
     const ctx = c.getContext('2d', { willReadFrequently: true })!;
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
@@ -46,7 +46,7 @@ await page.evaluate(async () => {
     const fd = decodeFile(bytes, 'x.gsp').doc, fp = fd.pages[fd.current ?? 0];
     const c3 = document.createElement('canvas'); c3.width = W; c3.height = H; const ctx3 = c3.getContext('2d', { willReadFrequently: true })!;
     ctx3.fillStyle = '#fff'; ctx3.fillRect(0, 0, W, H); ctx3.setTransform(z, 0, 0, z, -sc.x * z, -sc.y * z);
-    drawPage(ctx3, fp, evaluatePage(fp, undefined, undefined, { view }), { selection: new Set(), hideHidden: true, view });
+    drawPage(ctx3, fp, evaluatePage(fp, undefined, undefined, { view, angleUnit: fd.settings.display?.angleUnit }), { selection: new Set(), hideHidden: true, view });
     ctx3.setTransform(1, 0, 0, 1, 0, 0);
     const newFix = ink(ctx3.getImageData(0, 0, W, H).data), mask2 = new Uint8Array(W * H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (newFix[y * W + x]) for (let yy = Math.max(0, y - 2); yy <= Math.min(H - 1, y + 2); yy++) for (let xx = Math.max(0, x - 2); xx <= Math.min(W - 1, x + 2); xx++) mask2[yy * W + xx] = 1;

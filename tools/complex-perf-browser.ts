@@ -32,7 +32,7 @@ try {
     const ctx = canvas.getContext('2d')!;
     const times: number[] = []; st.begin('drag');
     for (let i = 0; i < 35; i++) {
-      const t = performance.now(); st.moveFree(a, 100 + i, 100 + i); st.recompute([a]);
+      const t = performance.now(); st.moveFree(a, 100 + i, 100 + i, false); st.recompute([a]);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawPage(ctx, st.page, st.results, { selection: new Set(), hideHidden: true, view: { x0: 0, y0: 0, x1: 1000, y1: 700 } });
       // 同步读回使 Canvas 提交实际光栅操作，但不包括合成器与显示刷新。

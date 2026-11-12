@@ -9,10 +9,12 @@ const page = await browser.newPage({ viewport: { width: w, height: h }, deviceSc
 await page.goto('http://127.0.0.1:5173/'); await page.waitForFunction(() => !!(window as any).__app);
 const b64 = readFileSync(inp).toString('base64');
 const png = await page.evaluate(async ([data, W, H, Z]) => {
-  const P = ['/src/gsp/codec.ts', '/src/core/engine.ts', '/src/ui/render.ts'];
-  const { decodeFile } = await import(/* @vite-ignore */ P[0]); const { evaluatePage } = await import(/* @vite-ignore */ P[1]); const { drawPage } = await import(/* @vite-ignore */ P[2]);
+  const P = ['/src/gsp/codec.ts', '/src/core/engine.ts', '/src/ui/render.ts', '/src/core/model.ts'];
+  const { decodeFile } = await import(/* @vite-ignore */ P[0]); const { evaluatePage } = await import(/* @vite-ignore */ P[1]); const { drawPage, applyDisplay } = await import(/* @vite-ignore */ P[2]);
+  const { pageDisplay } = await import(/* @vite-ignore */ P[3]);
   const bin = atob(data as string), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const doc = decodeFile(bytes, 'x.gsp').doc, pg = doc.pages[0], res = evaluatePage(pg);
+  const doc = decodeFile(bytes, 'x.gsp').doc, pg = doc.pages[Math.min(doc.current ?? 0, doc.pages.length - 1)], prefs = pageDisplay(doc, pg), res = evaluatePage(pg, undefined, undefined, { angleUnit: prefs.angleUnit });
+  applyDisplay(prefs);
   const c = document.createElement('canvas'); c.width = W as number; c.height = H as number; const ctx = c.getContext('2d')!;
   ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
   const z = Z as number; const sc = pg.scroll ?? { x: 0, y: 0 }; ctx.setTransform(z, 0, 0, z, -sc.x * z, -sc.y * z);   // 和应用里一样：页面坐标是逻辑像素，画布按屏幕缩放放大

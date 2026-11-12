@@ -43,7 +43,10 @@ export function distToStraight(s: Straight, p: Pt): number {
 
 export function intersectStraights(a: Straight, b: Straight): Pt | undefined {
   const d = sub(a.b, a.a), e = sub(b.b, b.a), den = cross(d, e);
-  if (Math.abs(den) < EPS * Math.max(1, len(d) * len(e))) return undefined;
+  // 一范数给出长度的上界。明确不平行时省掉两次 hypot，临界处仍使用原来的判定。
+  const absDen = Math.abs(den);
+  const maxLengthProduct = (Math.abs(d.x) + Math.abs(d.y)) * (Math.abs(e.x) + Math.abs(e.y));
+  if (absDen <= 2 * EPS * Math.max(1, maxLengthProduct) && absDen < EPS * Math.max(1, len(d) * len(e))) return undefined;
   const v = sub(b.a, a.a), t = cross(v, e) / den, u = cross(v, d) / den;
   if (!paramOk(a.ext, t) || !paramOk(b.ext, u)) return undefined;
   return pointAt(a, t);
@@ -54,8 +57,11 @@ export function intersectStraights(a: Straight, b: Straight): Pt | undefined {
 export function intersectLineCircleRaw(s: Straight, c: Circ): { t: number; p: Pt }[] {
   const d = sub(s.b, s.a), f = sub(s.a, c.c), A = dot(d, d);
   if (A < EPS) return [];
-  const B = 2 * dot(f, d), C = dot(f, f) - c.r * c.r, disc = B * B - 4 * A * C;
-  const tol = 1e-9 * Math.max(1, B * B);
+  const distanceSquared = dot(f, f), radiusSquared = c.r * c.r;
+  const B = 2 * dot(f, d), C = distanceSquared - radiusSquared, disc = B * B - 4 * A * C;
+  // 垂足接近 a 时 B 接近零，C 却是两个大数之差。按相减前的量级留出舍入余量。
+  const roundoff = 32 * Number.EPSILON * A * Math.max(distanceSquared, radiusSquared);
+  const tol = Math.max(1e-9 * Math.max(1, B * B), roundoff);
   if (disc < -tol) return [];
   const sq = Math.sqrt(Math.max(0, disc));
   const ts = disc <= tol ? [-B / (2 * A)] : [(-B - sq) / (2 * A), (-B + sq) / (2 * A)];

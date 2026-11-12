@@ -15,6 +15,7 @@ export class Store {
   doc: Doc;
   results: Results = new Map();
   ctx: EvalCtx = {};
+  private defaultAngleUnit: NonNullable<EvalCtx['angleUnit']> = 'deg';
   dirty = false;                  // 相对上次保存是否有改动
   private undo: HistoryEntry[] = [];
   private redo: HistoryEntry[] = [];
@@ -36,13 +37,36 @@ export class Store {
   on(fn: () => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   private emit() { for (const f of this.listeners) f(); }
 
+  fullEvalMs = 0;
   recompute(changed?: Iterable<Id>) {
+    const angleUnit = this.page.display?.angleUnit ?? this.doc.settings.display?.angleUnit ?? this.defaultAngleUnit;
+    if (this.ctx.angleUnit !== angleUnit) {
+      this.ctx = { ...this.ctx, angleUnit };
+      changed = undefined;
+    }
+    const start = performance.now();
     this.results = evaluatePage(this.page, changed, changed ? this.results : undefined, this.ctx);
+    if (!changed) this.fullEvalMs = performance.now() - start;
   }
+
+  syncAngleUnit(fallback: NonNullable<EvalCtx['angleUnit']>) {
+    this.defaultAngleUnit = fallback;
+    if (this.ctx.angleUnit !== (this.page.display?.angleUnit ?? this.doc.settings.display?.angleUnit ?? fallback)) this.recompute();
+  }
+
+  private lineDriven(d: Extract<import('./model').Def, { k: 'locus' }>): boolean {
+    if (d.pathRange) return false;
+    const drv = this.page.objects.find(o => o.id === d.driver)?.def, pathId = d.path ?? (drv?.k === 'onpath' ? drv.path : undefined);
+    const shape = pathId === undefined ? undefined : this.results.get(pathId)?.shape;
+    return shape?.k === 'line' && shape.s.ext !== 'segment';
+  }
+
   setView(view: EvalCtx['view']) {
     if (JSON.stringify(view) === JSON.stringify(this.ctx.view)) return;
     this.ctx = { ...this.ctx, view };
-    if (this.page.objects.some(o => o.def.k === 'plot')) { this.recompute(this.page.objects.filter(o => o.def.k === 'plot').map(o => o.id)); this.emit(); }
+    // 函数图像和直线/射线上的轨迹按视图取样，视图变化时重算
+    const viewDependent = this.page.objects.filter(o => o.def.k === 'plot' || (o.def.k === 'locus' && !o.def.parameter && this.lineDriven(o.def)));
+    if (viewDependent.length) { this.recompute(viewDependent.map(o => o.id)); this.emit(); }
   }
 
   // ---------- 事务 ----------
@@ -64,11 +88,13 @@ export class Store {
     this.tx = undefined;
     this.emit();
   }
-  cancel() {
+  /** 可传入事务开始时在同一视图和动画状态下的完整结果。 */
+  cancel(originalResults?: Results) {
     if (!this.tx) return;
     this.doc = JSON.parse(this.tx.before);
     this.tx = undefined;
-    this.recompute();
+    if (originalResults) this.results = originalResults;
+    else this.recompute();
     this.emit();
   }
   /** 一次性事务：fn 内修改文档，返回后提交。出错则回滚。 */
@@ -116,18 +142,18 @@ export class Store {
 
   private isPoint(o: Obj) { return ['free', 'onpath', 'mid', 'inter', 'translate', 'rotate', 'dilate', 'reflect', 'plotxy', 'plotfix', 'axispt', 'pointval', 'combine', 'iterpt'].includes(o.def.k); }
 
-  update(id: Id, def: Def) {
+  update(id: Id, def: Def, recompute = true) {
     const o = this.get(id); if (!o) return;
     o.def = def;
     this.ctx.tOverride?.delete(id); this.ctx.valOverride?.delete(id);
-    this.recompute([id]);
+    if (recompute) this.recompute([id]);
   }
-  /** 拖动用：只改自由点坐标，立即重算受影响的对象。 */
-  moveFree(id: Id, x: number, y: number) {
+  /** 拖动用：改自由点坐标；同时移动多个点时传 recompute=false，全部改完再统一 recompute。 */
+  moveFree(id: Id, x: number, y: number, recompute = true) {
     const o = this.get(id); if (!o || o.def.k !== 'free') return;
     o.def = { k: 'free', x, y };
     this.ctx.posOverride?.delete(id);
-    this.recompute([id]);
+    if (recompute) this.recompute([id]);
   }
   setStyle(ids: Iterable<Id>, patch: Partial<Style>) { for (const id of ids) { const o = this.get(id); if (o) o.style = { ...o.style, ...patch }; } }
   setHidden(ids: Iterable<Id>, hidden: boolean) { for (const id of ids) { const o = this.get(id); if (o) o.hidden = hidden; } }
@@ -149,6 +175,10 @@ export class Store {
     const p = this.page, start = new Set(ids), gone = new Set<Id>([...start, ...descendants(p, start)]);
     // 删除多边形顶点时，多边形内部一并删除（已由 parentsOf 覆盖）
     p.objects = p.objects.filter(o => !gone.has(o.id));
+    if (p.startupButtons) {
+      p.startupButtons = p.startupButtons.filter(id => !gone.has(id));
+      if (!p.startupButtons.length) delete p.startupButtons;
+    }
     this.recompute();
     return gone;
   }
@@ -171,6 +201,10 @@ export class Store {
   }
   switchPage(i: number) {
     if (i < 0 || i >= this.doc.pages.length) return;
+    if (i !== this.doc.current) {
+      const { tOverride: _t, valOverride: _v, posOverride: _p, ...view } = this.ctx;
+      this.ctx = view;
+    }
     this.doc.current = i;
     this.recompute();
     this.emit();

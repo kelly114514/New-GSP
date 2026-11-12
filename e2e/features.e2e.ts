@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { Store } from '../src/core/store';
+import { encodeGsp } from '../src/gsp/codec';
 
 declare global { interface Window { __app: any } }
 const errors: string[] = [];
@@ -130,6 +132,59 @@ test('多页：增加页、复制页、切换、页面链接按钮', async ({ pa
   expect(await page.locator('#pagebar button').count()).toBe(3);
   await page.locator('#pagebar button').nth(1).click();
   expect(await page.evaluate(() => window.__app.active.store.page.objects.length)).toBe(6);
+});
+
+test('旧课件链接按钮打开对应的本地帮助和邮件入口', async ({ page }) => {
+  const st = new Store();
+  const urls = ['Help://ToolboxFldr/CustomToolsFldr/ToolFolder.htm', 'mailto:teacher+lesson@example.test'];
+  st.run('旧课件链接', () => {
+    urls.forEach((url, i) => st.add({
+      k: 'button', action: { type: 'link', page: 0, url }, text: i ? '联系作者' : '工具帮助',
+      at: { x: 80, y: 100 + i * 80 }, w: 130, h: 28,
+    }));
+  });
+  const chooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Control+o');
+  await (await chooser).setFiles({ name: '旧链接.gsp', mimeType: 'application/octet-stream', buffer: Buffer.from(encodeGsp(st.doc)) });
+  await page.waitForFunction(() => window.__app.docs.length === 2);
+  await page.evaluate(() => {
+    const urls: string[] = [];
+    window.__app.testOpenedUrls = urls;
+    window.open = url => { urls.push(String(url)); return null; };
+  });
+  const canvas = page.locator('.docwin.active canvas').last();
+  await canvas.click({ position: { x: 100, y: 110 } });
+  await expect(page.getByRole('dialog')).toContainText('工具文件夹');
+  await ok(page);
+  await canvas.click({ position: { x: 100, y: 190 } });
+  expect(await page.evaluate(() => window.__app.testOpenedUrls)).toEqual([urls[1]]);
+});
+
+test('移动按钮同时执行时区分目标的初始位置和最终位置', async ({ page }) => {
+  const st = new Store();
+  const pairs = [false, true].map(initial => {
+    const y = initial ? 300 : 200;
+    const [a, b, c] = [200, 400, 600].map(x => st.add({ k: 'free', x, y }).id);
+    const follow = st.add({ k: 'button', text: '移动 A', at: { x: 30, y: y - 100 }, w: 90, h: 28,
+      action: { type: 'move', from: a, to: b, speed: 'high', ...(initial ? { toInitial: true } : { legacyFinal: true }) } }).id;
+    const move = st.add({ k: 'button', text: '移动 B', at: { x: 140, y: y - 100 }, w: 90, h: 28,
+      action: { type: 'move', from: b, to: c, speed: 'high' } }).id;
+    const button = st.add({ k: 'button', text: '运行', at: { x: 250, y: y - 100 }, w: 90, h: 28,
+      action: { type: 'series', buttons: [follow, move], mode: 'together' } }).id;
+    return { a, b, button };
+  });
+  const chooser = page.waitForEvent('filechooser');
+  await page.keyboard.press('Control+o');
+  await (await chooser).setFiles({ name: '并行移动.gsp', mimeType: 'application/octet-stream', buffer: Buffer.from(encodeGsp(st.doc)) });
+  await page.waitForFunction(() => window.__app.docs.length === 2);
+  await page.evaluate(ids => {
+    const app = window.__app, v = app.active;
+    ids.forEach(({ button }) => app.pressButton(v, v.store.get(button)));
+  }, pairs);
+  await expect.poll(() => page.evaluate(ids => ids.map(({ a, b }) => {
+    const results = window.__app.active.store.results;
+    return [results.get(a)?.shape?.p.x, results.get(b)?.shape?.p.x];
+  }), pairs)).toEqual([[600, 600], [400, 600]]);
 });
 
 test('属性、标签、参数选项、页面设置、颜色等对话框能打开并确认', async ({ page }) => {
@@ -456,4 +511,132 @@ test('双击标记：点→中心，线段→镜面，两者独立并存；动�
   await dbl(200, 250);                                                    // 点 A：只换中心，镜面保留
   expect(await page.evaluate(() => window.__app.active.marks)).toMatchObject({ center: 1, mirror: 4 });
   expect(await page.evaluate(() => window.__app.active.store.page.objects.length)).toBe(6);
+});
+
+test('系列按钮在 Reset 的目标无定义时仍可点击，并继续执行其它步骤', async ({ page }) => {
+  const ids = await page.evaluate(() => {
+    const st = window.__app.active.store;
+    return st.run('构造按钮和交点', () => {
+      const a = st.add({ k: 'free', x: 150, y: 160 }).id;
+      const b = st.add({ k: 'free', x: 350, y: 200 }).id;
+      const c = st.add({ k: 'free', x: 150, y: 280 }).id;
+      const d = st.add({ k: 'free', x: 350, y: 280 }).id;
+      const l1 = st.add({ k: 'line', a, b }).id;
+      const l2 = st.add({ k: 'line', a: c, b: d }).id;
+      const cross = st.add({ k: 'inter', a: l1, b: l2, branch: 0 }).id;
+      const marker = st.add({ k: 'free', x: 120, y: 400 }).id;
+      const reset = st.add({ k: 'button', action: { type: 'move', from: marker, to: cross, speed: 'high' }, text: '复位', at: { x: 560, y: 100 }, w: 90, h: 28 }, { hidden: true }).id;
+      const hide = st.add({ k: 'button', action: { type: 'hideshow', targets: [marker], mode: 'hide' }, text: '隐藏标记', at: { x: 560, y: 140 }, w: 90, h: 28 }, { hidden: true }).id;
+      const series = st.add({ k: 'button', action: { type: 'series', buttons: [reset, hide], mode: 'together' }, text: '系列', at: { x: 560, y: 180 }, w: 90, h: 28 }).id;
+      return { cross, marker, reset, hide, series };
+    });
+  });
+  const state = () => page.evaluate(({ cross, marker, series }) => {
+    const st = window.__app.active.store;
+    return [st.results.get(cross).status, st.results.get(series).shape?.k, st.get(marker).hidden];
+  }, ids);
+  expect(await state()).toEqual(['ok', 'box', false]);
+  await pdrag(page, 150, 160, 150, 200); // 两条直线平行，交点暂时无定义
+  expect(await state()).toEqual(['undefined', 'box', false]);
+  const button = await pt(page, 580, 194);
+  await page.mouse.click(button.x, button.y);
+  expect(await state()).toEqual(['undefined', 'box', true]);
+  await pdrag(page, 150, 200, 150, 160);
+  expect(await state()).toEqual(['ok', 'box', true]);
+
+  // 非法循环引用跳过已在执行路径上的系列，后续有效动作仍然执行。
+  await page.evaluate(({ series, hide, marker }) => {
+    const v = window.__app.active, st = v.store, def = st.get(series).def;
+    st.setHidden([marker], false);
+    st.update(series, { ...def, action: { ...def.action, buttons: [series, hide] } });
+  }, ids);
+  await page.mouse.click(button.x, button.y);
+  expect(await state()).toEqual(['ok', 'box', true]);
+});
+
+test('移动按钮能移动坐标绘制点和缩放后的点', async ({ page }) => {
+  const ids = await page.evaluate(() => {
+    const app = window.__app, v = app.active, st = v.store;
+    return st.run('构造移动按钮', () => {
+      const source = st.add({ k: 'free', x: 240, y: 260 }).id;
+      const center = st.add({ k: 'free', x: 440, y: 460 }).id;
+      const target = st.add({ k: 'free', x: 300, y: 380 }).id;
+      const seg = st.add({ k: 'seg', a: source, b: center }).id;
+      const origin = st.add({ k: 'mid', seg }).id;
+      const unitX = st.add({ k: 'translate', src: origin, by: { mode: 'rect', dx: 1, dy: 0 } }).id;
+      const unitY = st.add({ k: 'translate', src: origin, by: { mode: 'rect', dx: 0, dy: 1 } }).id;
+      const axisX = st.add({ k: 'line', a: origin, b: unitX }).id;
+      const axisY = st.add({ k: 'line', a: origin, b: unitY }).id;
+      const sys = st.add({ k: 'sys', origin, unitX, unitY, axisX, axisY, grid: 'square', showGrid: false, snap: false }).id;
+      const x = st.add({ k: 'measure', m: 'abscissa', refs: [source, sys] }).id;
+      const y = st.add({ k: 'measure', m: 'ordinate', refs: [source, sys] }).id;
+      const plot = st.add({ k: 'plotxy', x, y, sys }).id;
+      const scaled = st.add({ k: 'dilate', src: center, center: source, ratio: { mode: 'fixed', num: 2, den: 1 } }).id;
+      for (const [from, atY] of [[plot, 80], [scaled, 130]]) {
+        st.add({ k: 'button', text: '移动', at: { x: 40, y: atY }, w: 65, h: 25, action: { type: 'move', from, to: target, speed: 'high' } });
+      }
+      return [source, center, scaled];
+    });
+  });
+  const pos = await page.evaluate(() => { const r = window.__app.active.overlay.getBoundingClientRect(); return { x: r.left, y: r.top }; });
+  const coords = () => page.evaluate(ids => {
+    const st = window.__app.active.store;
+    return ids.map(id => st.results.get(id).shape.p);
+  }, ids);
+  await page.mouse.click(pos.x + 65, pos.y + 92);
+  await expect.poll(coords).toEqual([{ x: 300, y: 380 }, { x: 500, y: 580 }, { x: 700, y: 780 }]);
+  await page.mouse.click(pos.x + 65, pos.y + 142);
+  await expect.poll(coords).toEqual([{ x: 300, y: 380 }, { x: 300, y: 380 }, { x: 300, y: 380 }]);
+});
+
+test('以圆心和半径绘圆接受距离度量及带长度单位的计算结果', async ({ page }) => {
+  await scene(page);
+  const ids = await page.evaluate(() => {
+    const st = window.__app.active.store;
+    return st.run('构造半径输入', () => {
+      const length = st.add({ k: 'measure', m: 'length', refs: [4] }).id;
+      const distance = st.add({ k: 'measure', m: 'distance', refs: [3, 1] }).id;
+      const difference = st.add({ k: 'calc', unit: 'distance', expr: { t: 'bin', op: '-', a: { t: 'ref', id: length }, b: { t: 'ref', id: distance } } }).id;
+      const scalar = st.add({ k: 'param', name: 'k', value: 2, unit: 'none', showEdit: true }).id;
+      const angle = st.add({ k: 'param', name: 'α', value: 30, unit: 'angle', showEdit: true }).id;
+      const negative = st.add({ k: 'param', name: 'd', value: -2, unit: 'distance', showEdit: true }).id;
+      return { length, distance, difference, scalar, angle, negative };
+    });
+  });
+  await select(page, [ids.difference, 3]);
+  await page.locator('#menubar .toplabel').filter({ hasText: '构造' }).click();
+  const item = page.locator('#menubar .open .item').filter({ hasText: '以圆心和半径绘圆' });
+  await expect(item).toBeVisible();
+  await expect(item).not.toHaveClass(/disabled/);
+  await item.click();
+  const circle = (circleId?: number) => page.evaluate(circleId => {
+    const v = window.__app.active;
+    const id = circleId ?? v.sel[0];
+    return { id, def: v.store.get(id).def, shape: v.store.results.get(id).shape };
+  }, circleId);
+  const first = await circle();
+  expect(first.def).toEqual({ k: 'circle-seg', c: 3, seg: ids.difference });
+  expect(first.shape.c.r).toBeCloseTo(220 - Math.hypot(100, 180));
+  await select(page, []);
+  await pdrag(page, 420, 250, 520, 250);
+  expect((await circle(first.id)).shape.c.r).toBeCloseTo(320 - Math.hypot(100, 180));
+
+  const enabled = async (selection: number[]) => {
+    await select(page, selection);
+    return page.evaluate(() => window.__app.queryMenu(36934).enabled);
+  };
+  for (const bad of [ids.scalar, ids.angle, ids.negative]) expect(await enabled([3, bad])).toBe(false);
+  expect(await enabled([1, 3, ids.distance, ids.length])).toBe(false);
+
+  expect(await enabled([1, 3, ids.distance])).toBe(true);
+  await exec(page, 36934);
+  const selectedDefs = () => page.evaluate(() => {
+    const v = window.__app.active;
+    return v.sel.map((id: number) => v.store.get(id).def);
+  });
+  expect(await selectedDefs()).toEqual([{ k: 'circle-seg', c: 1, seg: ids.distance }, { k: 'circle-seg', c: 3, seg: ids.distance }]);
+
+  expect(await enabled([3, 4, ids.length])).toBe(true);
+  await exec(page, 36934);
+  expect(await selectedDefs()).toEqual([{ k: 'circle-seg', c: 3, seg: 4 }, { k: 'circle-seg', c: 3, seg: ids.length }]);
 });

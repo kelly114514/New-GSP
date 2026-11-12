@@ -1,5 +1,6 @@
 /** 迭代面板：不挡住画板，在画板里单击对象来给每个原象指定初象；“显示”“结构”两个弹出菜单。 */
 import type { App } from '../app';
+import { ITER_MAX_DEPTH } from '../core/engine';
 import { classOf } from '../core/construct';
 import { constructIteration, isNumericObj, iterationTargets, tableColumns } from '../core/iterate';
 import type { Id, Obj } from '../core/model';
@@ -96,7 +97,7 @@ export class IterPanel {
 
   private paramDepth(): number {
     const s = this.view.store.results.get(this.depthParam!.id)?.shape;
-    return s?.k === 'num' ? Math.round(s.q.v) : 0;
+    return s?.k === 'num' && Number.isFinite(s.q.v) ? Math.round(s.q.v) : 0;
   }
 
   /** 画板里的一次单击：选作当前空位的初象（点对点、数值对数值）。 */
@@ -130,7 +131,7 @@ export class IterPanel {
 
   private changeDepth(d: number) {
     if (this.depthParam) return;
-    this.depth = Math.max(0, Math.min(20, this.depth + d));
+    this.depth = Math.max(0, Math.min(ITER_MAX_DEPTH, this.depth + d));
     this.refresh();
   }
   private addMap() {

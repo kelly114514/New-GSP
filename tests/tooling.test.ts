@@ -76,6 +76,7 @@ describe.skipIf(!have)('载入 44 个工具文件', () => {
     const picks = st.run('输入', () => [st.add({ k: 'free', x: 100, y: 120 }).id, st.add({ k: 'free', x: 300, y: 250 }).id]);
     const output = st.run('工具', () => applyTool(st, tool, picks, () => ({ x: 20, y: 20 }), { random: () => 0.2 }));
     const locus = output.find(o => o.def.k === 'locus')!;
+    expect(locus.def).toMatchObject({ samples: 250 });
     const span = () => {
       const s = st.results.get(locus.id)?.shape;
       if (s?.k !== 'multi' || !s.items.every(it => it.k === 'line')) throw new Error('阴影轨迹没有线段');
@@ -88,6 +89,55 @@ describe.skipIf(!have)('载入 44 个工具文件', () => {
     st.run('移动', () => st.moveFree(picks[1], 400, 250));
     expect(span()).toBeGreaterThan(before + 60);
   });
+  it('原版点轨迹、圆内部与着色多边形工具采用不同的采样数', () => {
+    const cases = [
+      ['实体工具', '平截头体', [500, 500, 500, 500, 500, 500]],
+      ['经典坐标系', '数列图象生成工具', [62, 500]],
+      ['[3d]着色工具', '【函数】函数发生器3', [125]],
+    ] as const;
+    const tools = groups.flatMap(g => g.tools.map(resolveTool));
+    for (const [group, name, samples] of cases) {
+      const tool = tools.find(t => t.group === group && t.name === name);
+      if (!tool) throw new Error(`找不到工具 ${name}`);
+      const { st, picks } = feed(tool);
+      st.run('重放轨迹工具', () => applyTool(st, tool, picks, () => ({ x: 20, y: 20 }), { random: () => 0.37 }));
+      const loci = st.page.objects.flatMap(o => o.def.k === 'locus' ? [o.def.samples] : []);
+      expect(loci, name).toEqual(samples);
+    }
+  });
+  it('有界滑块换了视口也能拖到原版的第十个单位', () => {
+    const tools = groups.flatMap(g => g.tools.map(resolveTool)).filter(t => t.group === '滑块工具' && /^有界的[水平垂直]{2}滑块$/.test(t.name));
+    expect(tools).toHaveLength(2);
+    for (const tool of tools) {
+      const { st, picks } = feed(tool);
+      st.setView({ x0: 0, y0: 0, x1: 500, y1: 450 });
+      st.run('重放滑块工具', () => applyTool(st, tool, picks, () => ({ x: 20, y: 20 }), { random: () => 0.5 }));
+      const graph = st.page.objects.find(o => o.def.k === 'plot')!;
+      expect(graph.def).toMatchObject({ lo: -10, hi: 10, samples: 750 });
+      const point = st.page.objects.find(o => o.def.k === 'onpath' && o.def.path === graph.id)!;
+      if (point.def.k !== 'onpath') throw new Error('滑块没有附着点');
+      const d = point.def;
+      st.setView({ x0: 300, y0: 200, x1: 900, y1: 600 });
+      st.run('拖到端点', () => st.update(point.id, { ...d, t: 1 }));
+      const ratio = st.page.objects.find(o => o.def.k === 'measure' && o.def.m === 'ratio')!;
+      const q = st.results.get(ratio.id)?.shape;
+      expect(q?.k === 'num' && q.q.v).toBeCloseTo(10);
+    }
+  });
+  it.each([['过三点的抛物线(2)', 1], ['01 立体几何平台', 3]] as const)(
+    '%s 在不同视口中保留原版的固定图像范围', (name, count) => {
+      const ref = groups.flatMap(g => g.tools).find(t => t.name === name)!;
+      const tool = resolveTool(ref);
+      for (const x0 of [0, 180]) {
+        const { st, picks } = feed(tool);
+        st.setView({ x0, y0: 0, x1: x0 + 500, y1: 450 });
+        st.run('应用工具', () => applyTool(st, tool, picks, () => ({ x: 20, y: 20 }), { random: () => 0.37 }));
+        const plots = st.page.objects.filter(o => o.def.k === 'plot');
+        expect(plots).toHaveLength(count);
+        for (const plot of plots) expect(plot.def).toMatchObject({ lo: -10, hi: 10, samples: 750 });
+      }
+    },
+  );
 });
 
 it('路径点优先在可见部分初始化，视口以页面坐标计', () => {

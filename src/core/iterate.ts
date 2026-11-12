@@ -84,5 +84,5 @@ export function depthOf(st: Store, iterId: Id): number | undefined {
   if (!it || it.def.k !== 'iterate') return undefined;
   if ('fixed' in it.def.depth) return it.def.depth.fixed;
   const p = st.results.get(it.def.depth.param)?.shape;
-  return p?.k === 'num' ? Math.round(p.q.v) : undefined;
+  return p?.k === 'num' && Number.isFinite(p.q.v) ? Math.round(p.q.v) : undefined;
 }

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import * as G from '../src/core/geom';
 import { Store } from '../src/core/store';
 import { createSystem, constructIntersections, constructLines, dilateBy, reflectBy, rotateBy, translateBy } from '../src/core/construct';
-import { evaluatePage, pathPointAt, projectToPath, type Shape } from '../src/core/engine';
-import { evalExpr, parseExpr, q } from '../src/core/expr';
+import { evaluatePage, evaluateTargets, pathPointAt, projectToPath, type Shape } from '../src/core/engine';
+import { evalExpr, formatQ, parseExpr, q } from '../src/core/expr';
 import { hitAll, hitRect } from '../src/core/hit';
 import { labelFor } from '../src/core/store';
 import type { Id } from '../src/core/model';
@@ -11,7 +11,52 @@ import type { Id } from '../src/core/model';
 const pointAt = (st: Store, id: Id) => { const s = st.results.get(id)?.shape; if (s?.k !== 'pt') throw new Error(`#${id} 不是点：${JSON.stringify(st.results.get(id))}`); return s.p; };
 const free = (st: Store, x: number, y: number) => st.add({ k: 'free', x, y }).id;
 
+it('三点弧的参数从第一个点走向第三个点，变换后与投影一致', () => {
+  const st = new Store();
+  const a = free(st, 100, 200), b = free(st, 200, 100), c = free(st, 300, 200);
+  const m1 = free(st, 200, 0), m2 = free(st, 200, 300);
+  const mirror = st.add({ k: 'line', a: m1, b: m2 });
+  for (const ends of [[a, c], [c, a]]) {
+    const arc = st.add({ k: 'arc3', a: ends[0], b, c: ends[1] });
+    const moved = st.add({ k: 'translate', src: arc.id, by: { mode: 'rect', dx: 1, dy: 0 } });
+    const reflected = st.add({ k: 'reflect', src: arc.id, mirror: mirror.id });
+    for (const id of [arc.id, moved.id, reflected.id]) {
+      const s = st.results.get(id)?.shape;
+      if (s?.k !== 'arc') throw Error('弧无定义');
+      const offset = id === moved.id ? 96 / 2.54 : 0;
+      for (const [t, endpoint] of [[0, ends[0]], [1, ends[1]]] as const) {
+        const expected = pointAt(st, endpoint);
+        const p = pathPointAt(s, t)!;
+        expect(p.x).toBeCloseTo(id === reflected.id ? 400 - expected.x : expected.x + offset);
+        expect(p.y).toBeCloseTo(expected.y);
+        expect(projectToPath(s, p)?.t).toBeCloseTo(t);
+      }
+      const midpoint = pathPointAt(s, 0.5)!;
+      expect(hitAll(st.page, st.results, midpoint, 'mid')).toContain(id);
+    }
+    const length = st.add({ k: 'measure', m: 'arclength', refs: [arc.id] });
+    const reflectedLength = st.add({ k: 'measure', m: 'arclength', refs: [reflected.id] });
+    const firstLength = st.results.get(length.id)?.shape, secondLength = st.results.get(reflectedLength.id)?.shape;
+    expect(firstLength?.k === 'num' && secondLength?.k === 'num' && secondLength.q.v).toBeCloseTo(firstLength?.k === 'num' ? firstLength.q.v : NaN);
+  }
+});
+
 describe('几何数学', () => {
+  it('只求目标及其依赖时，与全页结果一致，并且不求无关对象', () => {
+    const st = new Store(), a = st.add({ k: 'free', x: 20, y: 40 }, {}, false), b = st.add({ k: 'free', x: 220, y: 40 }, {}, false);
+    const segment = st.add({ k: 'seg', a: a.id, b: b.id }, {}, false);
+    const driver = st.add({ k: 'onpath', path: segment.id, t: 0.3 }, {}, false);
+    const moving = st.add({ k: 'seg', a: a.id, b: driver.id }, {}, false);
+    const midpoint = st.add({ k: 'mid', seg: moving.id }, {}, false);
+    const locus = st.add({ k: 'locus', driver: driver.id, out: midpoint.id, samples: 40 }, { hidden: true }, false);
+    const anchor = st.add({ k: 'onpath', path: locus.id, t: 0.5 }, {}, false);
+    const unrelated = st.add({ k: 'free', x: 999, y: 999 }, {}, false);
+    const full = evaluatePage(st.page), partial = evaluateTargets(st.page, [anchor.id]);
+    expect(full.get(anchor.id)?.shape?.k).toBe('pt');
+    expect(partial.get(anchor.id)).toEqual(full.get(anchor.id));
+    expect(partial.has(locus.id)).toBe(true);
+    expect(partial.has(unrelated.id)).toBe(false);
+  });
   it('退化线段：两端重合时平行线、垂线、角平分线无定义而不是崩溃', () => {
     const st = new Store();
     st.run('x', () => {
@@ -33,6 +78,38 @@ describe('几何数学', () => {
     expect(tangent.length).toBe(1);
     expect(G.intersectCircles({ c: { x: 0, y: 0 }, r: 5 }, { c: { x: 10, y: 0 }, r: 5 }).length).toBe(1);   // 外切
     expect(G.intersectCircles({ c: { x: 0, y: 0 }, r: 5 }, { c: { x: 0, y: 0 }, r: 5 }).length).toBe(0);    // 同心重合
+  });
+
+  it('垂足接近直线起点时，线圆相切不会因判别式舍入丢失', () => {
+    const a = { x: 576.1400581597595, y: 569.0894107006911 };
+    const b = { x: 832.4069430122422, y: 398.20812182576185 };
+    const c = { x: 405.2587692848302, y: 312.8225258482085 };
+    const line: G.Straight = { a, b, ext: 'line' };
+    const r = 308.01482295427377;
+    const tangent = G.intersectStraightCircle(line, { c, r });
+    expect(tangent).toHaveLength(1);
+    expect(G.dist(tangent[0], a)).toBeLessThan(1e-10);
+    expect(G.intersectStraightCircle(line, { c, r: r - 1e-6 })).toHaveLength(0);
+    expect(G.intersectStraightCircle(line, { c, r: r + 1e-6 })).toHaveLength(2);
+  });
+
+  it('线圆两个已有交点相切时汇合，新建切点只创建一个', () => {
+    const st = new Store();
+    const { a, b, line, circle, first, second } = st.run('构造', () => {
+      const a = free(st, -10, 4), b = free(st, 10, 4), c = free(st, 0, 0), p = free(st, 5, 0);
+      const line = st.add({ k: 'line', a, b }).id, circle = st.add({ k: 'circle', c, p }).id;
+      const [first, second] = constructIntersections(st, line, circle);
+      return { a, b, line, circle, first: first.id, second: second.id };
+    });
+    expect(pointAt(st, first).x).toBeCloseTo(-3);
+    expect(pointAt(st, second).x).toBeCloseTo(3);
+    st.moveFree(a, -10, 5, false); st.moveFree(b, 10, 5, false); st.recompute([a, b]);
+    expect(pointAt(st, first)).toEqual({ x: 0, y: 5 });
+    expect(pointAt(st, second)).toEqual(pointAt(st, first));
+    expect(st.run('构造切点', () => constructIntersections(st, line, circle))).toHaveLength(1);
+    st.moveFree(a, -10, 6, false); st.moveFree(b, 10, 6, false); st.recompute([a, b]);
+    expect(st.results.get(first)?.status).toBe('undefined');
+    expect(st.results.get(second)?.status).toBe('undefined');
   });
 
   it('线段交点只在线段范围内；射线与直线放宽', () => {
@@ -193,7 +270,7 @@ describe('变换与路径的补充（来自原版课件的写法）', () => {
 });
 
 describe('度量与单位', () => {
-  it('长度以厘米计；角度 0–360；面积平方厘米', () => {
+  it('长度以厘米计，普通角度取夹角，面积以平方厘米计', () => {
     const st = new Store();
     st.run('x', () => {
       const a = free(st, 0, 0), b = free(st, 96 / 2.54 * 3, 0), c = free(st, 0, 96 / 2.54 * 4);
@@ -203,9 +280,32 @@ describe('度量与单位', () => {
     });
     const v = (id: Id) => (st.results.get(id)!.shape as { q: { v: number } }).q.v;
     expect(v(5)).toBeCloseTo(3, 6);
-    expect(v(6)).toBeCloseTo(270, 6);            // 从 ab 到 ac 逆时针（屏幕向上为正）
+    expect(v(6)).toBeCloseTo(90, 6);
     expect(v(8)).toBeCloseTo(6, 6);
     expect(v(9)).toBeCloseTo(12, 6);
+  });
+
+  it('角度单位切换后，依赖角度的计算跟随原版的正负规则', () => {
+    const st = new Store();
+    st.run('x', () => {
+      const vertex = free(st, 0, 0), right = free(st, 100, 0), down = free(st, 0, 100);
+      for (const refs of [[right, vertex, down], [down, vertex, right]]) {
+        const angle = st.add({ k: 'measure', m: 'angle', refs }).id;
+        const expr = parseExpr('sin(theta)', { resolve: name => name === 'theta' ? angle : undefined });
+        st.add({ k: 'calc', expr, unit: 'none' });
+      }
+    });
+    const values = () => [4, 5, 6, 7].map(id => {
+      const shape = st.results.get(id)?.shape;
+      return shape?.k === 'num' ? shape.q.v : undefined;
+    });
+    expect(values()).toEqual([90, 1, 90, 1]);
+    st.syncAngleUnit('rad');
+    expect(values()).toEqual([-90, -1, 90, 1]);
+    st.syncAngleUnit('dir');
+    expect(values()).toEqual([-90, -1, 90, 1]);
+    st.syncAngleUnit('deg');
+    expect(values()).toEqual([90, 1, 90, 1]);
   });
 
   it('坐标系：横纵坐标、斜率、坐标距离', () => {
@@ -233,8 +333,24 @@ describe('表达式与单位', () => {
     expect(ev('sin(0.5)')?.v).toBeCloseTo(Math.sin((0.5 * Math.PI) / 180));
     expect(ev('arcsin(0.5)')).toEqual({ v: expect.closeTo(30, 6), u: 'angle' });
   });
-  it('计算错误：除零、负数开方、对数定义域、arcsin 超界', () => {
-    for (const t of ['1/0', 'sqrt(-1)', 'ln(0)', 'log(-2)', 'arcsin(2)', 'tan(90°)']) expect(ev(t)).toBeUndefined();
+  it('计算错误：0/0、负数开方、负数取对数、arcsin 超界无定义', () => {
+    for (const t of ['0/0', 'sqrt(-1)', 'ln(-1)', 'log(-2)', 'arcsin(2)', 'tan(90°)']) expect(ev(t)).toBeUndefined();
+  });
+  it('表达式允许 ±∞（原版 0324 的“= ∞”、1119 的 e^(2·ln 0)）：非零数除以零、ln 0 是无穷，e^(−∞)=0，∞−∞ 无定义，显示为 ∞', () => {
+    expect(ev('1/0')?.v).toBe(Infinity);
+    expect(ev('-2/0')?.v).toBe(-Infinity);
+    expect(ev('ln(0)')?.v).toBe(-Infinity);
+    expect(ev('exp(ln(0))')?.v).toBe(0);
+    expect(ev('1/0 + 1')?.v).toBe(Infinity);
+    expect(ev('1/0 - 1/0')).toBeUndefined();
+    expect(formatQ(ev('1/0')!)).toBe('∞');
+  });
+  it('负数底数的非整数次幂：奇分母分数取实数根，偶分母无定义', () => {
+    expect(ev('(-8)^(1/3)')?.v).toBeCloseTo(-2, 9);
+    expect(ev('(-0.267)^(-0.6)')?.v).toBeCloseTo(-Math.pow(0.267, -0.6), 9);
+    expect(ev('(-1.5)^1.6')?.v).toBeCloseTo(Math.pow(1.5, 1.6), 9);
+    expect(ev('(-4)^0.5')).toBeUndefined();
+    expect(formatQ(ev('-1/0')!)).toBe('−∞');
   });
   it('语法错误给出可读的信息', () => {
     for (const t of ['1+', '(1+2', '*3', 'foo(2)']) expect(() => parse(t)).toThrow();
@@ -245,6 +361,20 @@ describe('表达式与单位', () => {
 });
 
 describe('函数图像', () => {
+  it('x=f(y) 的图像和附着点都使用文档中的纵向定义域', () => {
+    const st = new Store();
+    st.setView({ x0: 0, y0: 0, x1: 800, y1: 600 });
+    const [plot, start, end] = st.run('画函数图像', () => {
+      const sys = createSystem(st, { x: 400, y: 300 });
+      const f = st.add({ k: 'func', name: 'f', param: 'x', form: 'x=f(y)', expr: { t: 'num', v: 0 } });
+      const plot = st.add({ k: 'plot', func: f.id, sys: sys.id, lo: -1, hi: 2, samples: 400 });
+      return [plot.id, st.add({ k: 'onpath', path: plot.id, t: 0 }).id, st.add({ k: 'onpath', path: plot.id, t: 1 }).id];
+    });
+    expect(st.results.get(plot)?.shape?.k).toBe('paths');
+    expect(pointAt(st, start).y).toBeCloseTo(300 + 96 / 2.54);
+    expect(pointAt(st, end).y).toBeCloseTo(300 - 2 * 96 / 2.54);
+  });
+
   it('1/x 在 0 处断开，不画出错误连线；大范围采样随视图更新', () => {
     const st = new Store();
     st.ctx = { view: { x0: 0, y0: 0, x1: 800, y1: 600 } };
@@ -349,7 +479,7 @@ describe('性能', () => {
     expect(st.page.objects.length).toBeGreaterThanOrEqual(990);
     const times: number[] = [];
     st.begin('drag');
-    for (let i = 0; i < 200; i++) { const t0 = performance.now(); st.moveFree(1, i, i); st.recompute([1]); times.push(performance.now() - t0); }
+    for (let i = 0; i < 200; i++) { const t0 = performance.now(); st.moveFree(1, i, i, false); st.recompute([1]); times.push(performance.now() - t0); }
     st.commit();
     times.sort((a, b) => a - b);
     const p95 = times[Math.floor(times.length * 0.95)];

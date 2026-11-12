@@ -1,6 +1,6 @@
 {
  "generated": "2026-11-07",
- "note": "新版自己构造的验收课件；不含原版的任何内容。originalRoundtrip=已在原版中打开另存并读回一致。",
+ "note": "新版自己构造的验收课件；不含原版的任何内容。originalRoundtrip 表示已核验的构造字段在原版打开另存后读回一致；字体等未核验字段不包含在旧结果中。",
  "entries": [
   {
    "file": "00-全部对象.gsp",
@@ -104,7 +104,7 @@
      "onpath|ok|(229.55,259.11)",
      "circle|ok|circle",
      "arc3|ok|arc",
-     "onpath|ok|(374.93,201.2)",
+     "onpath|ok|(454.08,240.78)",
      "circle-int|ok|disk",
      "onpath|ok|(191.48,162.88)",
      "measure|ok|5.84",
@@ -182,8 +182,8 @@
      "measure|ok|0.7"
     ]
    ],
-   "originalRoundtrip": true,
-   "note": "全对象族互读样本：点线圆、变换、度量、参数计算函数、坐标系、表格、方程度量、图片、按钮"
+   "originalRoundtrip": false,
+   "note": "全对象族互读曾核验构造字段；2026-11-09 复测确认 Microsoft YaHei 和宋体被原版替换为 Tahoma，完整互读不成立。"
   },
   {
    "file": "01-params.gsp",
@@ -792,7 +792,7 @@
      "poly|ok|poly",
      "circle|ok|circle",
      "arc3|ok|arc",
-     "onpath|ok|(374.93,201.2)",
+     "onpath|ok|(454.08,240.78)",
      "measure|ok|5.84",
      "param|ok|2"
     ]

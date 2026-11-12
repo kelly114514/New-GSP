@@ -9,7 +9,7 @@ function compact(value: unknown): unknown {
 }
 export function baselineSummary(doc: Doc) {
   return doc.pages.map(page => {
-    const results = evaluatePage(page);
+    const results = evaluatePage(page, undefined, undefined, { angleUnit: doc.settings.display?.angleUnit });
     const objects = page.objects.map(o => ({ id: o.id, kind: o.def.k, def: o.def, parents: parentsOf(o.def), hidden: o.hidden, status: results.get(o.id)?.status ?? 'missing', shape: compact(results.get(o.id)?.shape) }));
     return { objects, visibleUndefined: objects.filter(o => !o.hidden && o.status !== 'ok').map(o => ({ id: o.id, kind: o.kind, status: o.status })) };
   });

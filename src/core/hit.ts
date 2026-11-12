@@ -1,5 +1,6 @@
 /** 命中测试与框选。半径是原版实测的物理像素数（页面坐标 1 单位 = 1 物理像素）。 */
 import { isLine, type Shape } from './engine';
+import { warpHit } from './warp';
 import * as G from './geom';
 import type { Pt } from './geom';
 import type { Id, Obj, Page } from './model';
@@ -24,7 +25,10 @@ export function boxOf(o: Obj, r: Shape | undefined): Rect | undefined {
   if (!r) return undefined;
   if (r.k === 'box') return { x0: r.at.x, y0: r.at.y, x1: r.at.x + r.w, y1: r.at.y + r.h };
   if (o.at && (r.k === 'num' || r.k === 'coords' || r.k === 'text' || r.k === 'table' || r.k === 'func')) {
-    const w = r.k === 'table' ? 20 + 90 * Math.max(1, r.cols.length) : 150, h = r.k === 'table' ? 22 * (2 + r.rows.length) : 20;
+    const scale = Math.max(1, (o.font?.size ?? (r.k === 'table' ? 14 : 18)) / (r.k === 'table' ? 14 : 18));
+    // 表格的尺寸与 render.ts 的 drawTable 一致（没有画布时按每字符约 7.9 像素估算列宽）。
+    const tableW = r.k === 'table' ? Array.from({ length: Math.max(1, r.cols.length) }, (_, i) => Math.max(r.cols[i]?.name.length ?? 0, ...r.rows.map(row => (Number.isFinite(row[i]) ? (r.intFirst && i === 0 ? String(row[i]) : Math.abs(row[i]).toFixed(2)) : '∞').length + (row[i] < 0 ? 1 : 0))) * 7.9 * scale + 10 * scale).reduce((a, b) => a + b, 0) : 0;
+    const w = r.k === 'table' ? tableW : 150 * scale, h = r.k === 'table' ? (22 + 20 * r.rows.length) * scale : 20 * scale;
     return { x0: o.at.x, y0: o.at.y, x1: o.at.x + w, y1: o.at.y + h };
   }
   return undefined;
@@ -36,7 +40,7 @@ function distTo(shape: Shape, p: Pt, rad: (typeof R)['low']): number | undefined
     case 'line': { const d = G.distToStraight(shape.s, p); return d <= rad.line ? d : undefined; }
     case 'circle': { const d = G.dist(shape.c.c, p) - shape.c.r; return d >= 0 ? (d <= rad.circleOut ? d : undefined) : -d <= rad.circleIn ? -d : undefined; }
     case 'arc': {
-      const ang = G.angleOf(shape.c, p), inside = G.sweep(shape.a0, ang) <= shape.sweep;
+      const ang = G.angleOf(shape.c, p), inside = (shape.sweep < 0 ? G.sweep(ang, shape.a0) : G.sweep(shape.a0, ang)) <= Math.abs(shape.sweep);
       const d = Math.abs(G.dist(shape.c, p) - shape.r);
       if (inside) return d <= rad.circleOut ? d : undefined;
       const e = Math.min(G.dist(p, shape.from), G.dist(p, shape.to));
@@ -58,7 +62,8 @@ function insideRegion(shape: Shape, p: Pt): boolean {
     case 'sector': {
       const d = G.dist(shape.c, p);
       if (d > shape.r) return false;
-      return G.sweep(shape.a0, G.angleOf(shape.c, p)) <= shape.sweep;
+      const angle = G.angleOf(shape.c, p);
+      return (shape.sweep < 0 ? G.sweep(angle, shape.a0) : G.sweep(shape.a0, angle)) <= Math.abs(shape.sweep);
     }
     default: return false;
   }
@@ -74,17 +79,26 @@ export function hitAll(page: Page, results: Results, p: Pt, power: Power, opts: 
     const r = results.get(o.id);
     if (!r?.shape || r.status !== 'ok') continue;
     const s = r.shape;
-    for (const it of s.k === 'multi' ? s.items : [s]) {       // 迭代象：任何一个像被点中都算点中
-      if (it.k === 'pt') { const d = distTo(it, p, rad); if (d !== undefined) pts.push({ id: o.id, d }); }
-      else if (it.k === 'line' || it.k === 'circle' || it.k === 'arc' || it.k === 'paths') { const d = distTo(it, p, rad); if (d !== undefined) paths.push({ id: o.id, d }); }
-      else if (it.k === 'poly' || it.k === 'disk' || it.k === 'sector') { if (insideRegion(it, p) && !regions.includes(o.id)) regions.push(o.id); }
-      else if (s.k === 'multi' && it.k === 'box' && p.x >= it.at.x && p.x <= it.at.x + it.w && p.y >= it.at.y && p.y <= it.at.y + it.h && !boxes.includes(o.id)) boxes.push(o.id);
+    let pointDist = Infinity, pathDist = Infinity, inRegion = false, inBox = false;
+    const flat = (x: Shape): Shape[] => (x.k === 'multi' ? x.items.flatMap(flat) : [x]);
+    for (const it of flat(s)) {
+      // 每个迭代象是一个可选对象。比较最近的子图形，避免把同一 ID 反复送去求交。
+      if (it.k === 'pt') pointDist = Math.min(pointDist, distTo(it, p, rad) ?? Infinity);
+      else if (it.k === 'line' || it.k === 'circle' || it.k === 'arc' || it.k === 'paths') pathDist = Math.min(pathDist, distTo(it, p, rad) ?? Infinity);
+      else if (it.k === 'poly' || it.k === 'disk' || it.k === 'sector') inRegion ||= insideRegion(it, p);
+      else if (s.k === 'multi' && it.k === 'box') inBox ||= p.x >= it.at.x && p.x <= it.at.x + it.w && p.y >= it.at.y && p.y <= it.at.y + it.h;
     }
+    if (pointDist < Infinity) { pts.push({ id: o.id, d: pointDist }); continue; }
+    if (pathDist < Infinity) { paths.push({ id: o.id, d: pathDist }); continue; }
+    if (inBox) { boxes.push(o.id); continue; }
+    if (inRegion) { regions.push(o.id); continue; }
     const b = boxOf(o, s);
-    if (s.k === 'box' && s.image && (!G.inPolygon(p, s.image.corners) || (s.image.clip && !G.inPolygon(p, s.image.clip)))) continue;
+    if (s.k === 'box' && s.image && (!G.inPolygon(p, s.image.corners) || s.image.clips?.some(clip => !G.inPolygon(p, clip)) || (s.image.mesh && !warpHit(s.image.mesh, p)))) continue;
     if (b && p.x >= b.x0 && p.x <= b.x1 && p.y >= b.y0 && p.y <= b.y1) boxes.push(o.id);
   }
   // 后创建的对象在上面：同一优先级内先看距离，再看创建顺序（后者优先）
+  // 悬停时每帧都走这里，多数时候没有候选或只有一个，不必为排序建表。
+  if (pts.length + paths.length + regions.length + boxes.length <= 1) return [...pts.map(x => x.id), ...paths.map(x => x.id), ...boxes, ...regions];
   const order = new Map(page.objects.map((o, i) => [o.id, i]));
   pts.sort((a, b) => a.d - b.d || order.get(b.id)! - order.get(a.id)!);
   paths.sort((a, b) => a.d - b.d || order.get(b.id)! - order.get(a.id)!);
@@ -120,7 +134,7 @@ function shapeHitsRect(o: Obj, s: Shape, rect: Rect): boolean {
       case 'circle': hit = G.circleHitsRect(s.c, rect); break;
       case 'arc': {
         if (!G.circleHitsRect({ c: s.c, r: s.r }, rect)) break;
-        const n = Math.max(24, Math.ceil(s.sweep * 24));
+        const n = Math.max(24, Math.ceil(Math.abs(s.sweep) * 24));
         for (let i = 0; i < n && !hit; i++) {
           const a1 = s.a0 + (s.sweep * i) / n, a2 = s.a0 + (s.sweep * (i + 1)) / n;
           hit = G.segmentHitsRect({ x: s.c.x + s.r * Math.cos(a1), y: s.c.y - s.r * Math.sin(a1) }, { x: s.c.x + s.r * Math.cos(a2), y: s.c.y - s.r * Math.sin(a2) }, rect);

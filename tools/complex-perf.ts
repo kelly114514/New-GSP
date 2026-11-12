@@ -5,7 +5,7 @@ import { decodeGsp } from '../src/gsp/codec';
 
 function measure(name: string, st: Store, driver: Id, detail: string) {
   st.begin('benchmark'); const times: number[] = [];
-  for (let i = 0; i < 25; i++) { const t = performance.now(); st.moveFree(driver, 100 + i, 100 + i); st.recompute([driver]); const dt = performance.now() - t; if (i >= 5) times.push(dt); }
+  for (let i = 0; i < 25; i++) { const t = performance.now(); st.moveFree(driver, 100 + i, 100 + i, false); st.recompute([driver]); const dt = performance.now() - t; if (i >= 5) times.push(dt); }
   st.cancel(); times.sort((a, b) => a - b);
   console.log(JSON.stringify({ name, detail, objects: st.page.objects.length, p50: times[9], p95: times[18], max: times[19], unit: 'ms', scope: 'moveFree + recompute; no drawing' }));
 }

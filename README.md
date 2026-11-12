@@ -8,9 +8,9 @@
 npm install
 npm run dev                  # 浏览器里开发，http://127.0.0.1:5173
 npm run build                # 类型检查 + 前端构建
-npx vitest run               # 单元测试（265 项）
-npx playwright test          # 浏览器交互测试（102 项，需要本机 Chrome）
-npm run scan -- ../sketchpad5 docs/sample-report.json    # 1431 个样例兼容扫描
+npx vitest run               # 单元测试
+npx playwright test          # 浏览器交互测试（需要本机 Chrome）
+npm run scan -- ../sketchpad5 # 全库读取与求值扫描，可加 --decode-only 只扫描读取
 npx tsx tools/bench.ts       # 性能基准
 npx tsx tools/make-demo.ts demo   # 生成演示课件
 npx tsx tools/make-matrix.ts      # 重新生成 docs/功能矩阵.md
@@ -52,4 +52,4 @@ npx tsx tools/check-interop.ts <输入.gsp> <另存.gsp>
 
 本机原版工具库的载入、整库结果与原版互读证据见 [工具兼容验证](docs/工具兼容验证.md)。
 
-最新P1/P2阶段成果、原版基准失败和仍未完成条件见 [P1/P2实施与验收](docs/P1-P2实施记录.md)。
+阶段性格式、工具与原版互读证据见 [P1/P2实施与验收](docs/P1-P2实施记录.md)。最新测试和安装验收范围见 [测试报告](docs/测试报告.md)。

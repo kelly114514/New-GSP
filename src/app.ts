@@ -1,11 +1,13 @@
 /** 应用外壳：多文档、菜单、工具箱、状态栏、文件与剪贴板、动画。 */
 import { classOf, createSystem, findSys, setGridStyle } from './core/construct';
+import { buttonSize } from './core/button';
 import { formatQ, parseExpr, usesX, type Expr } from './core/expr';
-import { DEFAULT_COLORS, DEFAULT_DISPLAY, childrenOf, parentsOf, newDoc, type ButtonAction, type DisplayPrefs, type FontSpec, type Id, type Obj } from './core/model';
+import { DEFAULT_COLORS, DEFAULT_DISPLAY, TEXT_DEFAULTS, childrenOf, parentsOf, newDoc, pageAutoSnap, pageDisplay, type ButtonAction, type DisplayPrefs, type FontSpec, type Id, type Obj } from './core/model';
 import type { Pt } from './core/geom';
 import { Store } from './core/store';
 import { projectOnPath } from './core/engine';
-import { analyse, executeCommand, queryCommand, type Ctx, type Sel } from './commands';
+import { legacyHelpTopic } from './core/link';
+import { analyse, executeCommand, fontTargets, mergeTextSource, queryCommand, type Ctx, type Sel } from './commands';
 import { Dialogs } from './ui/dialogs';
 import { comboOf, SHORTCUTS } from './shortcuts';
 import { DocView, type ToolId } from './ui/docview';
@@ -20,7 +22,7 @@ import { Mdi } from './ui/mdi';
 import { Toolbox } from './ui/toolbox';
 import { Motion } from './ui/motion';
 import { printDocument } from './ui/print';
-import { createToolObjects, inputPrompt, type Tool } from './core/tooling';
+import { createToolObjects, toolInputPrompt, type Tool } from './core/tooling';
 import { loadToolFile, resolveEmbedded, resolveTool, type ToolGroup, type ToolRef } from './toolkit';
 
 export interface Settings {
@@ -49,7 +51,7 @@ export interface Settings {
   toolFolder?: string;
 }
 const DEFAULT_SETTINGS: Settings = {
-  power: 'low', font: { name: 'Microsoft YaHei', size: 16, bold: false, italic: false, underline: false, color: '#000000' }, polygonBorders: false, autoSnap: false, autoLabel: false, textbarOnEdit: true, recent: [], doubleClickDeselect: false,
+  power: 'low', font: { name: 'Times New Roman', size: 16, bold: false, italic: false, underline: false, color: '#000000' }, polygonBorders: false, autoSnap: false, autoLabel: false, textbarOnEdit: true, recent: [], doubleClickDeselect: false,
   autoLabelMeasured: true, paramEdit: true, funcSymbol: false,
   colors: { point: '#ff0000', line: '#000080', circle: '#008000', plot: '#000080', locus: '#000080', interior: '#ffff00', randomInterior: true, autoUpdate: true, fade: false, fadeTime: 5 },
   polyOpacity: 50, marker: { color: '#ff0000', thick: true }, infoDescribe: 'parents', display: { ...DEFAULT_DISPLAY },
@@ -198,6 +200,7 @@ export class App {
   newDocument() {
     const doc = newDoc(`未命名${++this.counter}`);
     doc.settings.autoLabelPoints = this.settings.autoLabel;
+    doc.settings.display = structuredClone(this.settings.display);
     this.addView(new Store(doc));
   }
   focusDoc(v: DocView) { this.active = v; this.mdi.activate(v); this.refresh(); }
@@ -215,6 +218,12 @@ export class App {
       if (r.notes.length) this.dlg.message(r.notes.join('\n'));
       this.addRecent(f.path ?? f.name);
       v.resize();
+      for (const id of store.page.startupButtons ?? []) {
+        const button = store.get(id);
+        if (button?.def.k !== 'button') continue;
+        const action = button.def.action.type;
+        if (action === 'animate' || action === 'hideshow' || (action === 'move' && !store.protectedReason)) this.pressButton(v, button);
+      }
     } catch (e) { this.dlg.message(`无法打开文件：${e instanceof Error ? e.message : String(e)}`); }
   }
   addRecent(p: string) { this.settings.recent = [p, ...this.settings.recent.filter(x => x !== p)].slice(0, 8); this.saveSettings(); buildMenus(this); }
@@ -252,6 +261,7 @@ export class App {
   }
   /** 关闭前询问是否保存；返回 false 表示用户取消。 */
   async confirmClose(v: DocView): Promise<boolean> {
+    await v.waitForDrag();
     if (!v.store.dirty) return true;
     const r = await this.dlg.ask(`要保存对“${v.store.doc.name}”的修改吗？`, ['保存', '不保存', '取消']);
     if (r === '取消' || r === undefined) return false;
@@ -298,7 +308,7 @@ export class App {
       v?.fillAutoInputs(t);
       const i = v ? v.nextToolInput(t) ?? t.inputs.length : 0, need = t.inputs[i];
       const label = need?.label ? `（${need.label}）` : '';
-      return `${t.name}：${need ? `第 ${i + 1}/${t.inputs.length} 个前提条件${label}，请${inputPrompt[need.kind]}` : '单击画板应用工具'}`;
+      return `${t.name}：${need ? `第 ${i + 1}/${t.inputs.length} 个前提条件${label}，请${toolInputPrompt(need)}` : '单击画板应用工具'}`;
     }
     return h[this.toolbox.current] ?? '';
   }
@@ -349,7 +359,7 @@ export class App {
       for (const src of data.objs) {
         const def = remapDef(structuredClone(src.def), map);
         if (def.k === 'free') { def.x += off; def.y += off; }
-        if (def.k === 'text' || def.k === 'button' || def.k === 'image') def.at = { x: def.at.x + off, y: def.at.y + off };
+        if (def.k === 'text' || def.k === 'button' || (def.k === 'image' && !def.placement)) def.at = { x: def.at.x + off, y: def.at.y + off };
         const o = st.add(def, { style: { ...src.style }, hidden: src.hidden, label: undefined, labelShown: false, at: src.at && { x: src.at.x + off, y: src.at.y + off } });
         map.set(src.id, o.id);
         if (!src.external) made.push(o.id);
@@ -376,6 +386,18 @@ export class App {
   /** 分离/合并：合并两点、合并点到路径、从路径分离点、从定义分离点、合并文本到点。 */
   splitMerge(v: DocView, s: Sel, shift: boolean) {
     const st = v.store, pos = (id: Id) => { const r = st.results.get(id)?.shape; return r?.k === 'pt' ? r.p : undefined; };
+    const source = shift ? mergeTextSource(s) : undefined;
+    if (source && source.def.k !== 'text') {
+      const anchor = s.pts[0].id, p = pos(anchor);
+      if (!p) return;
+      const w = 40, h = 24, off = { x: -w / 2, y: -h / 2 };
+      const copy = st.run('合并文本到点', () => st.add({
+        k: 'text', text: '0', refs: [source.id], anchor, off,
+        at: { x: p.x + off.x, y: p.y + off.y }, w, h, font: { ...this.settings.font },
+      }));
+      v.setSel([copy.id]);
+      return;
+    }
     st.run('分离/合并', () => {
       if (s.n === 2 && s.pts.length === 2) {
         // 第一个点并入第二个点：凡是依赖前者的对象改为依赖后者，然后删除前者
@@ -394,15 +416,15 @@ export class App {
         const pr = projectOnPath(st.page, st.results, path.id, at); void shape;
         if (!pr) throw new Error('这个点不能合并到所选路径');
         if (st.page.objects.findIndex(o => o.id === path.id) > st.page.objects.findIndex(o => o.id === p.id)) throw new Error('路径比这个点创建得晚，不能合并');
-        st.update(p.id, { k: 'onpath', path: path.id, t: pr.t, ...(pr.abs ? { abs: true } : {}) });
+        st.update(p.id, { k: 'onpath', path: path.id, t: pr.t, ...(pr.side ?? {}), ...(pr.abs ? { abs: true } : {}) });
       } else if (s.n === 1 && s.onpath.length === 1) {
         const p = pos(s.onpath[0].id);
         if (p) st.update(s.onpath[0].id, { k: 'free', x: p.x, y: p.y });
       } else if (shift && s.n === 1 && s.pts.length === 1 && ['rotate', 'reflect', 'dilate', 'translate'].includes(s.pts[0].def.k)) {
         const p = pos(s.pts[0].id);
         if (p) st.update(s.pts[0].id, { k: 'free', x: p.x, y: p.y });
-      } else if (shift && s.texts.length === 1 && s.pts.length === 1) {
-        const t = s.texts[0];
+      } else if (source) {
+        const t = source;
         const ap = pos(s.pts[0].id), tb = st.results.get(t.id)?.shape;
         if (t.def.k === 'text' && ap && tb?.k === 'box') st.update(t.id, { ...t.def, anchor: s.pts[0].id, off: { x: tb.at.x - ap.x, y: tb.at.y - ap.y } });   // 文本随点移动
       }
@@ -427,7 +449,7 @@ export class App {
     const label = text ?? buttonText(v, action);
     const n = st.page.objects.filter(o => o.def.k === 'button').length;
     let made: Obj | undefined;
-    st.run('构造按钮', () => { made = st.add({ k: 'button', action, text: label, at: { x: v.scroll.x + 24, y: v.scroll.y + 24 + n * 36 }, w: Math.max(70, label.length * 16 + 24), h: 28 }); });
+    st.run('构造按钮', () => { made = st.add({ k: 'button', action, text: label, at: { x: v.scroll.x + 24, y: v.scroll.y + 24 + n * 36 }, ...buttonSize(label) }); });
     if (made) v.setSel([made.id]);
   }
   makeTable(v: DocView, s: Sel) {
@@ -494,7 +516,8 @@ export class App {
       if (s.def.k === 'sys') st.update(s.id, { ...s.def, showGrid: !s.def.showGrid });
     });
   }
-  toggleSnap(v: DocView) { const st = v.store; const s = findSys(st); if (!s || s.def.k !== 'sys') return; const d = s.def; st.run('格点', () => st.update(s.id, { ...d, snap: !d.snap })); }
+  toggleGridPoints(v: DocView) { const st = v.store; const s = findSys(st); if (!s || s.def.k !== 'sys') return; const d = s.def; st.run('格点', () => st.update(s.id, { ...d, gridPoints: d.gridPoints ? undefined : true })); }
+  toggleAutoSnap(v: DocView) { const st = v.store; st.run('自动吸附网格', () => { st.page.autoSnap = !pageAutoSnap(st.page); }); }
   async plotPoint(v: DocView, s: Sel) {
     const st = v.store;
     const sys = findSys(st);
@@ -530,6 +553,19 @@ export class App {
   }
 
   // ---------- 文本格式 ----------
+  private objectFont(v: DocView, o: Obj): FontSpec {
+    if (o.def.k === 'text') return o.def.font;
+    const cat = o.def.k === 'button' ? 'button' : o.def.k === 'table' || o.def.k === 'itertable' ? 'table' : 'value';
+    return o.font ?? { ...TEXT_DEFAULTS[cat].style, ...pageDisplay(v.store.doc, v.store.page, v.fallbackDisplay).textStyles?.[cat] };
+  }
+  private formatObjects(v: DocView, apply: (f: FontSpec) => FontSpec) {
+    const targets = fontTargets(analyse(v));
+    v.store.run('文本格式', () => { for (const o of targets) {
+      if (o.def.k === 'text') v.store.update(o.id, { ...o.def, font: apply(o.def.font), ...(o.def.runs ? { runs: o.def.runs.map(r => ({ ...r, font: apply(r.font) })) } : {}) });
+      else o.font = apply(this.objectFont(v, o));
+    } });
+    v.invalidate();
+  }
   toggleFont(v: DocView, key: 'bold' | 'italic' | 'underline') {
     const apply = (f: FontSpec) => ({ ...f, [key]: !f[key] });
     if (v.textEdit) {
@@ -537,8 +573,8 @@ export class App {
       const value = !f[key]; v.styleTextSelection(font => ({ ...font, [key]: value }));
       this.settings.font = { ...f, [key]: value }; this.refreshTextbar(); return;
     }
-    const sel = analyse(v).texts;
-    v.store.run('文本格式', () => { for (const o of sel) if (o.def.k === 'text') v.store.update(o.id, { ...o.def, font: apply(o.def.font), ...(o.def.runs ? { runs: o.def.runs.map(r => ({ ...r, font: apply(r.font) })) } : {}) }); });
+    const sel = fontTargets(analyse(v));
+    this.formatObjects(v, apply);
     if (sel[0]?.def.k === 'text') this.settings.font = sel[0].def.font;
     this.refreshTextbar();
   }
@@ -547,15 +583,12 @@ export class App {
     if (v.textEdit) {
       v.styleTextSelection(apply); this.refreshTextbar(); return;
     }
-    const sel = analyse(v).texts;
-    v.store.run('文本格式', () => { for (const o of sel) if (o.def.k === 'text') v.store.update(o.id, { ...o.def, font: apply(o.def.font), ...(o.def.runs ? { runs: o.def.runs.map(r => ({ ...r, font: apply(r.font) })) } : {}) }); });
+    this.formatObjects(v, apply);
     this.refreshTextbar();
   }
   setFont(v: DocView, patch: Partial<FontSpec>) {
-    const targets: Obj[] = v.textEdit ? [v.store.get(v.textEdit.id)!] : analyse(v).texts;
-    const apply = () => { for (const o of targets) if (o.def.k === 'text') o.def = { ...o.def, font: { ...o.def.font, ...patch }, ...(o.def.runs ? { runs: o.def.runs.map(r => ({ ...r, font: { ...r.font, ...patch } })) } : {}) }; };
     if (v.textEdit) v.styleTextSelection(f => ({ ...f, ...patch }));
-    else v.store.run('文本格式', apply);
+    else this.formatObjects(v, f => ({ ...f, ...patch }));
     Object.assign(this.settings.font, patch);
     v.store.recompute(); v.invalidate(); this.refreshTextbar();
   }
@@ -576,9 +609,9 @@ export class App {
   private textbarEls!: { font: HTMLSelectElement; size: HTMLSelectElement; color: HTMLInputElement };
   refreshTextbar() {
     const v = this.active; if (!v) return;
-    const editing = !!v.textEdit, selText = analyse(v).texts[0];
+    const editing = !!v.textEdit, selText = fontTargets(analyse(v))[0];
     const o = editing ? v.store.get(v.textEdit!.id) : selText;
-    const f = (editing ? v.textEditFont() : undefined) ?? (o?.def.k === 'text' ? o.def.font : this.settings.font);
+    const f = (editing ? v.textEditFont() : undefined) ?? (o ? this.objectFont(v, o) : this.settings.font);
     const { font, size, color } = this.textbarEls;
     font.value = f.name; size.value = String(f.size); color.value = f.color;
     const on = editing || !!selText;
@@ -590,8 +623,8 @@ export class App {
   toggleToolbox() { this.toolboxVisible = !this.toolboxVisible; this.toolbox.el.hidden = !this.toolboxVisible; this.docs.forEach(d => d.resize()); }
 
   // ---------- 按钮、信息 ----------
-  pressButton(v: DocView, o: Obj) {
-    if (o.def.k !== 'button') return;
+  pressButton(v: DocView, o: Obj, path: readonly Id[] = []) {
+    if (o.def.k !== 'button' || path.includes(o.id)) return;
     const a = o.def.action, st = v.store;
     switch (a.type) {
       case 'hideshow': {
@@ -604,11 +637,17 @@ export class App {
         v.invalidate(); break;
       }
       case 'animate': this.anim.toggle(v, a.targets.map(id => st.get(id)).filter((x): x is Obj => !!x), a.speed, a.direction); break;
-      case 'move': { for (const [from, to] of [[a.from, a.to], ...(a.pairs ?? [])]) { const tgt = st.get(to); this.anim.moveTo(v, from, to, a.speed, a.toInitial && tgt?.def.k === 'free' ? { x: tgt.def.x, y: tgt.def.y } : undefined); } break; }
-      case 'link':
-        if (a.url) void desktop.openUrl(a.url);
+      case 'move': {
+        for (const [from, to] of [[a.from, a.to], ...(a.pairs ?? [])]) this.anim.moveTo(v, from, to, a.speed, a.toInitial);
+        break;
+      }
+      case 'link': {
+        const topic = a.url && legacyHelpTopic(a.url);
+        if (topic) void this.dlg.message(topic);
+        else if (a.url) void desktop.openUrl(a.url).catch(() => this.dlg.message('系统未能打开这个链接。'));
         else if (a.page >= 1 && a.page <= st.doc.pages.length) { st.switchPage(a.page - 1); v.sel = []; this.refresh(); }
         break;
+      }
       case 'scroll': { const s = st.results.get(a.point)?.shape; if (s?.k === 'pt') { v.scroll = a.where === 'center' ? { x: s.p.x - (v.canvas.width / v.dpr) / 2, y: s.p.y - (v.canvas.height / v.dpr) / 2 } : { x: s.p.x, y: s.p.y }; v.updateView(); v.eraseTraces(); v.invalidate(); } break; }
       case 'sound': playFunctions(v, a.funcs); break;
       case 'series': {
@@ -617,8 +656,11 @@ export class App {
         if (a.stopAnim) this.anim.stopView(v);
         if (a.clearTraces) v.eraseTraces();
         const steps = a.buttons.map(id => st.get(id)).filter((x): x is Obj => !!x && x.def.k === 'button');
-        if (a.mode === 'seq') { let t = 0; for (const b of steps) { window.setTimeout(() => this.pressButton(v, b), t); t += (a.seconds ?? 0) * 1000 + (b.def.k === 'button' && (b.def.action.type === 'move' || b.def.action.type === 'animate') ? 1000 : 0); } }
-        else steps.forEach(b => this.pressButton(v, b));
+        // 只拦截当前执行路径上的循环，允许一个系列正常重复执行同一按钮。
+        const nextPath = [...path, o.id];
+        const press = (b: Obj) => this.pressButton(v, b, nextPath);
+        if (a.mode === 'seq') { let t = 0; for (const b of steps) { window.setTimeout(() => press(b), t); t += (a.seconds ?? 0) * 1000 + (b.def.k === 'button' && (b.def.action.type === 'move' || b.def.action.type === 'animate') ? 1000 : 0); } }
+        else steps.forEach(press);
         if (a.after === 'duration' && a.seconds) window.setTimeout(() => this.anim.stopView(v), a.seconds * 1000);
         break;
       }
@@ -663,7 +705,8 @@ export class App {
   flashStatus(t: string) { this.setStatus(t); window.clearTimeout(this.flash); this.flash = window.setTimeout(() => { this.flash = undefined; this.updateStatus(); }, 2500); }
   setCoordHint(_p: Pt) { /* 状态栏保持工具提示，不随鼠标闪烁 */ }
   refresh() {
-    if (this.active) applyDisplay(this.active.store.doc.settings.display ?? this.settings.display);
+    this.docs.forEach(d => d.store.syncAngleUnit(d.fallbackDisplay.angleUnit));
+    if (this.active) applyDisplay(pageDisplay(this.active.store.doc, this.active.store.page, this.active.fallbackDisplay));
     buildMenus(this, true);
     this.refreshTextbar();
     this.refreshPageBar();
@@ -682,6 +725,8 @@ export class App {
     this.pagebar.replaceChildren(...doc.pages.map((p, i) => { const b = document.createElement('button'); b.textContent = p.name; b.className = i === doc.current ? 'on' : ''; b.onclick = () => { v.store.switchPage(i); v.sel = []; v.eraseTraces(); this.refresh(); }; return b; }));
   }
   showContextMenu(v: DocView, e: MouseEvent, p: Pt) {
+    // 右键不会经过 DocView.onDown 的前台切换；先激活目标文档，避免从另一个文档取命令状态或执行目标。
+    if (this.active !== v) this.focusDoc(v);
     // 右键先选中被点的对象
     const hit = (hitFirst(v, p));
     if (hit !== undefined && !v.sel.includes(hit)) v.setSel([hit]);
@@ -695,7 +740,7 @@ export class App {
     if (e.isComposing || v.textEdit?.composing) return;
     const target = e.target as HTMLElement | null;
     const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
-    if (this.dlg.open) return;
+    if (this.dlg.open || v.dragCompleting || (v.backgroundDragging && e.key !== 'Escape')) return;
     if (typing && target !== v.textEdit?.ta) return;
     const combo = comboOf(e);
     // 菜单快捷键
@@ -716,10 +761,10 @@ export class App {
   queryMenu(id: number, shift = false) { return queryCommand(id, this.ctx(shift)); }
   exec(id: number, shift = false) { return executeCommand(id, this.ctx(shift)); }
   parseText(v: DocView, text: string, variable?: string): Expr {
-    const st = v.store, named = st.page.objects.filter(o => ['param', 'calc', 'measure', 'func'].includes(o.def.k));
+    const st = v.store, named = st.page.objects.filter(o => ['param', 'calc', 'measure', 'func', 'picfunc'].includes(o.def.k));
     const nameOf = (o: Obj) => (o.def.k === 'param' ? o.def.name : o.def.k === 'func' ? o.def.name : o.label ?? measureName(st.page, st.results, o));
     const names = named.map(nameOf);
-    return parseExpr(text, { names, variable, resolve: n => named.find(o => nameOf(o) === n && o.def.k !== 'func')?.id, funcs: n => named.find(o => o.def.k === 'func' && nameOf(o) === n)?.id });
+    return parseExpr(text, { names, variable, resolve: n => named.find(o => nameOf(o) === n && classOf(o) !== 'func')?.id, funcs: n => named.find(o => classOf(o) === 'func' && nameOf(o) === n)?.id });
   }
 }
 

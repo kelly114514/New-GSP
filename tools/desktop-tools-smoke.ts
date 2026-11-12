@@ -9,6 +9,7 @@ import { chromium } from '@playwright/test';
 import { loadToolFile, resolveTool } from '../src/toolkit';
 import { decodeFile } from '../src/gsp/codec';
 import { toolInputFixture } from './tool-input-fixture';
+import { applyTool } from '../src/core/tooling';
 
 const exe = resolve(process.argv[2]);
 const folder = resolve(process.argv[3] ?? '../sketchpad5/Tool Folder');
@@ -20,7 +21,9 @@ const groups = readdirSync(folder).filter(f => /\.gsp$/i.test(f)).sort().flatMap
 });
 const fixtures = groups.flatMap((g, gi) => g.tools.map((ref, ti) => {
   const t = resolveTool(ref), f = toolInputFixture(t);
-  return { gi, ti, name: `${g.name}/${t.name}`, doc: f.st.doc, picks: f.picks };
+  const doc = structuredClone(f.st.doc);
+  f.st.run(t.name, () => applyTool(f.st, t, f.picks, () => ({ x: 20, y: 200 }), { random: () => 0.37 }));
+  return { gi, ti, name: `${g.name}/${t.name}`, doc, picks: f.picks, expected: f.st.page.objects.length };
 }));
 const child = spawn(exe, [], { stdio: 'ignore', env: { ...process.env,
   NEW_GSP_TEST_RECOVERY_DIR: join(dir, 'recovery'),
@@ -71,7 +74,6 @@ try {
       const tool = app.customTool;
       if (tool.blocked) return tool.blocked;
       v.toolPicks = f.picks;
-      const before = st.page.objects.length;
       const previousRandom = Math.random; let seed = 123456789;
       Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
       if (trace) console.log('阶段：执行工具', performance.now().toFixed(0));
@@ -93,8 +95,7 @@ try {
       }
       if (trace) console.log('阶段：执行完成', performance.now().toFixed(0));
       if (document.querySelector('.dlg')) return '出现了未处理的对话框';
-      const expected = tool.objects.length - tool.inputs.length;
-      if (st.page.objects.length !== before + expected) return '创建数量不符';
+      if (st.page.objects.length !== f.expected) return `预期 ${f.expected} 个对象，实际 ${st.page.objects.length} 个`;
       const bad = st.page.objects.filter((o: any) => o.def.k === 'unknown' || ['missing', 'unsupported'].includes(st.results.get(o.id)?.status));
       return bad.length ? JSON.stringify(bad.map((o: any) => [o.id, o.def.k])) : '';
     }, { f: fixture, trace });
@@ -127,5 +128,6 @@ try {
   if (child.exitCode === null && child.signalCode === null) await new Promise(r => child.once('exit', r));
   // 只清理本次创建的目录。WebView2 的子进程可能短暂持有文件。
   if (dirname(realpathSync(dir)) !== temp) throw Error('拒绝清理临时目录之外的路径');
-  rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+  try { rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 }); }
+  catch (error) { console.warn('临时目录暂未清理', dir, error); }
 }

@@ -9,7 +9,11 @@ import type { DocView } from './docview';
 
 interface Item { id?: number; name?: string; access?: string; shortcut?: string; separator?: boolean; children?: Item[] }
 const ACCESS: Record<string, string> = { 文件: 'F', 编辑: 'E', 显示: 'D', 构造: 'C', 变换: 'T', 度量: 'M', 数据: 'N', 绘图: 'G', 窗口: 'W', 帮助: 'H' };
-const PALETTE = ['#000000', '#808080', '#ff0000', '#ff8000', '#ffff00', '#00c000', '#008000', '#00ffff', '#0000ff', '#000080', '#8000ff', '#ff00ff'];
+// 32859–32874：原版逐色采集课件 tc01-colors.gsp 与程序色表的顺序一致。
+export const PALETTE = [
+  '#000000', '#ff0000', '#ff8000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff',
+  '#8a66d9', '#800080', '#008000', '#000080', '#800000', '#c0854a', '#c0c0c0', '#808080',
+];
 
 // 快捷键表：从规格里的字符串规范化
 const shortcutOf = (s: string) => s.replace('Shift+Ctrl', 'Shift+Ctrl').replace('Alt+↑', 'Alt+ArrowUp').replace('Alt+↓', 'Alt+ArrowDown');
@@ -171,6 +175,7 @@ let closeMenus: () => void = () => undefined;
 function refreshStates(app: App) {
   if (!app.active) return;
   const ctx: Ctx = app.ctx(shiftDown);
+  app.menubar.querySelectorAll<HTMLButtonElement>('.swrow .sw').forEach(b => { b.disabled = !queryCommand(36909, ctx).enabled; });
   // 窗口菜单的文档列表
   const win = app.menubar.querySelector('.windowmenu');
   if (win && win.querySelectorAll('.docitem').length !== app.docs.length) {
@@ -198,33 +203,34 @@ const sizes = [P(36897), P(36898), P(36899), P(36900)];
 const widths = [P(36901), P(36902), P(36903), P(36904)];
 const dashes = [P(36905), P(36906), P(36907)];
 const color: CItem = { label: () => '颜色', palette: true };
+const contextType = (s: ReturnType<typeof analyse>) => s.sameType?.replace('内部', '') ?? '对象';
 const common = (kind: 'point' | 'line' | 'region' | 'plain'): CItem[] => {
   const head: CItem[] = [P(36890), P(36895), SEP];
   const body: CItem[] = kind === 'point' ? [...sizes, color] : kind === 'line' ? [...widths, SEP, ...dashes, color] : [color];
-  return [...head, ...body, SEP, { cmd: 36911 }, { cmd: 36913 }, { cmd: 36914 }, { cmd: 36915, label: (s) => `追踪${s.sameType ?? '对象'}` }, { cmd: 36917, label: s => `生成${s.sameType ?? '对象'}的动画` }];
+  return [...head, ...body, SEP, { cmd: 36911, label: s => `隐藏${contextType(s)}` }, { cmd: 36913 }, { cmd: 36914, label: s => `${contextType(s)}的标签…` }, { cmd: 36915, label: s => `追踪${contextType(s)}` }, { cmd: 36917, label: s => `生成${contextType(s)}的动画` }];
 };
 
-function contextItems(v: DocView): CItem[] {
+export function contextItems(v: DocView): CItem[] {
   const s = analyse(v);
   if (s.n === 0) return [P(36870), P(36871), P(36874), SEP, P(36889), P(36896), SEP, P(36921), P(36922), P(36923), SEP, P(36970), P(36971), P(36975), SEP, P(36980), P(36981), P(36982), P(36983), SEP, P(36984), P(36985), P(36987), P(36988), P(36990), P(36991)];
   if (s.n > 1) return [P(36890), P(36891), P(36895), SEP, color, SEP, { cmd: 36911 }, { cmd: 36913 }, { cmd: 36915 }, SEP, P(36878), P(36879), P(36881)];
   const o = s.objs[0], c = classOf(o);
   const k = o.def.k;
-  if (c === 'point') return [...(k === 'onpath' ? [P(36890), P(36893)] : k === 'free' ? [] : [P(36890)]), P(36895), SEP, ...sizes, color, SEP, { cmd: 36911 }, { cmd: 36913 }, { cmd: 36914 }, { cmd: 36915, label: () => '追踪点' }, { cmd: 36917, label: () => '生成点的动画' }, SEP, P(36939), SEP, ...(k === 'onpath' ? [P(36963)] : []), P(36964), P(36965), P(36966)];
+  if (c === 'point') return [...(k === 'onpath' ? [P(36890), P(36893)] : k === 'free' ? [] : [P(36890)]), P(36895), SEP, ...sizes, color, SEP, { cmd: 36911, label: () => '隐藏点' }, { cmd: 36913 }, { cmd: 36914, label: () => '点的标签…' }, { cmd: 36915, label: () => '追踪点' }, { cmd: 36917, label: () => '生成点的动画' }, SEP, P(36939), SEP, ...(k === 'onpath' ? [P(36963)] : []), P(36964), P(36965), P(36966)];
   if (c === 'straight') return [...common('line'), SEP, P(36940), SEP, ...(k === 'seg' ? [P(36953)] : []), P(36968), ...(k === 'line' ? [P(36969)] : []), SEP, P(36987)];
   if (c === 'circle') return [...common('line'), SEP, P(36956), P(36958), P(36961), P(36969), SEP, P(36987)];
   if (c === 'arc') return [...common('line'), SEP, P(36959), P(36960), P(36961), SEP, P(36987)];
-  if (c === 'interior') return [...common('region'), SEP, P(36955), P(36958), SEP, P(36987)];
+  if (c === 'interior') return [...common('region'), SEP, P(36955), P(36958), SEP, { cmd: 36987, label: s => `在${contextType(s)}上绘制点…` }];
   if (c === 'locus' || c === 'plot') return [...common('line'), SEP, P(36987), SEP, P(200001), P(200002)];
-  if (k === 'iterimg') return [P(36890), P(36895), SEP, ...sizes, color, SEP, { cmd: 36911 }, { cmd: 36915 }, SEP, P(200005), P(200006)];
-  if (k === 'measure') return [P(36890), P(36895), color, SEP, { cmd: 36911 }, { cmd: 36914 }, SEP, P(36944), SEP, P(36987)];
+  if (k === 'iterimg') return [P(36890), P(36895), SEP, ...sizes, color, SEP, { cmd: 36911 }, { cmd: 36915, label: () => '追踪迭代象' }, { cmd: 36917, label: () => '生成迭代象的动画' }, SEP, P(200005), P(200006)];
+  if (k === 'measure') return [P(36890), P(36895), color, SEP, { cmd: 36911, label: () => `隐藏${o.def.k === 'measure' && o.def.m === 'distance' ? '距离度量值' : '度量值'}` }, { cmd: 36914, label: () => `${o.def.k === 'measure' && o.def.m === 'distance' ? '距离度量值' : '度量值'}的标签…` }, SEP, P(36944), SEP, P(36987)];
   if (k === 'param') return [P(36894), P(36895), color, SEP, { cmd: 36911 }, { cmd: 36914 }, { cmd: 36917, label: () => '生成参数的动画' }, SEP, P(36942), SEP, P(36987), SEP, P(200003), P(200004)];
-  if (k === 'calc') return [P(36894), P(36895), color, SEP, { cmd: 36911 }, { cmd: 36914 }, SEP, P(36942), SEP, P(36987)];
-  if (k === 'func') return [P(36894), P(36895), color, SEP, { cmd: 36911 }, { cmd: 36914 }, SEP, P(36990)];
+  if (k === 'calc') return [P(36894), P(36895), color, SEP, { cmd: 36911, label: () => '隐藏度量值' }, { cmd: 36914, label: () => '度量值的标签…' }, SEP, P(36942), SEP, P(36987)];
+  if (k === 'func') return [P(36894), P(36895), color, SEP, { cmd: 36911 }, { cmd: 36914 }, SEP, P(36976), P(36990)];
   if (k === 'table') return [P(36890), P(36895), color, SEP, { cmd: 36911 }, SEP, P(36973), SEP, P(36989)];
   if (k === 'button') return [P(36890), P(36895), color, SEP, { cmd: 36911 }, { cmd: 36914 }];
-  if (k === 'image') return [P(36895), color, SEP, { cmd: 36911 }];
-  if (k === 'text') return [P(36894), P(36895), color, SEP, { cmd: 36911, label: () => '隐藏说明' }];
+  if (k === 'image') return [P(36895), color, SEP, { cmd: 36911 }, SEP, P(36977)];
+  if (k === 'text') return [P(36895), color, SEP, { cmd: 36911, label: () => '隐藏说明' }];
   return [P(36890), P(36895), SEP, { cmd: 36911 }];
 }
 
@@ -240,7 +246,7 @@ export class ContextMenu {
   }
   hide() { this.el.hidden = true; }
   show(v: DocView, x: number, y: number) {
-    const ctx = this.app.ctx();
+    const ctx: Ctx = { ...this.app.ctx(), view: v };
     const build = (items: CItem[], into: HTMLElement) => {
       for (const it of items) {
         if (it.sep) { into.append(document.createElement('hr')); continue; }
@@ -249,9 +255,11 @@ export class ContextMenu {
           row.classList.add('sub'); row.dataset.access = 'C'; row.innerHTML = '<span class="ck"></span><span class="nm">颜色(C)</span><span class="arrow">▶</span>';
           const sub = document.createElement('div'); sub.className = 'dropdown';
           const sw = document.createElement('div'); sw.className = 'swrow';
-          for (const c of PALETTE) { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.onclick = () => { this.hide(); v.store.run('颜色', () => v.store.setStyle(v.sel, { color: c })); }; sw.append(b); }
-          const other = document.createElement('div'); other.className = 'item'; other.dataset.access = 'O'; other.innerHTML = '<span class="ck"></span><span class="nm">其它(O)…</span>'; other.onclick = () => { this.hide(); void this.app.exec(36909); };
-          sub.append(sw, other); row.append(sub);
+          const colorEnabled = queryCommand(36909, ctx).enabled;
+          for (const c of PALETTE) { const b = document.createElement('button'); b.className = 'sw'; b.style.background = c; b.disabled = !colorEnabled; b.onclick = () => { this.hide(); v.store.run('颜色', () => v.store.setStyle(v.sel, { color: c })); }; sw.append(b); }
+          sub.append(sw);
+          if (colorEnabled) { const other = document.createElement('div'); other.className = 'item'; other.dataset.access = 'O'; other.innerHTML = '<span class="ck"></span><span class="nm">其它(O)…</span>'; other.onclick = () => { this.hide(); void this.app.exec(36909); }; sub.append(other); }
+          row.append(sub);
           row.onmouseenter = () => { setHot(into, row); sub.classList.add('show'); }; row.onmouseleave = () => { sub.classList.remove('show'); row.classList.remove('hot'); };
         } else {
           const id = it.cmd!, st = queryCommand(id, ctx), s = analyse(v);

@@ -22,6 +22,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; font: 13px 'Segoe UI', '
 .dropdown hr { border: 0; border-top: 1px solid #ccc; margin: 3px 2px; }
 .swrow { display: grid; grid-template-columns: repeat(6, 22px); gap: 3px; padding: 5px 8px; }
 .sw { width: 20px; height: 20px; border: 1px solid #666; padding: 0; }
+.sw:disabled { opacity: 0.35; }
 .ctxmenu { position: fixed; display: block; }
 .ctxmenu[hidden] { display: none; }
 .main { flex: 1; display: flex; min-height: 0; }

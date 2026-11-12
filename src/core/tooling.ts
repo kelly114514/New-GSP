@@ -5,11 +5,11 @@
  * 应用时：前提条件换成用户点选的对象，其余对象按顺序重新构造，引用经 remapDef 换成新对象。
  * 文件格式见 docs/gsp格式.md §3h；哪些规则来自文件、哪些是推断，也写在那里。
  */
-import { ancestors, isMeasureDef, isPointDef, isStraightDef, parentsOf, type Def, type EmbeddedTool, type Id, type Obj, type Page } from './model';
-import { pathPointAt, type EvalCtx, type Results, type Shape } from './engine';
+import { ancestors, isMeasureDef, isPointDef, isStraightDef, parentsOf, pageDisplay, TEXT_REF, type Def, type EmbeddedTool, type Id, type Obj, type Page } from './model';
+import { pathPointAt, pathUsesPixelDistance, polygonEdgeAt, type EvalCtx, type Results, type Shape } from './engine';
 import { remapDef } from './remap';
 import { labelFor, type Store } from './store';
-import { TAU, type Pt, type Straight } from './geom';
+import { dist, TAU, type Pt, type Straight } from './geom';
 
 /** 占位类型来自工具记录及其后续构造的引用；依据见 gsp格式.md §3h。 */
 export type InputKind = 'point' | 'number' | 'segment' | 'straight' | 'system' | 'function' | 'path' | 'curve' | 'text' | 'polygon' | 'axis' | 'iteration-image' | 'plot-path' | 'object' | 'geometry';
@@ -22,7 +22,8 @@ export const inputPrompt: Record<InputKind, string> = {
   'plot-path': '点一个函数图像或轨迹', object: '点一个对象',
   geometry: '点一个点、路径或图片',
 };
-export interface ToolInput { index: Id; kind: InputKind; label?: string }
+export interface ToolInput { index: Id; kind: InputKind; label?: string; unit?: 'distance' }
+export const toolInputPrompt = (input: ToolInput): string => input.unit === 'distance' ? '点一个距离值' : inputPrompt[input.kind];
 export interface Tool {
   name: string;
   comment?: string;
@@ -62,7 +63,7 @@ export function inputKindOf(o: Obj): InputKind | undefined {
 }
 
 /** 画板里的对象能不能当这一项前提条件。 */
-export function acceptsInput(kind: InputKind, o: Obj, results?: Results): boolean {
+export function acceptsInput(kind: InputKind, o: Obj, results?: Results, unit?: ToolInput['unit']): boolean {
   const s = results?.get(o.id)?.shape;
   if (kind === 'point') return s ? s.k === 'pt' : isPointDef(o.def);
   if (kind === 'segment') return s ? s.k === 'line' && s.s.ext === 'segment' : o.def.k === 'seg';
@@ -70,7 +71,7 @@ export function acceptsInput(kind: InputKind, o: Obj, results?: Results): boolea
   if (kind === 'system') return o.def.k === 'sys';
   if (kind === 'function') return o.def.k === 'func' || o.def.k === 'picfunc';
   if (kind === 'object') return o.def.k !== 'unknown';
-  if (kind === 'geometry') return !!s && ['pt', 'line', 'circle', 'arc', 'paths', 'poly', 'disk', 'sector'].includes(s.k) || o.def.k === 'image';
+  if (kind === 'geometry') return !!s && ['pt', 'line', 'circle', 'arc', 'paths', 'poly', 'disk', 'sector'].includes(s.k) || o.def.k === 'image' || o.def.k === 'image-clip' || o.def.k === 'custom-image';
   if (kind === 'path') return !!s && ['line', 'circle', 'arc', 'paths', 'poly', 'disk', 'sector'].includes(s.k);
   if (kind === 'curve') return s?.k === 'circle' || s?.k === 'arc' || s?.k === 'sector';
   if (kind === 'polygon') return s?.k === 'poly';
@@ -78,20 +79,35 @@ export function acceptsInput(kind: InputKind, o: Obj, results?: Results): boolea
   if (kind === 'iteration-image') return o.def.k === 'iterimg';
   if (kind === 'plot-path') return o.def.k === 'plot' || o.def.k === 'locus' || o.def.k === 'pcurve';
   if (kind === 'text') return o.def.k === 'text' || isMeasureDef(o.def) || o.def.k === 'func' || o.def.k === 'picfunc';
-  return isMeasureDef(o.def) && !(o.def.k === 'measure' && (o.def.m === 'coords' || o.def.m === 'equation'));
+  if (!isMeasureDef(o.def) || o.def.k === 'measure' && (o.def.m === 'coords' || o.def.m === 'equation')) return false;
+  return unit === undefined || s?.k === 'num' && s.q.u === unit;
 }
 
 /** 坐标系本身不画独立轮廓，工具输入通过原点或两根轴找到所属坐标系。 */
-export function toolInputFromHits(kind: InputKind, hits: Id[], page: Page, results: Results, used: Id[]): Id | undefined {
+export function toolInputFromHits(kind: InputKind, hits: Id[], page: Page, results: Results, used: Id[], unit?: ToolInput['unit']): Id | undefined {
   for (const id of hits) {
     const o = page.objects.find(o => o.id === id);
-    if (o && !used.includes(id) && acceptsInput(kind, o, results) && (kind !== 'axis' || page.objects.some(s => s.def.k === 'sys' && [s.def.axisX, s.def.axisY].includes(id)))) return id;
+    if (o && !used.includes(id) && acceptsInput(kind, o, results, unit) && (kind !== 'axis' || page.objects.some(s => s.def.k === 'sys' && [s.def.axisX, s.def.axisY].includes(id)))) return id;
     if (kind === 'system') {
       const sys = page.objects.find(o => o.def.k === 'sys' && !used.includes(o.id) && [o.def.origin, o.def.axisX, o.def.axisY].includes(id));
       if (sys) return sys.id;
     }
   }
   return undefined;
+}
+
+/** 标记了工具标签的数值前提，原版会直接采用画板上的同名值。 */
+export function automaticToolInputs(tool: Tool, page: Page, results: Results): (Id | undefined)[] {
+  const system = page.objects.filter(o => o.def.k === 'sys').at(-1)?.id;
+  return tool.inputs.map(input => {
+    if (input.kind === 'system') return system;
+    if (input.kind !== 'number' || !input.label || !tool.objects.find(o => o.id === input.index)?.toolLabel) return undefined;
+    const matches = page.objects.filter(o => {
+      const label = o.label ?? (o.def.k === 'param' ? o.def.name : undefined);
+      return !o.hidden && label === input.label && acceptsInput(input.kind, o, results, input.unit);
+    });
+    return matches.length === 1 ? matches[0].id : undefined;
+  });
 }
 
 function visibleLineRange(line: Straight, view: NonNullable<EvalCtx['view']>): [number, number] | undefined {
@@ -118,7 +134,7 @@ function visibleLineRange(line: Straight, view: NonNullable<EvalCtx['view']>): [
 }
 
 /**
- * 工具里的函数图像：原版应用时把定义域重设为覆盖当前视口。
+ * 工具里的函数图像通常以应用时的视口为定义域。
  * 依据：44 组工具逐个原版执行的保存结果（tools 对照，见 docs/工具兼容验证.md）。
  */
 function toolPlotRange(st: Store, def: Extract<Obj['def'], { k: 'plot' }>): { lo?: number; hi?: number; samples?: number } {
@@ -134,6 +150,31 @@ function toolPlotRange(st: Store, def: Extract<Obj['def'], { k: 'plot' }>): { lo
   // 定义域覆盖视口：x=f(y) 按视口高，其余按视口宽；采样数恢复默认 750。
   if (vertical) return { lo: (origin.y - view.y1) / length, hi: (origin.y - view.y0) / length, samples: 750 };
   return { lo: (view.x0 - origin.x) / length, hi: (view.x1 - origin.x) / length, samples: 750 };
+}
+
+/** 有界滑块以过原点的常值图像作路径，并用单位点量出滑块位置。原版的范围固定为 ±10。 */
+function isBoundedSliderPlot(id: Id, d: Extract<Def, { k: 'plot' }>, defs: ReadonlyMap<Id, Def>): boolean {
+  const sys = defs.get(d.sys), func = defs.get(d.func);
+  if (sys?.k !== 'sys' || func?.k !== 'func' || func.expr.t !== 'ref') return false;
+  const zero = defs.get(func.expr.id);
+  if (zero?.k !== 'measure' || (zero.m !== 'abscissa' && zero.m !== 'ordinate') || zero.refs[0] !== sys.origin || zero.refs[1] !== d.sys) return false;
+  const unit = func.form === 'x=f(y)' ? sys.unitY : sys.unitX;
+  for (const item of defs.values()) {
+    if (item.k !== 'measure' || item.m !== 'ratio' || item.refs[0] !== sys.origin || item.refs[1] !== unit) continue;
+    const driver = defs.get(item.refs[2]);
+    if (driver?.k === 'onpath' && driver.path === id) return true;
+  }
+  return false;
+}
+
+/** 这两种旧工具在不同落点和已有坐标系下均触发原版的 ±10 回退。 */
+function usesOriginalFixedPlotRange(tool: Tool, obj: Obj): boolean {
+  if (rawOf(obj)?.m !== 72) return false;
+  if (tool.name === '过三点的抛物线(2)' && tool.objects.length === 27 && tool.inputs.length === 4) return obj.id === 26;
+  if (tool.name === '01 立体几何平台' && tool.objects.length === 270 && tool.inputs.length === 1) {
+    return obj.def.k === 'plot' && obj.def.lo === -10 && obj.def.hi === 10;
+  }
+  return false;
 }
 
 /** 工具应用时沿可见路径初始化一次。尝试次数有上限，路径完全在屏幕外时仍保留可拖动的点。 */
@@ -183,7 +224,7 @@ export function buildTool(meta: Pick<EmbeddedTool, 'name' | 'comment' | 'prereq'
     const o = objects.find(x => x.id === idx);
     const kind = o && inputKindOf(o);
     if (!o || !kind) { const r = o && rawOf(o); block(`prereq:${r?.c ?? '?'}/${r?.k ?? '?'}`, `前提条件的类型（大类 ${r?.c ?? '?'} / 类型 ${r?.k ?? '?'}）还没有核对过，暂不支持`); continue; }
-    inputs.push({ index: idx, kind, ...(o.label ? { label: o.label } : {}) });
+    inputs.push({ index: idx, kind, ...(o.label ? { label: o.label } : {}), ...(kind === 'number' && rawOf(o)?.k === 60 ? { unit: 'distance' } : {}) });
   }
   const isInput = new Set(meta.prereq);
   for (const o of objects) {
@@ -203,7 +244,7 @@ export function buildTool(meta: Pick<EmbeddedTool, 'name' | 'comment' | 'prereq'
 /** 文字型对象的下一个空位：从视口左上角 (10,5) 起，排在已有可见文字之下。隐藏对象不占位（逐工具实测）。 */
 function nextFloatSlot(st: Store): Pt {
   const base = { x: (st.ctx.view?.x0 ?? st.page.scroll?.x ?? 0) + 10, y: (st.ctx.view?.y0 ?? st.page.scroll?.y ?? 0) + 5 };
-  const size = st.doc.settings.display?.textStyles?.value?.size ?? 18;
+  const size = pageDisplay(st.doc, st.page).textStyles?.value?.size ?? 18;
   let y = base.y;
   for (const o of st.page.objects) {
     if (o.hidden) continue;
@@ -236,37 +277,111 @@ function toolObjectLabel(st: Store, def: Def, o: Obj): string | undefined {
   return labelFor(st.page.labelCounter++) + primes;
 }
 
+/** 原版会复用由定义确定的公共点。不能按当下坐标相等合并，否则拖动后会丢掉真实交点。 */
+function sharedStraightPoint(a: Id, b: Id, defs: ReadonlyMap<Id, Def>): Id | undefined {
+  const points = (d: Def | undefined): Id[] => {
+    if (d?.k === 'seg' || d?.k === 'ray' || d?.k === 'line') return [d.a, d.b];
+    if (d?.k === 'perp' || d?.k === 'parallel') return [d.pt];
+    if (d?.k === 'bisect') return [d.v];
+    return [];
+  };
+  const on = (p: Id, path: Id, endpoints: Id[]): boolean => {
+    const d = defs.get(p);
+    return endpoints.includes(p) || (d?.k === 'onpath' && d.path === path) || (d?.k === 'mid' && d.seg === path)
+      || (d?.k === 'inter' && (d.a === path || d.b === path));
+  };
+  const pa = points(defs.get(a)), pb = points(defs.get(b));
+  if (a === b || !pa.length || !pb.length) return undefined;
+  const shared = [...new Set([...pa, ...pb])].filter(p => on(p, a, pa) && on(p, b, pb));
+  return shared.length === 1 ? shared[0] : undefined;
+}
+
+/** 原版工具重建轨迹时按作品类型选采样数；变换与着色不改变类型。 */
+function toolLocusSamples(d: Extract<Def, { k: 'locus' }>, raw: RawKind | undefined, defs: ReadonlyMap<Id, Def>): number {
+  if ((raw?.m === 35 && raw.k === 42) || (raw?.m === 102 && raw.k === 90)) return 500;
+  if (raw?.m !== 35 || raw.k !== 43) return Math.min(500, Math.max(250, d.samples));
+  let id = d.out;
+  const seen = new Set<Id>();
+  while (!seen.has(id)) {
+    seen.add(id);
+    const target = defs.get(id);
+    if (target?.k === 'colorize' || target?.k === 'translate' || target?.k === 'rotate' || target?.k === 'dilate' || target?.k === 'reflect') {
+      id = target.src;
+      continue;
+    }
+    if (target?.k === 'poly') return 125;
+    if (target?.k === 'circle-int') return 62;
+    break;
+  }
+  return 250;
+}
+
 export function applyTool(st: Store, tool: Tool, picks: Id[], _nextPos: () => Pt, options: { random?: () => number } = {}): Obj[] {
   if (tool.blocked) throw new Error(tool.blocked);
   if (picks.length !== tool.inputs.length) throw new Error('前提条件没有点选完整');
-  tool.inputs.forEach((inp, i) => { const o = st.get(picks[i]); if (!o || !acceptsInput(inp.kind, o, st.results) || inp.kind === 'axis' && !st.page.objects.some(s => s.def.k === 'sys' && [s.def.axisX, s.def.axisY].includes(o.id))) throw new Error(`第 ${i + 1} 个前提条件类型不符：请${inputPrompt[inp.kind]}`); });
+  tool.inputs.forEach((inp, i) => { const o = st.get(picks[i]); if (!o || !acceptsInput(inp.kind, o, st.results, inp.unit) || inp.kind === 'axis' && !st.page.objects.some(s => s.def.k === 'sys' && [s.def.axisX, s.def.axisY].includes(o.id))) throw new Error(`第 ${i + 1} 个前提条件类型不符：请${toolInputPrompt(inp)}`); });
   const map = new Map<Id, Id>();
   tool.inputs.forEach((inp, i) => map.set(inp.index, picks[i]));
   const isInput = new Set(tool.inputs.map(i => i.index)), made: Obj[] = [];
+  const axisInputs = new Set(tool.inputs.filter(i => i.kind === 'axis').map(i => i.index));
+  const definitions = new Map(tool.objects.map(o => [o.id, o.def]));
+  const reused = new Set<Id>();
   // 按钮、迭代等会引用排在后面的对象，先为整批对象预留映射。
   let next = st.page.nextId;
-  for (const o of tool.objects) if (!isInput.has(o.id)) map.set(o.id, next++);
   for (const o of tool.objects) {
     if (isInput.has(o.id)) continue;
+    const d = o.def;
+    let existing: Id | undefined;
+    if (d.k === 'sys' && axisInputs.has(d.axisX) && axisInputs.has(d.axisY)) {
+      const x = map.get(d.axisX), y = map.get(d.axisY);
+      const sys = st.page.objects.find(s => s.def.k === 'sys' && s.def.axisX === x && s.def.axisY === y);
+      if (!sys) throw new Error('请选同一坐标系的横轴和纵轴');
+      existing = sys.id;
+    } else if (d.k === 'inter' && rawOf(o)?.m === 9 && d.branch === 0) {
+      const shared = sharedStraightPoint(d.a, d.b, definitions);
+      const target = shared === undefined ? undefined : map.get(shared);
+      // 可见作品可以显示工具本次建立的公共点，已有前提点的外观保持原状。
+      if (target !== undefined && (o.hidden || target >= st.page.nextId && !o.labelShown && !o.trace)) existing = target;
+    } else if (o.hidden && d.k === 'translate' && d.by.mode === 'vector' && d.by.from === d.by.to) {
+      // 同一点给出的位移恒为零，原版工具沿用原对象。
+      existing = map.get(d.src);
+    }
+    if (existing !== undefined) {
+      map.set(o.id, existing);
+      reused.add(o.id);
+    } else map.set(o.id, next++);
+  }
+  for (const o of tool.objects) {
+    if (isInput.has(o.id)) continue;
+    if (reused.has(o.id)) {
+      if (o.def.k === 'inter' && !o.hidden) st.setHidden([map.get(o.id)!], false);
+      continue;
+    }
     let def = remapDef(JSON.parse(JSON.stringify(o.def)), map);
     const raw = rawOf(o);
     if (def.k === 'onpath' && raw?.m === 15 && raw.withParams === false) {
       if (!st.results.has(def.path)) st.recompute();
-      def = { ...def, t: initialToolPathParameter(st.results.get(def.path)?.shape, options.random, st.ctx.view) };
+      const path = st.results.get(def.path)?.shape;
+      const t = initialToolPathParameter(path, options.random, st.ctx.view);
+      def = pathUsesPixelDistance(st.page, def.path)
+        ? { ...def, t: path?.k === 'line' ? t * dist(path.s.a, path.s.b) : t, abs: true }
+        : { ...def, t, ...(path?.k === 'poly' ? polygonEdgeAt(path.pts, t) : {}) };
     }
-    if (def.k === 'plot' && st.ctx.view) def = { ...def, ...toolPlotRange(st, def) };
-    // 原版应用工具时重设轨迹采样数：实测结果只有 125、250、500，规律未明；取相同量级，兼顾平滑和性能。
-    if (def.k === 'locus') def = { ...def, samples: Math.min(500, Math.max(250, def.samples)) };
+    if (def.k === 'plot' && o.def.k === 'plot') {
+      if (isBoundedSliderPlot(o.id, o.def, definitions) || usesOriginalFixedPlotRange(tool, o)) def = { ...def, lo: -10, hi: 10, samples: 750 };
+      else if (st.ctx.view) def = { ...def, ...toolPlotRange(st, def) };
+    }
+    if (def.k === 'locus' && o.def.k === 'locus') def = { ...def, samples: toolLocusSamples(o.def, raw, definitions) };
     if (def.k === 'func') { const name = nextFunctionName(st); if (name) def = { ...def, name }; }
     if (def.k === 'button' || (def.k === 'text' && def.anchor === undefined)) def = { ...def, at: nextFloatSlot(st) };
     // 没有自己样式的文本跟随目标文档的“标题”样式
-    const titleStyle = st.doc.settings.display?.textStyles?.title;
+    const titleStyle = pageDisplay(st.doc, st.page).textStyles?.title;
     if (def.k === 'text' && titleStyle && def.font.name === 'Times New Roman' && def.font.size === 16) {
       const font = { ...def.font, ...titleStyle }; def = { ...def, font, ...(def.runs ? { runs: def.runs.map(run => ({ ...run, font: { ...run.font, ...titleStyle } })) } : {}) };
     }
     if (def.k === 'text' && def.anchor !== undefined) {
       // 附着文本以点为中心；原版按实际文字尺寸计算，这里用字号估计（占位字符的宽度不可用）。
-      const lines = def.text.replace(/\ue000\d+\ue001/g, '0').split('\n');
+      const lines = def.text.replace(TEXT_REF, '0').split('\n');
       const unit = (ch: string) => ch.charCodeAt(0) > 255 ? 1 : 0.5;
       const wide = Math.max(...lines.map(t => [...t].reduce((n, ch) => n + unit(ch), 0))) * def.font.size + 6;
       def = { ...def, off: { x: -wide / 2, y: -lines.length * def.font.size * 0.55 } };
@@ -279,6 +394,22 @@ export function applyTool(st: Store, tool: Tool, picks: Id[], _nextPos: () => Pt
     made.push(n);
   }
   st.recompute();
+  // 插入公式的点和无名线段端点需要可引用的标签，标签仍可保持隐藏。
+  const textRefs = new Set<Id>();
+  for (const o of made) {
+    if (o.def.k !== 'text') continue;
+    for (const id of o.def.refs ?? []) {
+      const ref = st.get(id);
+      if (ref?.def.k === 'seg' && ref.label === undefined) {
+        textRefs.add(ref.def.a);
+        textRefs.add(ref.def.b);
+      } else textRefs.add(id);
+    }
+  }
+  for (const id of textRefs) {
+    const point = st.get(id);
+    if (point && point.label === undefined && st.results.get(id)?.shape?.k === 'pt') point.label = st.defaultLabel(point);
+  }
   return made.filter(o => !o.hidden);
 }
 

@@ -111,6 +111,28 @@ test('显式匹配所选参数并使用工具；候选有歧义时不执行', as
   expect(await count(page)).toBe(before + 1);
 });
 
+test('自定义工具自动采用同名数值，仍可将该数值点给另一个前提', async ({ page }) => {
+  const target = await page.evaluate(() => {
+    const app = window.__app, v = app.active, st = v.store;
+    const value = st.run('新建参数', () => st.add({ k: 'param', name: 't[1]', value: 3, unit: 'none', showEdit: true }, { at: { x: 60, y: 100 } }));
+    const output = { k: 'calc', expr: { t: 'bin', op: '+', a: { t: 'ref', id: 101 }, b: { t: 'ref', id: 102 } }, unit: 'none' };
+    app.customTool = {
+      name: '同名数值工具',
+      inputs: [{ index: 101, kind: 'number', label: 't[1]' }, { index: 102, kind: 'number' }],
+      objects: [{ id: 101, toolLabel: true }, { id: 102 }, { id: 103, def: output, style: value.style, hidden: false }],
+    };
+    app.setTool('custom');
+    const bounds = v.overlay.getBoundingClientRect();
+    return { id: value.id, x: bounds.left + 68, y: bounds.top + 107 };
+  });
+  await page.mouse.click(target.x, target.y);
+  const output = await page.evaluate(() => {
+    const st = window.__app.active.store, calc = st.page.objects.find((o: any) => o.def.k === 'calc');
+    return calc && { expr: calc.def.expr, value: st.results.get(calc.id).shape.q.v };
+  });
+  expect(output).toEqual({ expr: { t: 'bin', op: '+', a: { t: 'ref', id: target.id }, b: { t: 'ref', id: target.id } }, value: 6 });
+});
+
 test('对象属性可设置工具标签并保留到创建的工具', async ({ page }) => {
   await page.evaluate(() => {
     const v = window.__app.active, st = v.store;
@@ -261,13 +283,13 @@ test('组合文本中的按钮显示名称并能单击执行', async ({ page }) 
     st.run('场景', () => {
       target = st.add({ k: 'free', x: 400, y: 300 }).id;
       const button = st.add({ k: 'button', action: { type: 'hideshow', targets: [target], mode: 'toggle' }, text: '切换', at: { x: 20, y: 20 }, w: 60, h: 24 }, { hidden: true }).id;
-      st.add({ k: 'text', text: '0', refs: [button], at: { x: 100, y: 100 }, w: 180, h: 32, font: { name: 'Arial', size: 16, bold: false, italic: false, underline: false, color: '#000000' } });
+      st.add({ k: 'text', text: '0', refs: [button], at: { x: 100, y: 100 }, w: 24, h: 24, font: { name: 'Arial', size: 48, bold: false, italic: false, underline: false, color: '#000000' } });
     }); app.setTool('move'); app.refresh(); return target;
   });
   const box = await page.evaluate(() => { const b = window.__app.active.overlay.getBoundingClientRect(); return { x: b.left, y: b.top }; });
-  await page.mouse.click(box.x + 110, box.y + 110);
+  await page.mouse.click(box.x + 140, box.y + 135);
   expect(await page.evaluate(id => window.__app.active.store.get(id).hidden, target)).toBe(true);
-  await page.mouse.click(box.x + 110, box.y + 110);
+  await page.mouse.click(box.x + 140, box.y + 135);
   expect(await page.evaluate(id => window.__app.active.store.get(id).hidden, target)).toBe(false);
 });
 

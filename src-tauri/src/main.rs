@@ -58,9 +58,23 @@ fn read_gsp(path: String) -> Result<Vec<u8>, String> {
 
 #[tauri::command]
 fn open_url(url: String) -> Result<(), String> {
-    let ok = (url.starts_with("http://") || url.starts_with("https://")) && url.len() < 2000 && !url.chars().any(|c| c.is_whitespace() || c == '"' || c == '<' || c == '>' || c == '^' || c == '&' || c == '|');
-    if !ok { return Err("只能打开 http/https 网址".into()); }
+    if !is_action_url(&url) { return Err("只能打开 http/https 网址或 mailto 邮件地址".into()); }
     std::process::Command::new("rundll32").args(["url.dll,FileProtocolHandler", &url]).spawn().map(|_| ()).map_err(|e| e.to_string())
+}
+
+fn is_action_url(url: &str) -> bool {
+    if url.len() >= 2000 || url.chars().any(|c| c.is_control() || c.is_whitespace() || matches!(c, '"' | '<' | '>' | '^' | '&' | '|')) {
+        return false;
+    }
+    let Some((scheme, target)) = url.split_once(':') else { return false; };
+    if scheme.eq_ignore_ascii_case("http") || scheme.eq_ignore_ascii_case("https") {
+        return target.strip_prefix("//").is_some_and(|host| !host.is_empty());
+    }
+    if !scheme.eq_ignore_ascii_case("mailto") { return false; }
+    let Some((local, domain)) = target.split_once('@') else { return false; };
+    !local.is_empty() && !domain.is_empty() &&
+        local.bytes().all(|c| c.is_ascii_alphanumeric() || b"._+-".contains(&c)) &&
+        domain.bytes().all(|c| c.is_ascii_alphanumeric() || b".-".contains(&c))
 }
 
 /// 读系统剪贴板里的图片：用 PowerShell 取出并存成临时 PNG（WebView2 的 navigator.clipboard.read 会弹权限提示，不可用）。没有图片返回 None。
@@ -183,6 +197,14 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn action_urls_only_allow_web_and_basic_mail_recipients() {
+        assert!(is_action_url("HTTPS://example.test/help"));
+        assert!(is_action_url("mailto:teacher+lesson@example.test"));
+        for url in ["file:///tmp/a", "javascript:alert(1)", "mailto:a@b.test?bcc=c@d.test", "mailto:a%0D@b.test"] {
+            assert!(!is_action_url(url));
+        }
+    }
     #[test]
     fn launch_accepts_both_document_formats() {
         for path in [r"C:\课件\测试.gsp", r"C:\课件\测试.NGSP", "文件.GSP"] { assert!(is_document_arg(path)); }

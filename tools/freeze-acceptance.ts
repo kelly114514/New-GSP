@@ -17,7 +17,7 @@ export interface ManifestEntry { file: string; format: 'gsp' | 'ngsp'; pages: nu
 /** 对象的求值摘要：种类 + 状态 + 关键数值（保留 2 位小数）。 */
 export function digestDoc(doc: Doc): string[][] {
   return doc.pages.map(p => {
-    const res = evaluatePage(p);
+    const res = evaluatePage(p, undefined, undefined, { angleUnit: doc.settings.display?.angleUnit });
     const r2 = (v: number) => (Math.round(v * 100) / 100).toString();
     return p.objects.map(o => {
       const r = res.get(o.id), s = r?.shape as Record<string, unknown> | undefined;

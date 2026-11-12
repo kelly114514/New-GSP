@@ -1,8 +1,9 @@
 /** 动画：路径点沿路径运动、参数连续变化、“移动”按钮。运行时状态不写入构造定义；关闭文档时释放计时器。 */
-import { pathPointAt, projectOnPath, type Shape } from './core/engine';
+import { motionPathParameter, pathPointAt, polygonEdgeAt, projectOnPath, type Shape } from './core/engine';
 import { dragSysUnit } from './core/construct';
 import * as G from './core/geom';
-import { parentsOf, type Id, type Obj } from './core/model';
+import { ancestors, parentsOf, type Id, type Obj, type Page } from './core/model';
+import type { Store } from './core/store';
 import type { App } from './app';
 import type { DocView } from './ui/docview';
 
@@ -10,8 +11,35 @@ type Speed = 'slow' | 'medium' | 'fast' | 'high' | number;
 type Direction = 'forward' | 'backward' | 'bounce' | 'random';
 const PX_PER_SEC = { slow: 50, medium: 120, fast: 260, high: 600 };
 
-interface Run { view: DocView; id: Id; dir: Direction; speed: Speed; sign: 1 | -1; v?: { x: number; y: number } }
-interface Move { view: DocView; id: Id; from: G.Pt; to: G.Pt; elapsed: number; dur: number; target: Id; t?: [number, number]; value?: [number, number]; sys?: Id }
+interface Run { view: DocView; page: Page; id: Id; dir: Direction; speed: Speed; sign: 1 | -1; v?: { x: number; y: number } }
+interface Move { view: DocView; page: Page; id: Id; from: G.Pt; to: G.Pt; elapsed: number; dur: number; follow?: { id: Id; speed: Speed }; t?: [number, number]; value?: [number, number]; sys?: Id }
+
+/** 能反向移动的构造点，换成原象和对应的目标位置。 */
+function movePointSource(st: Store, id: Id, target: G.Pt): { id: Id; target: G.Pt; along?: Id[] } {
+  const d = st.get(id)?.def;
+  if (d?.k === 'plotxy' && !d.polar) {
+    const x = st.get(d.x)?.def, y = st.get(d.y)?.def;
+    if (x?.k === 'measure' && x.m === 'abscissa' && y?.k === 'measure' && y.m === 'ordinate'
+      && x.refs[0] === y.refs[0] && x.refs[1] === d.sys && y.refs[1] === d.sys
+      && st.get(x.refs[0])?.def.k === 'free') {
+      const source = x.refs[0], refs = ancestors(st.page, [d.sys]);
+      // 原象参与定义坐标系时，原版同时平移坐标系的自由点，保留绘制点在系内的坐标。
+      const along = refs.has(source) ? [...refs].filter(id => id !== source && st.get(id)?.def.k === 'free') : [];
+      return { id: source, target, along };
+    }
+  }
+  if (d?.k === 'dilate' && st.get(d.src)?.def.k === 'free' && d.ratio.mode !== 'marked') {
+    const center = st.results.get(d.center)?.shape;
+    const value = d.ratio.mode === 'value' ? st.results.get(d.ratio.m)?.shape : undefined;
+    const ratio = d.ratio.mode === 'fixed' ? d.ratio.num / d.ratio.den : value?.k === 'num' ? value.q.v : NaN;
+    const fixed = parentsOf(d).slice(1);
+    if (center?.k === 'pt' && Number.isFinite(ratio) && Math.abs(ratio) > G.EPS
+      && !fixed.includes(d.src) && !ancestors(st.page, fixed).has(d.src)) {
+      return { id: d.src, target: G.dilatePt(target, center.p, 1 / ratio) };
+    }
+  }
+  return { id, target };
+}
 
 export class Animator {
   private runs: Run[] = [];
@@ -23,7 +51,7 @@ export class Animator {
 
   constructor(private app: App) {}
   get running() { return this.runs.length > 0 || this.moves.length > 0; }
-  isAnimating(id: Id) { return this.runs.some(r => r.id === id); }
+  private isAnimating(view: DocView, id: Id) { return this.runs.some(r => r.view === view && r.page === view.store.page && r.id === id); }
 
   private speedPx(s: Speed) { return typeof s === 'number' ? s : PX_PER_SEC[s]; }
 
@@ -55,37 +83,48 @@ export class Animator {
   toggle(view: DocView, objs: Obj[], speed?: Speed, dir?: Direction) {
     const targets = this.units(view, objs);
     if (!targets.length) return;
-    const allOn = targets.every(o => this.isAnimating(o.id));
-    if (allOn) { this.runs = this.runs.filter(r => !targets.some(o => o.id === r.id)); }
+    const allOn = targets.every(o => this.isAnimating(view, o.id));
+    if (allOn) { this.stopFor(view, targets); }
     else for (const o of targets) {
-      if (this.isAnimating(o.id)) continue;
+      if (this.isAnimating(view, o.id)) continue;
       const d = dir ?? o.anim?.direction ?? 'forward';
       const ang = Math.random() * Math.PI * 2;
-      this.runs.push({ view, id: o.id, dir: d, speed: speed ?? o.anim?.speed ?? 'medium', sign: d === 'backward' ? -1 : 1, v: o.def.k === 'free' ? { x: Math.cos(ang), y: Math.sin(ang) } : undefined });
+      this.runs.push({ view, page: view.store.page, id: o.id, dir: d, speed: speed ?? o.anim?.speed ?? 'medium', sign: d === 'backward' ? -1 : 1, v: o.def.k === 'free' ? { x: Math.cos(ang), y: Math.sin(ang) } : undefined });
     }
     this.paused = false;
     if (this.runs.length) this.app.motion.show();   // 动画开始时运动控制台自动出现
     this.kick(); this.app.refresh();
   }
-  moveTo(view: DocView, from: Id, to: Id, speed: Speed, dest?: G.Pt) {
-    const st = view.store, a = st.results.get(from)?.shape, b0 = st.results.get(to)?.shape;
-    const b = dest ? ({ k: 'pt', p: dest } as const) : b0;
+  moveTo(view: DocView, from: Id, to: Id, speed: Speed, initial = false) {
+    const st = view.store, a = st.results.get(from)?.shape, targetDef = st.get(to)?.def;
+    const b = initial && targetDef?.k === 'free' ? { k: 'pt' as const, p: { x: targetDef.x, y: targetDef.y } } : st.results.get(to)?.shape;
     const def = st.get(from)?.def;
     if (a?.k === 'num' && b?.k === 'num' && def?.k === 'param') {
-      this.moves.push({ view, id: from, from: { x: 0, y: 0 }, to: { x: 0, y: 0 }, value: [a.q.v, b.q.v], elapsed: 0, dur: speed === 'high' ? 0.01 : 0.5, target: to }); this.kick(); return;
+      this.moves.push({ view, page: st.page, id: from, from: { x: 0, y: 0 }, to: { x: 0, y: 0 }, value: [a.q.v, b.q.v], elapsed: 0, dur: speed === 'high' ? 0.01 : 0.5 }); this.kick(); return;
     }
     if (a?.k !== 'pt' || b?.k !== 'pt') return;
     const sys = st.page.objects.find(o => o.def.k === 'sys' && [o.def.unitX, o.def.unitY].includes(from));
-    if (def?.k !== 'free' && def?.k !== 'onpath' && !sys) return;
+    const driver = sys ? { id: from, target: b.p } : movePointSource(st, from, b.p);
+    const start = st.results.get(driver.id)?.shape;
+    if (start?.k !== 'pt') return;
+    const driverDef = st.get(driver.id)?.def;
+    from = driver.id;
+    if (driverDef?.k !== 'free' && driverDef?.k !== 'onpath' && !sys) return;
     let t: [number, number] | undefined;
-    if (def?.k === 'onpath') {
-      const p = projectOnPath(st.page, st.results, def.path, b.p); if (!p) return;
+    if (driverDef?.k === 'onpath') {
+      const p = projectOnPath(st.page, st.results, driverDef.path, driver.target, !!driverDef.abs); if (!p) return;
       let target = p.t;
-      if (st.results.get(def.path)?.shape?.k === 'circle') target = def.t + ((target - def.t + Math.PI) % G.TAU + G.TAU) % G.TAU - Math.PI;
-      t = [st.ctx.tOverride?.get(from) ?? def.t, target];
+      if (st.results.get(driverDef.path)?.shape?.k === 'circle') target = driverDef.t + ((target - driverDef.t + Math.PI) % G.TAU + G.TAU) % G.TAU - Math.PI;
+      t = [st.ctx.tOverride?.get(from) ?? motionPathParameter(driverDef, st.results.get(driverDef.path)?.shape), target];
     }
-    const dist = G.dist(a.p, b.p), dur = Math.max(0.2, dist / this.speedPx(speed) / this.factor * 2.5);
-    this.moves.push({ view, id: from, from: a.p, to: b.p, elapsed: 0, dur: speed === 'high' ? 0.01 : dur, target: to, ...(t ? { t } : {}), ...(sys ? { sys: sys.id } : {}) });
+    const dur = this.moveDuration(G.dist(a.p, b.p), speed);
+    const follow = !initial && !t && !sys && def?.k === 'free' && targetDef?.k === 'free' ? { id: to, speed } : undefined;
+    this.moves.push({ view, page: st.page, id: from, from: start.p, to: driver.target, elapsed: 0, dur, follow, ...(t ? { t } : {}), ...(sys ? { sys: sys.id } : {}) });
+    const delta = G.sub(driver.target, start.p);
+    for (const id of driver.along ?? []) {
+      const shape = st.results.get(id)?.shape;
+      if (shape?.k === 'pt') this.moves.push({ view, page: st.page, id, from: shape.p, to: G.add(shape.p, delta), elapsed: 0, dur });
+    }
     this.kick();
   }
   /** 所有（或 only 指定的）运动对象掉头。 */
@@ -111,7 +150,7 @@ export class Animator {
     const mark = (v: DocView, id: Id) => { const l = touched.get(v) ?? []; l.push(id); touched.set(v, l); };
     for (const r of [...this.runs]) {
       const st = r.view.store, o = st.get(r.id);
-      if (!o || !st.doc.pages.includes(st.page)) { this.runs = this.runs.filter(x => x !== r); continue; }
+      if (!o || r.page !== st.page) { this.runs = this.runs.filter(x => x !== r); continue; }
       st.ctx.tOverride ??= new Map(); st.ctx.valOverride ??= new Map();
       const px = this.speedPx(r.speed);
       if (o.def.k === 'free' && r.v) {
@@ -126,13 +165,14 @@ export class Animator {
         mark(r.view, r.id);
       } else if (o.def.k === 'onpath') {
         const path = st.results.get(o.def.path)?.shape;
-        let t = st.ctx.tOverride.get(r.id) ?? o.def.t;
+        let t = st.ctx.tOverride.get(r.id) ?? motionPathParameter(o.def, path);
         const len = this.pathLength(path);
         if (!path || len < 1e-6) continue;
-        const absAxis = o.def.abs && path.k === 'line';   // 坐标轴上的点：t 就是像素
-        let step = absAxis ? px * dt : (px * dt) / len;
+        const absolute = o.def.abs && path.k === 'line';
+        let step = absolute ? px * dt : (px * dt) / len;
         if (path.k === 'circle' || path.k === 'disk') step = (px * dt) / Math.max(1, len) * G.TAU;
-        const lo = absAxis ? -1500 : path.k === 'line' && path.s.ext !== 'segment' ? -2 : 0, hi = absAxis ? 1500 : path.k === 'line' && path.s.ext !== 'segment' ? 3 : path.k === 'circle' || path.k === 'disk' ? Infinity : 1;
+        const lo = path.k === 'line' && path.s.ext !== 'segment' ? (absolute ? (path.s.ext === 'ray' ? 0 : -1500) : -2) : 0;
+        const hi = absolute ? 1500 : path.k === 'line' && path.s.ext !== 'segment' ? 3 : path.k === 'circle' || path.k === 'disk' ? Infinity : 1;
         const wraps = path.k === 'poly' || path.k === 'circle' || path.k === 'disk';
         if (r.dir === 'random') r.sign = Math.random() < 0.05 ? (r.sign === 1 ? -1 : 1) : r.sign;
         t += step * r.sign;
@@ -147,6 +187,8 @@ export class Animator {
         mark(r.view, r.id);
       }
     }
+    this.moves = this.moves.filter(m => m.page === m.view.store.page);
+    this.resolveMoveTargets();
     for (const m of [...this.moves]) {
       const st = m.view.store; m.elapsed += dt;
       st.ctx.posOverride ??= new Map();
@@ -161,7 +203,11 @@ export class Animator {
         st.ctx.posOverride.delete(m.id);
         st.run('移动点', () => {
           const o = st.get(m.id);
-          if (m.t && o?.def.k === 'onpath') st.update(m.id, { ...o.def, t: m.t[1] });
+          if (m.t && o?.def.k === 'onpath') {
+            const path = st.results.get(o.def.path)?.shape;
+            const side = o.def.edge !== undefined && path?.k === 'poly' ? polygonEdgeAt(path.pts, m.t[1]) : undefined;
+            st.update(m.id, { ...o.def, t: m.t[1], ...side });
+          }
           else if (m.value && o?.def.k === 'param') st.update(m.id, { ...o.def, value: m.value[1] });
           else if (m.sys) { const sys = st.get(m.sys); if (sys) dragSysUnit(st, sys, m.id, m.to); }
           else st.moveFree(m.id, m.to.x, m.to.y);
@@ -172,6 +218,38 @@ export class Animator {
     this.app.motion.refresh();
     if (this.running) this.raf = requestAnimationFrame(t => this.tick(t));
     else this.app.refresh();
+  }
+
+  private moveDuration(distance: number, speed: Speed): number {
+    return speed === 'high' ? 0.01 : Math.max(0.2, distance / this.speedPx(speed) / this.factor * 2.5);
+  }
+
+  /** 同时移动的自由目标按其终点计算，所有动作入队后才解析，避免取决于按钮顺序。 */
+  private resolveMoveTargets() {
+    if (!this.moves.some(m => m.follow)) return;
+    const targets = new Map<DocView, Map<Id, Move>>();
+    for (const move of this.moves) {
+      if (move.t || move.value || move.sys) continue;
+      const group = targets.get(move.view) ?? new Map<Id, Move>();
+      group.set(move.id, move);
+      targets.set(move.view, group);
+    }
+    for (const move of this.moves) {
+      if (!move.follow) continue;
+      const group = targets.get(move.view);
+      const visited = new Set<Id>([move.id]);
+      let target = group?.get(move.follow.id);
+      while (target) {
+        if (visited.has(target.id)) { target = undefined; break; }
+        visited.add(target.id);
+        const next = target.follow && group?.get(target.follow.id);
+        if (!next) break;
+        target = next;
+      }
+      if (!target || G.dist(move.to, target.to) < G.EPS) continue;
+      move.to = target.to;
+      move.dur = this.moveDuration(G.dist(move.from, move.to), move.follow.speed);
+    }
   }
 
   private pathLength(p: Shape | undefined): number {

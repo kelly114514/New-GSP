@@ -5,7 +5,7 @@ export interface Q { v: number; u: Unit }
 export const q = (v: number, u: Unit = 'none'): Q => ({ v, u });
 
 export type Expr =
-  | { t: 'num'; v: number; u?: Unit }
+  | { t: 'num'; v: number; u?: Unit; ang?: true; c?: 'pi' | 'e' }   // c：原版的常量记号 π、e（令牌 0x0d、0x0e）   // ang：导函数里度与弧度的换算系数，弧度制文档里取 1
   | { t: 'ref'; id: number }
   | { t: 'x' }
   | { t: 'neg'; a: Expr }
@@ -33,14 +33,40 @@ export interface EvalEnv {
   call?(func: number, arg: Q): Q | undefined;
 }
 
-/** 三角函数的自变量：原版默认角度单位是“度”，无单位的数也按度计算（sin(0.5) = 0.01）。 */
-const toRad = (a: Q) => (a.v * Math.PI) / 180;
-const ok = (n: number): Q | undefined => (Number.isFinite(n) ? q(n) : undefined);
+/** 计算按文档的角度单位进行（原版样例 example-10.gsp：弧度制文档里 5·sin(0.5(x−y)+2·r(s))/√(x²+y²+1)，
+ * r(s) 为 −130.29° 的度量，原版显示 0.78，正是把它当 −2.274 弧度、无单位数也按弧度时的结果）。
+ * 度制（含有向度）下无单位的数按度计算（sin(0.5) = 0.01）。角度值在模型里一律存为度，进出表达式时换算。 */
+let radianMode = false;
+export function setRadianMode(on: boolean): boolean { const old = radianMode; radianMode = on; return old; }
+export const isRadianMode = () => radianMode;
+const toRad = (a: Q) => (radianMode ? a.v : (a.v * Math.PI) / 180);
+const inMode = (a: Q | undefined): Q | undefined => (a && radianMode && a.u === 'angle' ? { v: (a.v * Math.PI) / 180, u: 'angle' } : a);
+// 表达式按 IEEE 规则允许 ±∞（原版：ln 0 = −∞、e^(−∞) = 0、非零数除以零 = ∞，见 1119、0324）；只有 NaN（0/0、∞−∞、负数开方…）才是“未定义”。
+// 几何、计数等其他用途在 engine.qOf 里仍只接受有限数。
+const ok = (n: number): Q | undefined => (Number.isNaN(n) ? undefined : q(n));
+/** 乘方。底数为负、指数不是整数时，指数能写成奇分母分数（如 1/5、−3/5）就取实数根，偶分母无定义。
+ * 依据：分形图27.gsp 的 (−1.93)^(5^−1)、1300 的 (−0.267)^(−0.6) 在原版里都有值。 */
+export function realPow(a: number, b: number): number {
+  if (a >= 0 || (b | 0) === b || !Number.isFinite(b) || Number.isInteger(b)) return Math.pow(a, b);
+  for (let den = 1; den <= 999; den += 2) {   // 只试奇分母
+    const num = Math.round(b * den);
+    if (Math.abs(b * den - num) < 1e-9 * den) return (Math.abs(num) % 2 === 1 ? -1 : 1) * Math.pow(-a, b);
+  }
+  return NaN;
+}
+const angleOut = (rad: number): Q => q(radianMode ? rad : (rad * 180) / Math.PI, 'angle');
 
+/** 求整个表达式：结果的角度值换回度存放。 */
 export function evalExpr(e: Expr, env: EvalEnv): Q | undefined {
+  const r = evalIn(e, env);
+  return r && radianMode && r.u === 'angle' ? { v: (r.v * 180) / Math.PI, u: 'angle' } : r;
+}
+
+function evalIn(e: Expr, env: EvalEnv): Q | undefined {
+  const evalExpr = evalIn;
   switch (e.t) {
-    case 'num': return q(e.v, e.u ?? 'none');
-    case 'ref': return env.ref(e.id);
+    case 'num': return e.ang && radianMode ? q(1) : inMode(q(e.v, e.u ?? 'none'));
+    case 'ref': return inMode(env.ref(e.id));
     case 'x': return env.x;
     case 'neg': { const a = evalExpr(e.a, env); return a && q(-a.v, a.u); }
     case 'bin': {
@@ -51,12 +77,14 @@ export function evalExpr(e: Expr, env: EvalEnv): Q | undefined {
         case '+': return finiteQ(a.v + b.v, u);
         case '-': return finiteQ(a.v - b.v, u);
         case '*': return finiteQ(a.v * b.v, a.u !== 'none' && b.u !== 'none' ? 'none' : u);
-        case '/': return b.v === 0 ? undefined : finiteQ(a.v / b.v, a.u !== 'none' && b.u !== 'none' ? 'none' : a.u);
-        case '^': return finiteQ(Math.pow(a.v, b.v), 'none');
+        case '/':   // 非零数除以零得到 ∞（原版计算和表格显示“∞”，实测 0324、0325）；0/0 仍无定义。∞ 参与后续运算时结果无定义。
+          if (b.v === 0) return a.v === 0 || Number.isNaN(a.v) ? undefined : q(a.v > 0 ? Infinity : -Infinity, a.u !== 'none' && b.u !== 'none' ? 'none' : a.u);
+          return finiteQ(a.v / b.v, a.u !== 'none' && b.u !== 'none' ? 'none' : a.u);
+        case '^': return finiteQ(realPow(a.v, b.v), 'none');
       }
       return undefined;
     }
-    case 'call': { const a = evalExpr(e.a, env); return a && env.call?.(e.func, a); }
+    case 'call': { const a = evalExpr(e.a, env); return a && inMode(env.call?.(e.func, a && radianMode && a.u === 'angle' ? { v: (a.v * 180) / Math.PI, u: 'angle' } : a)); }
     case 'fn': {
       const a = evalExpr(e.a, env);
       if (!a) return undefined;
@@ -68,13 +96,13 @@ export function evalExpr(e: Expr, env: EvalEnv): Q | undefined {
         case 'sec': return Math.abs(Math.cos(r)) < 1e-12 ? undefined : ok(1 / Math.cos(r));
         case 'csc': return Math.abs(Math.sin(r)) < 1e-12 ? undefined : ok(1 / Math.sin(r));
         case 'cot': return Math.abs(Math.sin(r)) < 1e-12 ? undefined : ok(Math.cos(r) / Math.sin(r));
-        case 'arcsin': return Math.abs(a.v) > 1 ? undefined : q((Math.asin(a.v) * 180) / Math.PI, 'angle');
-        case 'arccos': return Math.abs(a.v) > 1 ? undefined : q((Math.acos(a.v) * 180) / Math.PI, 'angle');
-        case 'arctan': return q((Math.atan(a.v) * 180) / Math.PI, 'angle');
+        case 'arcsin': return Math.abs(a.v) > 1 ? undefined : angleOut(Math.asin(a.v));
+        case 'arccos': return Math.abs(a.v) > 1 ? undefined : angleOut(Math.acos(a.v));
+        case 'arctan': return angleOut(Math.atan(a.v));
         case 'sqrt': return a.v < 0 ? undefined : finiteQ(Math.sqrt(a.v), a.u);
         case 'abs': return q(Math.abs(a.v), a.u);
-        case 'ln': return a.v <= 0 ? undefined : ok(Math.log(a.v));
-        case 'log': return a.v <= 0 ? undefined : ok(Math.log10(a.v));
+        case 'ln': return a.v < 0 ? undefined : ok(Math.log(a.v));
+        case 'log': return a.v < 0 ? undefined : ok(Math.log10(a.v));
         case 'exp': return ok(Math.exp(a.v));
         case 'sgn': return q(Math.sign(a.v));
         case 'round': return q(Math.round(a.v), a.u);
@@ -84,14 +112,14 @@ export function evalExpr(e: Expr, env: EvalEnv): Q | undefined {
     }
   }
 }
-const finiteQ = (v: number, u: Unit): Q | undefined => (Number.isFinite(v) ? q(v, u) : undefined);
+const finiteQ = (v: number, u: Unit): Q | undefined => (Number.isNaN(v) ? undefined : q(v, u));
 
 // ---------------- 文本 <-> AST ----------------
 const PREC: Record<string, number> = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 4 };
 
 export function exprToText(e: Expr, nameOf: (id: number) => string, parentPrec = 0, varName = 'x'): string {
   switch (e.t) {
-    case 'num': return fmtNum(e.v) + (e.u === 'angle' ? '°' : e.u === 'distance' ? ' cm' : '');
+    case 'num': return e.c ? (e.c === 'pi' ? 'π' : 'e') : fmtNum(e.v) + (e.u === 'angle' ? '°' : e.u === 'distance' ? ' cm' : '');
     case 'ref': return nameOf(e.id);
     case 'x': return varName;
     case 'neg': return '-' + exprToText(e.a, nameOf, 3, varName);
@@ -153,8 +181,8 @@ export function parseExpr(text: string, o: ParseOpts): Expr {
         i++; const a = sum(); skip(); if (peek() !== ')') throw new ParseError('缺少右括号'); i++;
         return { t: 'fn', name: w.toLowerCase(), a };
       }
-      if (w === 'pi' || w === 'π') return { t: 'num', v: Math.PI };
-      if (w === 'e' && peek() !== '(') return { t: 'num', v: Math.E };
+      if (w === 'pi' || w === 'π') return { t: 'num', v: Math.PI, c: 'pi' };
+      if (w === 'e' && peek() !== '(') return { t: 'num', v: Math.E, c: 'e' };
       if (w === (o.variable ?? 'x') && peek() !== '(') return { t: 'x' };
       const fid = o.funcs?.(w);
       if (fid !== undefined && peek() === '(') { i++; const a = sum(); skip(); if (peek() !== ')') throw new ParseError('缺少右括号'); i++; return { t: 'call', func: fid, a }; }
@@ -162,7 +190,7 @@ export function parseExpr(text: string, o: ParseOpts): Expr {
       if (id !== undefined) return { t: 'ref', id };
       throw new ParseError(`不认识 ${w}`);
     }
-    if (c === 'π') { i++; return { t: 'num', v: Math.PI }; }
+    if (c === 'π') { i++; return { t: 'num', v: Math.PI, c: 'pi' }; }
     throw new ParseError(c ? `意外的字符 ${c}` : '表达式不完整');
   }
   function unary(): Expr {
@@ -213,6 +241,7 @@ const fixed = (v: number, digits: number) => { const t = v.toFixed(digits); retu
 export const formatPlain = (v: number) => fixed(v, display.otherPrec);
 /** 数值显示：默认精度到百分位（与原版默认相同）。 */
 export function formatQ(v: Q, digits?: number): string {
+  if (!Number.isFinite(v.v)) return v.v > 0 ? '∞' : '−∞';
   if (v.u === 'angle') {
     const d = digits ?? display.anglePrec;
     if (display.angleUnit === 'rad') return `${fixed((v.v * Math.PI) / 180, d)} 弧度`;
@@ -231,7 +260,7 @@ export function formatQ(v: Q, digits?: number): string {
 /** 对自变量求导（定义导函数）。调用其它函数时返回 undefined。三角函数按“度”计算，所以多一个 π/180。 */
 export function derive(e: Expr): Expr | undefined {
   const num = (v: number): Expr => ({ t: 'num', v }), bin = (op: '+' | '-' | '*' | '/' | '^', a: Expr, b: Expr): Expr => ({ t: 'bin', op, a, b });
-  const rad = num(Math.PI / 180), deg = num(180 / Math.PI);
+  const rad: Expr = { t: 'num', v: Math.PI / 180, ang: true }, deg: Expr = { t: 'num', v: 180 / Math.PI, ang: true };
   switch (e.t) {
     case 'num': case 'ref': return num(0);
     case 'x': return num(1);
@@ -277,11 +306,11 @@ export function derive(e: Expr): Expr | undefined {
   }
 }
 function simplify(e: Expr): Expr {
-  if (e.t === 'neg') { const a = simplify(e.a); return a.t === 'num' ? { t: 'num', v: a.v === 0 ? 0 : -a.v } : { t: 'neg', a }; }
+  if (e.t === 'neg') { const a = simplify(e.a); return a.t === 'num' && !a.ang ? { t: 'num', v: a.v === 0 ? 0 : -a.v } : { t: 'neg', a }; }
   if (e.t !== 'bin') return e;
   const isN = (x: Expr, v: number) => x.t === 'num' && x.v === v;
   const a = simplify(e.a), b = simplify(e.b);
-  if (a.t === 'num' && b.t === 'num' && e.op !== '^' && !(e.op === '/' && b.v === 0)) return { t: 'num', v: e.op === '+' ? a.v + b.v : e.op === '-' ? a.v - b.v : e.op === '*' ? a.v * b.v : a.v / b.v };
+  if (a.t === 'num' && b.t === 'num' && !a.ang && !b.ang && e.op !== '^' && !(e.op === '/' && b.v === 0)) return { t: 'num', v: e.op === '+' ? a.v + b.v : e.op === '-' ? a.v - b.v : e.op === '*' ? a.v * b.v : a.v / b.v };
   if (e.op === '+') { if (isN(a, 0)) return b; if (isN(b, 0)) return a; }
   if (e.op === '-' && isN(b, 0)) return a;
   if (e.op === '*') { if (isN(a, 0) || isN(b, 0)) return { t: 'num', v: 0 }; if (isN(a, 1)) return b; if (isN(b, 1)) return a; }

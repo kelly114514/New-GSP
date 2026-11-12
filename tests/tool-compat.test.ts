@@ -80,6 +80,61 @@ describe('工具兼容修复', () => {
     }
   });
 
+  it('距离前提只匹配带距离单位的数值', () => {
+    const st = new Store();
+    const [ratio, distance] = st.run('参数', () => [
+      st.add({ k: 'param', name: '比例', value: 2, unit: 'none', showEdit: true }).id,
+      st.add({ k: 'param', name: '距离', value: 2, unit: 'distance', showEdit: true }).id,
+    ]);
+    expect(toolInputFromHits('number', [ratio, distance], st.page, st.results, [], 'distance')).toBe(distance);
+    expect(toolInputFromHits('number', [ratio], st.page, st.results, [], 'distance')).toBeUndefined();
+  });
+
+  it('工具由两根前提轴引用原坐标系，图像可以求值', () => {
+    const st = new Store();
+    const [sys, f] = st.run('前提', () => [
+      createSystem(st),
+      st.add({ k: 'func', name: 'f', param: 'x', expr: { t: 'x' } }),
+    ]);
+    if (sys.def.k !== 'sys') throw new Error('没有坐标系');
+    const tool: Tool = { name: '在所选坐标系画函数', inputs: [
+      { index: 101, kind: 'axis' }, { index: 102, kind: 'axis' }, { index: 103, kind: 'function' },
+    ], objects: [
+      object(104, { k: 'sys', axisX: 101, axisY: 102, origin: 101, unitX: 101, unitY: 102, grid: 'rect', showGrid: false, snap: false }),
+      object(105, { k: 'plot', func: 103, sys: 104, samples: 400 }),
+    ] };
+    const picks = [sys.def.axisX, sys.def.axisY, f.id];
+    const [graph] = st.run('用工具', () => applyTool(st, tool, picks, () => ({ x: 0, y: 0 })));
+    expect(st.page.objects.filter(o => o.def.k === 'sys')).toHaveLength(1);
+    expect(graph.def).toMatchObject({ k: 'plot', sys: sys.id });
+    expect(st.results.get(graph.id)?.shape?.k).toBe('paths');
+  });
+
+  it('工具复用定义上共有的交点，位置偶然重合的交点仍保留', () => {
+    const st = new Store();
+    const picks = st.run('前提', () => [
+      st.add({ k: 'free', x: 10, y: 10 }).id,
+      st.add({ k: 'free', x: 50, y: 10 }).id,
+      st.add({ k: 'free', x: 30, y: 10 }).id,
+    ]);
+    const tool: Tool = { name: '垂线交点', inputs: [101, 102, 103].map(index => ({ index, kind: 'point' })), objects: [
+      object(104, { k: 'seg', a: 101, b: 102 }),
+      object(105, { k: 'mid', seg: 104 }),
+      object(106, { k: 'perp', line: 104, pt: 105 }),
+      { ...object(107, { k: 'inter', a: 104, b: 106, branch: 0 }), hidden: true, src: { m: 9 } },
+      object(108, { k: 'perp', line: 104, pt: 103 }),
+      { ...object(109, { k: 'inter', a: 104, b: 108, branch: 0 }), hidden: true, src: { m: 9 } },
+      object(110, { k: 'seg', a: 107, b: 109 }),
+    ] };
+    const [seg] = st.run('应用', () => applyTool(st, tool, picks, () => ({ x: 0, y: 0 }))).slice(-1);
+    const midpoint = st.page.objects.find(o => o.def.k === 'mid')!;
+    const intersections = st.page.objects.filter(o => o.def.k === 'inter');
+    expect(intersections).toHaveLength(1);
+    expect(seg.def).toEqual({ k: 'seg', a: midpoint.id, b: intersections[0].id });
+    st.run('拖动', () => st.moveFree(picks[2], 40, 30));
+    expect(st.results.get(seg.id)?.shape).toMatchObject({ k: 'line', s: { a: { x: 30, y: 10 }, b: { x: 40, y: 10 } } });
+  });
+
   it('整批预映射保留按钮向前引用；类型错误在创建对象之前拒绝，撤销完整恢复', () => {
     const st = new Store();
     const input = st.run('输入', () => st.add({ k: 'free', x: 50, y: 80 }).id);

@@ -27,6 +27,132 @@ function iterRecords(bytes: Uint8Array) {
 
 const imagesOf = (st: ReturnType<typeof evaluatePage>, id: number) => { const s = st.get(id)?.shape; return s?.k === 'multi' ? s.items : []; };
 
+it('对象编号稀疏时仍能展开迭代象', () => {
+  const st = new Store();
+  st.page.nextId = 1_000_000;
+  const start = st.add({ k: 'free', x: 10, y: 20 });
+  const step = st.add({ k: 'translate', src: start.id, by: { mode: 'rect', dx: 0.2, dy: 0 } });
+  const iter = st.add({ k: 'iterate', pre: [start.id], maps: [[step.id]], body: [step.id], depth: { fixed: 3 } });
+  const image = st.add({ k: 'iterimg', src: step.id, iter: iter.id });
+  const points = imagesOf(evaluatePage(st.page), image.id);
+  expect(points).toHaveLength(3);
+  for (let i = 0; i < points.length; i++) {
+    const s = points[i];
+    expect(s.k).toBe('pt');
+    if (s.k === 'pt') expect(s.p.x).toBeCloseTo(10 + (i + 2) * 0.2 * 96 / 2.54, 10);
+  }
+});
+
+it('轨迹读取迭代象末点与逐样本完整展开一致', () => {
+  for (const branching of [false, true]) for (const finalOnly of [false, true]) for (const fixed of [false, true]) {
+    const st = new Store();
+    const a = st.add({ k: 'free', x: 0, y: 0 });
+    const b = st.add({ k: 'free', x: 100, y: 0 });
+    const line = st.add({ k: 'seg', a: a.id, b: b.id });
+    const driver = st.add({ k: 'onpath', path: line.id, t: 0.5 });
+    const first = st.add({ k: 'translate', src: driver.id, by: { mode: 'rect', dx: fixed ? 0 : 0.2, dy: fixed ? 0 : 0.1 } });
+    const second = st.add({ k: 'translate', src: driver.id, by: { mode: 'rect', dx: -0.1, dy: 0.2 } });
+    const iter = st.add({ k: 'iterate', pre: [driver.id], maps: branching ? [[first.id], [second.id]] : [[first.id]], body: [first.id, second.id], depth: { fixed: 3 }, finalOnly });
+    const image = st.add({ k: 'iterimg', src: first.id, iter: iter.id });
+    const point = st.add({ k: 'iterpt', img: image.id });
+    const withoutLocus = structuredClone(st.page);
+    const locus = st.add({ k: 'locus', driver: driver.id, out: point.id, samples: 40 });
+    const shape = evaluatePage(st.page).get(locus.id)?.shape;
+    if (shape?.k !== 'paths') throw Error('轨迹无定义');
+    const expected = Array.from({ length: 41 }, (_, i) => {
+      const s = evaluatePage(withoutLocus, undefined, undefined, { tOverride: new Map([[driver.id, i / 40]]) }).get(point.id)?.shape;
+      if (s?.k !== 'pt') throw Error('迭代末点无定义');
+      return s.p;
+    });
+    expect(shape.paths[0]).toEqual(expected);
+  }
+});
+
+it('单映射轨迹在末几层无交点时与完整迭代象一致', () => {
+  for (const finalOnly of [false, true]) {
+    const st = new Store();
+    const origin = st.add({ k: 'free', x: 0, y: 0 });
+    const end = st.add({ k: 'free', x: 3, y: 0 });
+    const radius = st.add({ k: 'free', x: 25, y: 0 });
+    const path = st.add({ k: 'seg', a: origin.id, b: end.id });
+    const circle = st.add({ k: 'circle', c: origin.id, p: radius.id });
+    const driver = st.add({ k: 'onpath', path: path.id, t: 0.5 });
+    const step = st.add({ k: 'translate', src: driver.id, by: { mode: 'rect', dx: 0.26, dy: 0 } });
+    const vertical = st.add({ k: 'perp', pt: driver.id, line: path.id });
+    const intersection = st.add({ k: 'inter', a: vertical.id, b: circle.id, branch: 0 });
+    const iter = st.add({ k: 'iterate', pre: [driver.id], maps: [[step.id]], body: [step.id, vertical.id, intersection.id], depth: { fixed: 4 }, finalOnly });
+    const image = st.add({ k: 'iterimg', src: intersection.id, iter: iter.id });
+    const point = st.add({ k: 'iterpt', img: image.id });
+    const withoutLocus = structuredClone(st.page);
+    const locus = st.add({ k: 'locus', driver: driver.id, out: point.id, samples: 40 });
+    const actual = evaluatePage(st.page).get(locus.id);
+    const expected = Array.from({ length: 41 }, (_, i) => evaluatePage(withoutLocus, undefined, undefined,
+      { tOverride: new Map([[driver.id, i / 40]]) }).get(point.id)?.shape);
+    if (finalOnly) {
+      expect(expected.every(s => s === undefined)).toBe(true);
+      expect(actual?.status).toBe('undefined');
+    } else {
+      expect(expected.every(s => s?.k === 'pt')).toBe(true);
+      expect(actual?.shape?.k).toBe('paths');
+      if (actual?.shape?.k === 'paths') expect(actual.shape.paths[0]).toEqual(expected.map(s => s?.k === 'pt' ? s.p : undefined));
+    }
+  }
+});
+
+it('同一轨迹样本读取两个迭代象时与完整展开一致', () => {
+  const st = new Store();
+  const a = st.add({ k: 'free', x: 0, y: 0 }), b = st.add({ k: 'free', x: 100, y: 0 });
+  const path = st.add({ k: 'seg', a: a.id, b: b.id });
+  const driver = st.add({ k: 'onpath', path: path.id, t: 0.5 });
+  const step = st.add({ k: 'translate', src: driver.id, by: { mode: 'rect', dx: 0.2, dy: 0.1 } });
+  const second = st.add({ k: 'translate', src: driver.id, by: { mode: 'rect', dx: -0.3, dy: 0.2 } });
+  const iter = st.add({ k: 'iterate', pre: [driver.id], maps: [[step.id]], body: [step.id, second.id], depth: { fixed: 7 } });
+  const image1 = st.add({ k: 'iterimg', src: step.id, iter: iter.id });
+  const image2 = st.add({ k: 'iterimg', src: second.id, iter: iter.id });
+  const p1 = st.add({ k: 'iterpt', img: image1.id }), p2 = st.add({ k: 'iterpt', img: image2.id });
+  const seg = st.add({ k: 'seg', a: p1.id, b: p2.id }), mid = st.add({ k: 'mid', seg: seg.id });
+  const withoutLocus = structuredClone(st.page);
+  const locus = st.add({ k: 'locus', driver: driver.id, out: mid.id, samples: 40 });
+  const shape = evaluatePage(st.page).get(locus.id)?.shape;
+  expect(shape?.k).toBe('paths');
+  const expected = Array.from({ length: 41 }, (_, i) => {
+    const s = evaluatePage(withoutLocus, undefined, undefined, { tOverride: new Map([[driver.id, i / 40]]) }).get(mid.id)?.shape;
+    if (s?.k !== 'pt') throw Error('迭代末点无定义');
+    return s.p;
+  });
+  if (shape?.k === 'paths') expect(shape.paths[0]).toEqual(expected);
+});
+
+it('单映射提前无定义时保留最后有效层并尊重仅显示最终迭代', () => {
+  for (const finalOnly of [false, true]) {
+    const st = new Store();
+    const origin = st.add({ k: 'free', x: 0, y: 0 }), end = st.add({ k: 'free', x: 3, y: 0 });
+    const radius = st.add({ k: 'free', x: 25, y: 0 });
+    const path = st.add({ k: 'seg', a: origin.id, b: end.id });
+    const circle = st.add({ k: 'circle', c: origin.id, p: radius.id });
+    const driver = st.add({ k: 'onpath', path: path.id, t: 0.5 });
+    const step = st.add({ k: 'translate', src: driver.id, by: { mode: 'rect', dx: 0.26, dy: 0 } });
+    const vertical = st.add({ k: 'perp', pt: step.id, line: path.id });
+    const next = st.add({ k: 'inter', a: vertical.id, b: circle.id, branch: 0 });
+    const iter = st.add({ k: 'iterate', pre: [driver.id], maps: [[next.id]], body: [step.id, vertical.id, next.id], depth: { fixed: 4 }, finalOnly });
+    const image = st.add({ k: 'iterimg', src: step.id, iter: iter.id });
+    const point = st.add({ k: 'iterpt', img: image.id });
+    const withoutLocus = structuredClone(st.page);
+    const locus = st.add({ k: 'locus', driver: driver.id, out: point.id, samples: 40 });
+    const actual = evaluatePage(st.page).get(locus.id);
+    const expected = Array.from({ length: 41 }, (_, i) => evaluatePage(withoutLocus, undefined, undefined,
+      { tOverride: new Map([[driver.id, i / 40]]) }).get(point.id)?.shape);
+    if (finalOnly) {
+      expect(expected.every(s => s === undefined)).toBe(true);
+      expect(actual?.status).toBe('undefined');
+    } else {
+      expect(expected.every(s => s?.k === 'pt')).toBe(true);
+      expect(actual?.shape?.k).toBe('paths');
+      if (actual?.shape?.k === 'paths') expect(actual.shape.paths[0]).toEqual(expected.map(s => s?.k === 'pt' ? s.p : undefined));
+    }
+  }
+});
+
 describe.skipIf(!have)('迭代：原版采集的样本', () => {
   it('点和线段的迭代：A→B、B→中点，默认 3 次；位置与手算一致', () => {
     const r = decodeGsp(load('i01')), pg = r.doc.pages[0], res = evaluatePage(pg);

@@ -60,5 +60,6 @@ try {
   if (child.pid) spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
   // 只清理本脚本 mkdtemp 创建的目录，验证绝对路径在系统临时目录内。
   if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw Error('拒绝清理临时目录之外的路径');
-  rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
+  // Windows 的 WebView2 子进程可能在主程序退出后仍短暂持有配置目录。
+  rmSync(dir, { recursive: true, force: true, maxRetries: 60, retryDelay: 500 });
 }

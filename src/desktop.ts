@@ -1,5 +1,6 @@
 /** 桌面适配层：文件、剪贴板、关闭、恢复快照。开发浏览器和 Tauri 程序共用业务代码，只有这里分两条路径。 */
 import { invoke, isTauri } from '@tauri-apps/api/core';
+import { isExternalActionUrl } from './core/link';
 
 export interface OpenedFile { name: string; path?: string; bytes: Uint8Array }
 export interface SavedFile { name: string; path?: string }
@@ -160,9 +161,9 @@ export const desktop = {
     if (isTauri()) await invoke('recovery_delete', { name });
     else localStorage.removeItem(`newgsp.recovery.${name}`);
   },
-  /** 用系统默认浏览器打开网址（只接受 http/https）。 */
+  /** 交给系统关联的浏览器或邮件程序。 */
   async openUrl(url: string) {
-    if (!/^https?:\/\/[^\s"<>]+$/i.test(url)) return;
+    if (!isExternalActionUrl(url)) return;
     if (isTauri()) await invoke('open_url', { url });
     else window.open(url, '_blank', 'noopener');
   },

@@ -1,10 +1,12 @@
 /** 对话框：分组、选项顺序与默认值按界面规格；文字用自己的话。全部是 DOM 模态框，返回 Promise。 */
 import type { App } from '../app';
-import { evalExpr, exprToText, fmtNum, FUNCS, formatQ, ParseError, type Expr } from '../core/expr';
+import { exprToText, fmtNum, FUNCS, formatQ, ParseError, type Expr } from '../core/expr';
+import { evaluateExpression } from '../core/engine';
 import { classOf, createSystem, findSys } from '../core/construct';
 import { hitAll } from '../core/hit';
+import { isExternalActionUrl } from '../core/link';
 import type { AngleBy, DisplayPrefs, FuncForm, Id, Obj, RatioBy, TextCat, TextStyle, TranslateBy, UnitKind } from '../core/model';
-import { childrenOf, DEFAULT_DISPLAY, parentsOf, TEXT_CATS, TEXT_DEFAULTS } from '../core/model';
+import { childrenOf, pageDisplay, parentsOf, TEXT_CATS, TEXT_DEFAULTS } from '../core/model';
 import type { Sel } from '../commands';
 import type { DocView } from './docview';
 import { funcHead, measureName, typeName } from './render';
@@ -152,7 +154,7 @@ export class Dialogs {
     const m = v.marks, st = v.store;
     const hasVec = !!m.vector && !!st.get(m.vector[0]) && !!st.get(m.vector[1]);
     const hasDist = m.distance !== undefined && !!st.get(m.distance);
-    const hasAng = !!m.angle && m.angle.every(i => !!st.get(i));
+    const hasAng = !!m.angle && (Array.isArray(m.angle) ? m.angle.every(i => !!st.get(i)) : !!st.get(m.angle.m));
     const dist = this.fixedOrMarked('tdist', ['固定距离(F)', '标记距离(M)'], hasDist, '1.0', '厘米');
     const ang = this.fixedOrMarked('tang', ['固定角度(F)', '标记角度(M)'], hasAng, '90.0', '°');
     const dx = this.fixedOrMarked('tdx', ['固定距离(F)', '标记距离(M)'], hasDist, '1.0', '厘米（向右为正）');
@@ -168,7 +170,7 @@ export class Dialogs {
       return {
         mode: 'polar',
         dist: dist.pick.value === 'marked' ? { m: m.distance! } : { fixed: this.parseNum(dist.input.value, '距离') },
-        angle: ang.pick.value === 'marked' ? { pts: m.angle! } : { fixed: this.parseNum(ang.input.value, '角度') },
+        angle: ang.pick.value === 'marked' ? (Array.isArray(m.angle) ? { pts: m.angle } : { m: m.angle!.m }) : { fixed: this.parseNum(ang.input.value, '角度') },
       };
     };
     const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(by)); } catch { v.ghost = undefined; v.invalidate(); } };
@@ -182,10 +184,10 @@ export class Dialogs {
   private centerGroup(v: DocView, center: Id) { const o = v.store.get(center); return h('div', { class: 'group' }, '中心：', h('span', { class: 'tgt' }, o?.label ?? (o ? typeName(o) : '?'))); }
 
   rotate(v: DocView, center: Id, preview?: (by: AngleBy) => Obj[]): Promise<AngleBy | undefined> {
-    const m = v.marks, hasAng = !!m.angle && m.angle.every(i => !!v.store.get(i));
+    const m = v.marks, hasAng = !!m.angle && (Array.isArray(m.angle) ? m.angle.every(i => !!v.store.get(i)) : !!v.store.get(m.angle.m));
     const a = this.num('90.0', 64);
     const mode = this.radios('rmode', [['fixed', '固定角度(F)'], ['marked', '标记角度(M)', !hasAng]], x => { a.disabled = x === 'marked'; refresh(); });
-    const read = (): AngleBy => (mode.value === 'marked' ? { mode: 'marked', a: m.angle![0], v: m.angle![1], b: m.angle![2] } : { mode: 'fixed', deg: this.parseNum(a.value, '角度') });
+    const read = (): AngleBy => (mode.value === 'marked' ? (Array.isArray(m.angle) ? { mode: 'marked', a: m.angle[0], v: m.angle[1], b: m.angle[2] } : { mode: 'value', m: m.angle!.m }) : { mode: 'fixed', deg: this.parseNum(a.value, '角度') });
     const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(by)); } catch { v.ghost = undefined; v.invalidate(); } };
     const body = h('div', {}, h('div', { class: 'group' }, '旋转参数：', mode.el, h('div', { class: 'row' }, a, ' 度')), this.centerGroup(v, center));
     body.addEventListener('input', refresh);
@@ -260,7 +262,8 @@ export class Dialogs {
       return sel;
     };
     const values: [string, string][] = st.page.objects.filter(o => ['param', 'calc', 'measure'].includes(o.def.k)).map(o => { const n = this.nameOf(v, o.id), q0 = st.results.get(o.id)?.shape; return [`${n} = ${q0?.k === 'num' ? formatQ(q0.q) : '无定义'}`, n]; });
-    const fns: [string, string][] = [...FUNCS.map(f => [`${f}(x)`, `${f}(`] as [string, string]), ...st.page.objects.filter(o => o.def.k === 'func').map(o => [`${(o.def as { name: string }).name}(x)`, `${(o.def as { name: string }).name}(`] as [string, string]), ['π', 'pi']];
+    const userFunctions = st.page.objects.filter(o => classOf(o) === 'func').map(o => nameFn(o.id));
+    const fns: [string, string][] = [...[...FUNCS, ...userFunctions].map(f => [`${f}(x)`, `${f}(`] as [string, string]), ['π', 'pi']];
     const unitSel = menu('单位(U)', [['度 (°)', '°'], ['厘米 (cm)', ' cm']]);
     const parse = () => this.app.parseText(v, ta.value, opts.func ? variable : '\u0000');
     const headText = () => funcHead({ name: opts.name ?? 'f', param: variable, form, symbol });
@@ -273,7 +276,7 @@ export class Dialogs {
       else if (!parsed) preview.textContent = `${opts.func ? `${headText()} = ` : ''}${text}\n（${bad}）`;
       else if (opts.func) preview.textContent = `${headText()} = ${exprToText(parsed, nameFn, 0, variable)}`;
       else {
-        const val = evalExpr(parsed, { ref: id => { const s = st.results.get(id)?.shape; return s?.k === 'num' ? s.q : undefined; } });
+        const val = evaluateExpression(st.page, st.results, parsed, st.ctx.angleUnit);
         preview.textContent = `${exprToText(parsed, nameFn)} = ${val ? formatQ(val) : '无定义'}`;
       }
       if (okBtn) okBtn.disabled = !parsed;
@@ -325,12 +328,12 @@ export class Dialogs {
     return this.exprEditor(v, initial ? '编辑计算' : '新建计算', { func: false, initial }).then(r => (r ? { expr: r.expr } : undefined));
   }
   func(v: DocView, initial?: { name: string; expr: Expr; form?: FuncForm; symbol?: boolean }): Promise<{ name: string; expr: Expr; variable: string; form: FuncForm; symbol: boolean } | undefined> {
-    const next = (() => { const used = new Set(v.store.page.objects.filter(o => o.def.k === 'func').map(o => (o.def as { name: string }).name)); for (const c of 'fghijklmn') if (!used.has(c)) return c; return 'f'; })();
+    const next = (() => { const used = new Set(v.store.page.objects.filter(o => classOf(o) === 'func').map(o => this.nameOf(v, o.id))); for (const c of 'fghijklmn') if (!used.has(c)) return c; return 'f'; })();
     const name = initial?.name ?? next;
     return this.exprEditor(v, initial ? '编辑函数' : '新建函数', { func: true, initial: initial?.expr, name, form: initial?.form, symbol: initial?.symbol ?? (initial ? false : this.app.settings.funcSymbol) }).then(r => (r ? { ...r, name } : undefined));
   }
   private nameOf(v: DocView, id: Id): string { const o = v.store.get(id); return !o ? '?' : o.def.k === 'param' ? o.def.name : o.def.k === 'func' ? o.def.name : o.label ?? measureName(v.store.page, v.store.results, o); }
-  async editCalc(v: DocView, o: Obj) { if (o.def.k !== 'calc') return; const d = o.def, r = await this.calc(v, d.expr); if (r) v.store.run('编辑计算', () => v.store.update(o.id, { ...d, expr: r.expr })); }
+  async editCalc(v: DocView, o: Obj) { if (o.def.k !== 'calc') return; const d = o.def, r = await this.calc(v, d.expr); if (r) v.store.run('编辑计算', () => v.store.update(o.id, { ...d, expr: r.expr, unit: evaluateExpression(v.store.page, v.store.results, r.expr, v.store.ctx.angleUnit)?.u ?? d.unit })); }
   async editFunc(v: DocView, o: Obj) { if (o.def.k !== 'func') return; const d = o.def, r = await this.func(v, { name: d.name, expr: d.expr, form: d.form, symbol: d.symbol }); if (r) v.store.run('编辑函数', () => { const { form: _f, symbol: _s, ...rest } = d; v.store.update(o.id, { ...rest, name: r.name, expr: r.expr, param: r.variable, ...(r.form !== 'y=f(x)' ? { form: r.form } : {}), ...(r.symbol ? { symbol: true } : {}) }); o.label = r.name; }); }
 
   /** 绘制参数曲线：选两个函数（单击画板上的函数式，或事先选中），坐标系模式，t 的取值范围。 */
@@ -472,7 +475,13 @@ export class Dialogs {
       const t = text.value.trim(); if (!t) throw new Error('标签不能为空'); return { t, show: show.checked };
     }));
     if (!r) return;
-    st.run(`${typeName(o)}的标签`, () => { for (const x of s.objs) { x.label = r.t; x.labelShown = r.show; if (x.def.k === 'param') x.def = { ...x.def, name: r.t }; } });
+    st.run(`${typeName(o)}的标签`, () => {
+      for (const x of s.objs) {
+        if (r.t !== x.label && (x.def.k === 'measure' || x.def.k === 'calc')) x.valueDisplay = r.t ? 'label' : 'expression';
+        x.label = r.t; x.labelShown = r.show;
+        if (x.def.k === 'param') x.def = { ...x.def, name: r.t };
+      }
+    });
   }
 
   // ------------- 颜色 -------------
@@ -541,7 +550,7 @@ export class Dialogs {
     const r = await this.modal('链接按钮', h('div', {}, h('div', { class: 'group' }, '链接到：', kind.el), h('div', { class: 'row' }, '页面：', sel), h('div', { class: 'row' }, '网址：', url)), () => this.guard(() => {
       if (kind.value === 'page') return { page: Number(sel.value) } as { page: number; url?: string };
       const u = url.value.trim();
-      if (!/^https?:\/\/[^\s"<>]+$/i.test(u)) throw new Error('网址要以 http:// 或 https:// 开头，且不含空格');
+      if (!isExternalActionUrl(u)) throw new Error('请输入 http://、https:// 网址，或 mailto: 电子邮件地址。');
       return { page: 0, url: u };
     }), '确定');
     if (r) this.app.makeButton(v, r.url ? { type: 'link', page: 0, url: r.url } : { type: 'link', page: r.page }, r.url ?? undefined);
@@ -590,8 +599,20 @@ export class Dialogs {
       unitPick = this.radios<UnitKind>('pu', [['none', '无'], ['angle', '角度'], ['distance', '距离']]); unitPick.set(d.unit);
       addTab('参数', h('div', {}, h('div', { class: 'row' }, '名称：', nameInput, ' = ', valInput), h('div', { class: 'group' }, '单位：', unitPick.el)));
     }
+    // 绘图页：轨迹、函数图像、参数曲线的采样数量；取样变换的图片另有允许失真度（原版属性“绘图”页）
+    let samplesInput: HTMLInputElement | undefined, distortion: HTMLInputElement | undefined;
+    if (d.k === 'locus' || d.k === 'plot' || d.k === 'pcurve' || d.k === 'custom-image') {
+      samplesInput = h('input', { type: 'number', value: String(d.samples), min: '1', step: '1', style: 'width:90px' });
+      const rows: HTMLElement[] = [h('div', { class: 'row' }, '采样数量(N)：', samplesInput)];
+      if (d.k === 'custom-image') {
+        distortion = h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(Math.max(0, Math.min(1, d.distortion))), style: 'width:180px' });
+        rows.push(h('div', { class: 'row' }, '允许失真度(D)：', h('span', {}, '无 '), distortion, h('span', {}, ' 全部')));
+      }
+      addTab('绘图', h('div', {}, ...rows));
+    }
     const body = h('div', { class: 'props' }, tabs, ...panes);
     const r = await this.modal(nameTitle, body, () => this.guard(() => {
+      if (samplesInput) { const n = this.parseNum(samplesInput.value, '采样数量'); if (!(n >= 1 && Number.isInteger(n))) throw new Error('采样数量应为正整数'); }
       if (valInput) this.parseNum(valInput.value, '数值');
       if (nameInput && !nameInput.value.trim()) throw new Error('名称不能为空');
       return true;
@@ -602,9 +623,14 @@ export class Dialogs {
       o.hidden = hidden.checked;
       if (selectable.checked) delete o.unselectable; else o.unselectable = true;
       const t = label.value.trim();
+      if (t && t !== o.label && (d.k === 'measure' || d.k === 'calc')) o.valueDisplay = 'label';
       if (t) { o.label = t; o.labelShown = showLabel.checked; } else o.labelShown = false;
       if (toolLabel.checked) o.toolLabel = true; else delete o.toolLabel;
       if (animSpeed && animDir) o.anim = { speed: animSpeed.value as 'slow', direction: animDir.value as 'forward' };
+      if (samplesInput && (d.k === 'locus' || d.k === 'plot' || d.k === 'pcurve' || d.k === 'custom-image')) {
+        const samples = Math.round(this.parseNum(samplesInput.value, '采样数量'));
+        st.update(o.id, d.k === 'custom-image' ? { ...d, samples, distortion: Number(distortion?.value ?? d.distortion) } : { ...d, samples });
+      }
       if (d.k === 'param' && valInput && nameInput && unitPick) { st.update(o.id, { ...d, name: nameInput.value.trim(), value: this.parseNum(valInput.value, '数值'), unit: unitPick.value }); o.label = nameInput.value.trim(); }
     });
     if (o.unselectable) v.setSel(v.sel.filter(i => i !== o.id));
@@ -612,7 +638,7 @@ export class Dialogs {
 
   // ------------- 参数选项 / 文档选项 / 页面设置 -------------
   async preferences() {
-    const s = this.app.settings, v = this.app.active, cur: DisplayPrefs = { ...DEFAULT_DISPLAY, ...s.display, ...v.store.doc.settings.display };
+    const s = this.app.settings, v = this.app.active, cur: DisplayPrefs = pageDisplay(v.store.doc, v.store.page, v.fallbackDisplay);
     const tabs = h('div', { class: 'tabs' }), panes: HTMLElement[] = [];
     const add = (n: string, p: HTMLElement) => { const b = h('button', { type: 'button', class: panes.length ? '' : 'on' }, n); b.onclick = () => panes.forEach((x, i) => { x.hidden = x !== p; (tabs.children[i] as HTMLElement).classList.toggle('on', x === p); }); tabs.append(b); p.hidden = panes.length > 0; panes.push(p); };
     const sel = <T extends string>(items: [T, string][], val: T, cls = '') => { const e = h('select', { class: cls }, ...items.map(([a, b]) => h('option', { value: a }, b))); e.value = val; return e; };
@@ -662,9 +688,23 @@ export class Dialogs {
     const body = h('div', { class: 'props' }, tabs, ...panes);
     const r = await this.modal('参数选项', body, () => this.guard(() => { const n = this.parseNum(opacity.value, '透明度'); if (n < 0 || n > 100) throw new Error('透明度要在 0 到 100 之间'); return { opacity: n }; }), '确定', { width: 480 });
     if (!r) return;
-    const next: DisplayPrefs = { angleUnit: angU.value as DisplayPrefs['angleUnit'], anglePrec: Number(angP.value), distUnit: disU.value as DisplayPrefs['distUnit'], distPrec: Number(disP.value), otherPrec: Number(othP.value), background: cBack.value, selected: cSel.value, mathItalic: ital.checked };
-    delete next.fromFile; v.store.doc.settings.display = next;
+    const textStyles = v.store.page.display?.textStyles ?? v.store.doc.settings.display?.textStyles ?? cur.textStyles;
+    const next: DisplayPrefs = { ...cur, ...(textStyles ? { textStyles } : {}), angleUnit: angU.value as DisplayPrefs['angleUnit'], anglePrec: Number(angP.value), distUnit: disU.value as DisplayPrefs['distUnit'], distPrec: Number(disP.value), otherPrec: Number(othP.value), background: cBack.value, selected: cSel.value, mathItalic: ital.checked };
+    delete next.fromFile;
     if (scopeNew) s.display = { ...next };
+    else if (JSON.stringify({ ...cur, fromFile: undefined }) !== JSON.stringify(next)) {
+      v.store.run('参数选项', () => {
+        const page = v.store.page, original = v.store.doc.settings.display;
+        if (page.display) {
+          v.store.doc.settings.display = { ...next, angleUnit: original?.angleUnit ?? next.angleUnit, anglePrec: original?.anglePrec ?? next.anglePrec,
+            distPrec: original?.distPrec ?? next.distPrec, otherPrec: original?.otherPrec ?? next.otherPrec,
+            mathItalic: original?.mathItalic ?? next.mathItalic, textStyles: original?.textStyles,
+            ...(original?.fromFile ? { fromFile: true } : {}) };
+          page.display = { ...page.display, angleUnit: next.angleUnit, anglePrec: next.anglePrec, distPrec: next.distPrec, otherPrec: next.otherPrec,
+            mathItalic: next.mathItalic, textStyles: next.textStyles ?? {} };
+        } else v.store.doc.settings.display = next;
+      });
+    }
     // 使用新颜色时自动更新：现有对象里还是旧默认颜色的，跟着换
     const old = { ...c }, nc = { ...c, point: cPoint.value, line: cLine.value, circle: cCircle.value, plot: cPlot.value, locus: cLocus.value, interior: cInt.value, randomInterior: rnd.checked, autoUpdate: autoUp.checked, fade: fade.checked, fadeTime: Number(fadeT.value) };
     if (autoUp.checked) {
@@ -680,7 +720,7 @@ export class Dialogs {
   }
   /** 文本样式：左边选类别，右边改字体、大小、粗斜下划线、颜色；“应用于”决定写到当前画板还是以后新建的画板。 */
   async textStyles(v: DocView) {
-    const s = this.app.settings, cur: DisplayPrefs = { ...DEFAULT_DISPLAY, ...s.display, ...v.store.doc.settings.display };
+    const s = this.app.settings, cur: DisplayPrefs = pageDisplay(v.store.doc, v.store.page, v.fallbackDisplay);
     const work = Object.fromEntries(TEXT_CATS.map(([c]) => [c, { ...TEXT_DEFAULTS[c].style, ...cur.textStyles?.[c] }])) as Record<TextCat, TextStyle>;
     let cat: TextCat = 'label';
     const list = h('select', { size: 6, style: 'width:190px' }, ...TEXT_CATS.map(([c, n]) => h('option', { value: c }, n)));
@@ -711,7 +751,10 @@ export class Dialogs {
     const diff: NonNullable<DisplayPrefs['textStyles']> = {};
     for (const [c] of TEXT_CATS) { const d = TEXT_DEFAULTS[c].style, w = work[c], o: Partial<TextStyle> = {}; for (const k of Object.keys(d) as (keyof TextStyle)[]) if (w[k] !== d[k]) (o as Record<string, unknown>)[k] = w[k]; if (Object.keys(o).length) diff[c] = o; }
     const next = { ...cur, textStyles: diff };
-    delete next.fromFile; if (scope.checked) v.store.doc.settings.display = next;
+    delete next.fromFile; if (scope.checked) v.store.run('文本样式', () => {
+      if (v.store.page.display) v.store.page.display = { ...v.store.page.display, textStyles: diff };
+      else v.store.doc.settings.display = next;
+    });
     if (scopeNew.checked) { s.display = { ...s.display, textStyles: diff }; this.app.saveSettings(); }
     this.app.refresh();
   }
