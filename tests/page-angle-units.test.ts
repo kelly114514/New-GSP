@@ -108,7 +108,9 @@ describe('多页角度单位', () => {
   const styleResaved = resolve(import.meta.dirname, '../../reference/raw/runtime/interop-evidence/multipage-style-written-resaved.gsp');
   it.skipIf(!existsSync(styleWritten) || !existsSync(styleResaved))('各页精度和文本样式经原版另存后保留', () => {
     const before = decodeGsp(readFileSync(styleWritten)).doc, after = decodeGsp(readFileSync(styleResaved)).doc;
-    expect(before.pages.map(p => pageDisplay(before, p))).toEqual(after.pages.map(p => pageDisplay(after, p)));
+    // 原版另存会补写页设置 10005（数学标签用斜体），夹具写出时没有该记录：比较时忽略“是否取自文件”的标记，数值本身仍须相同。
+    const plain = (doc: typeof before) => doc.pages.map(p => { const { mathItalicKnown: _known, ...rest } = pageDisplay(doc, p); return rest; });
+    expect(plain(before)).toEqual(plain(after));
     expect(pageDisplay(after, after.pages[1])).toMatchObject({ angleUnit: 'rad', anglePrec: 3, distPrec: 4, otherPrec: 1,
       textStyles: { title: { name: 'Arial', size: 20, bold: true }, value: { size: 23, italic: true } } });
   });

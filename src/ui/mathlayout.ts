@@ -16,11 +16,19 @@ function text(ctx: CanvasRenderingContext2D, s: string, font: string, size: numb
   return { w, asc: size * 0.78, desc: size * 0.22, draw(c, x, base) { c.save(); c.font = withSize(f, size); c.textBaseline = 'alphabetic'; c.fillText(s, x, base); c.restore(); } };
 }
 
+const LATIN_NAME = /([A-Za-zΑ-Ωα-ω′'″]+)/;
+/** 名字：italic 时只有拉丁、希腊字母和撇号斜体，数字、汉字、符号保持正体（原版“数学标签用斜体”，0669、0454 对照）。 */
+function nameText(ctx: CanvasRenderingContext2D, s: string, font: string, size: number, italic: boolean): MathBox {
+  if (!italic || /\bitalic\b/.test(font)) return text(ctx, s, font, size);
+  const pieces = s.split(LATIN_NAME).filter(Boolean);
+  if (pieces.length === 1) return text(ctx, s, font, size, LATIN_NAME.test(s) && s.replace(LATIN_NAME, '') === '');
+  return row(pieces.map(p => text(ctx, p, font, size, LATIN_NAME.test(p) && p.replace(LATIN_NAME, '') === '')));
+}
 /** 名字里的 [..] 是下标。 */
-function name(ctx: CanvasRenderingContext2D, s: string, font: string, size: number): MathBox {
+function name(ctx: CanvasRenderingContext2D, s: string, font: string, size: number, italic = false): MathBox {
   const parts = s.split(/(\[[^\]]*\])/).filter(Boolean);
-  if (parts.length === 1 && !parts[0].startsWith('[')) return text(ctx, s, font, size);
-  return row(parts.map(p => (p.startsWith('[') ? shift(text(ctx, p.slice(1, -1), font, size * 0.72), size * 0.3) : text(ctx, p, font, size))));
+  if (parts.length === 1 && !parts[0].startsWith('[')) return nameText(ctx, s, font, size, italic);
+  return row(parts.map(p => (p.startsWith('[') ? shift(nameText(ctx, p.slice(1, -1), font, size * 0.72, italic), size * 0.3) : nameText(ctx, p, font, size, italic))));
 }
 
 function row(items: MathBox[]): MathBox {
@@ -93,7 +101,7 @@ export function layoutExpr(ctx: CanvasRenderingContext2D, e: Expr, o: MathOpts, 
       const s = (e.v < 0 ? '−' : '') + fmtNum(Math.abs(e.v)) + (e.u === 'angle' ? '°' : e.u === 'distance' ? '厘米' : '');
       return text(ctx, s, plain, size);
     }
-    case 'ref': return name(ctx, o.nameOf(e.id), o.font, size);
+    case 'ref': return name(ctx, o.nameOf(e.id), o.font, size, o.italicVars);
     case 'x': return text(ctx, o.varName, o.font, size, o.italicVars);
     case 'neg': {
       const inner = L(e.a, 3);
@@ -105,13 +113,14 @@ export function layoutExpr(ctx: CanvasRenderingContext2D, e: Expr, o: MathOpts, 
       if (e.name === 'abs') return fence(L(e.a), '|', '|', size, plain);
       return row([text(ctx, e.name, plain, size), fence(L(e.a), '(', ')', size, plain)]);
     }
-    case 'call': return row([name(ctx, o.nameOf(e.func), o.font, size), fence(L(e.a), '(', ')', size, plain)]);
+    case 'call': return row([name(ctx, o.nameOf(e.func), o.font, size, o.italicVars), fence(L(e.a), '(', ')', size, plain)]);
     case 'bin': {
       const p = PREC[e.op];
       let box: MathBox;
       if (e.op === '/') box = frac(L(e.a), L(e.b), size);
       else if (e.op === '^') {
-        const baseWrap = e.a.t === 'bin' || e.a.t === 'neg' || (e.a.t === 'num' && e.a.v < 0);
+        // 底数是加减乘或乘方时 L(e.a, 5) 已经加了括号，这里不再重复（0669 原版是 (x_F − x_C′)²，不是 ((x_F − x_C′))²）；分数、负号、负数仍要补括号。
+        const baseWrap = (e.a.t === 'bin' && e.a.op === '/') || e.a.t === 'neg' || (e.a.t === 'num' && e.a.v < 0);
         const b = L(e.a, 5);
         box = sup(baseWrap ? fence(b, '(', ')', size, plain) : b, L(e.b, 0, size * 0.72), size);
       } else {

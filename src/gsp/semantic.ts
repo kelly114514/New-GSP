@@ -100,7 +100,7 @@ export function compareContent(before: Doc, after: Doc): ContentDifference[] {
     // 来源标记不是显示设置；实际精度、字体样式等即使来自文件也必须完整比较。
     if (path === 'settings.display' || /^pages\.\d+\.display$/.test(path)) {
       const plain = (d: unknown) => {
-        const { fromFile: _source, textStyles, ...prefs } = (d ?? {}) as Partial<DisplayPrefs>;
+        const { fromFile: _source, mathItalicKnown: _known, textStyles, ...prefs } = (d ?? {}) as Partial<DisplayPrefs>;
         const styles: Record<string, Record<string, unknown>> = {};
         for (const cat of Object.keys(textStyles ?? {}).sort()) {
           const style = textStyles?.[cat as TextCat] as Record<string, unknown> | undefined;

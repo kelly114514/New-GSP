@@ -240,6 +240,7 @@ const fixed = (v: number, digits: number) => { const t = v.toFixed(digits); retu
 /** 无单位数值按当前精度显示。 */
 export const formatPlain = (v: number) => fixed(v, display.otherPrec);
 /** 数值显示：默认精度到百分位（与原版默认相同）。 */
+/** 显示用的数值字符串：长度单位紧跟数字不留空格（原版 0454 的 0.60厘米、1346 的 20.00厘米）。 */
 export function formatQ(v: Q, digits?: number): string {
   if (!Number.isFinite(v.v)) return v.v > 0 ? '∞' : '−∞';
   if (v.u === 'angle') {
@@ -250,9 +251,9 @@ export function formatQ(v: Q, digits?: number): string {
   }
   if (v.u === 'distance') {
     const d = digits ?? display.distPrec;
-    if (display.distUnit === 'in') return `${fixed(v.v / 2.54, d)} 英寸`;
-    if (display.distUnit === 'px') return `${fixed(v.v * CM, d)} 像素`;
-    return `${fixed(v.v, d)} 厘米`;
+    if (display.distUnit === 'in') return `${fixed(v.v / 2.54, d)}英寸`;
+    if (display.distUnit === 'px') return `${fixed(v.v * CM, d)}像素`;
+    return `${fixed(v.v, d)}厘米`;
   }
   return fixed(v.v, digits ?? display.otherPrec);
 }

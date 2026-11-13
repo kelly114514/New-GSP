@@ -88,7 +88,7 @@ test('参数选项：单位、颜色、文本、工具四页，默认单位页�
   await expect(page.locator('.dlg select.power')).toBeVisible();
   await ok(page); await p;
   const q = exec(page, 36971);
-  await expect(page.locator('.calc-menus select').first().locator('option').nth(1)).toHaveText(/^AB = \d+\.\d{3} 厘米$/);
+  await expect(page.locator('.calc-menus select').first().locator('option').nth(1)).toHaveText(/^AB = \d+\.\d{3}厘米$/);
   await page.locator('.dlg-cancel').click(); await q;
 });
 

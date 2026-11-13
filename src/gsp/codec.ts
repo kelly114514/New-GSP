@@ -989,6 +989,8 @@ export function encodeGsp(doc: Doc, notes: Set<string> = new Set()): Uint8Array 
     }
     out.rec(902, compat('page'));
     const ph = new Buf(36); ph.o = 4; ph.i16(Math.round(page.scroll?.x ?? 0)).i16(Math.round(page.scroll?.y ?? 0)); ph.o = 8; ph.u16(0xea1b).u16(pageAutoSnap(page) ? 1 : 0); ph.o = 16; ph.u16(1).u16(1); ph.o = 24; ph.u32(page.objects.length); out.rec(1000, ph.b);
+    // 页设置 10005：数学标签用斜体（原版改写实验确认）。其余 10002..10007 含义未知，不写。
+    if (page === doc.pages[0] || page.display?.mathItalic !== undefined) out.rec(10005, new Buf(2).u16(display.mathItalic ? 1 : 0).b);
     if (page === doc.pages[0] || page.display?.angleUnit !== undefined) {
       const unit = display.angleUnit;
       out.rec(10042, new Buf(2).u16(unit === 'rad' ? 0 : unit === 'dir' ? 2 : 1).b);
@@ -1071,6 +1073,7 @@ function parseRaw(recs: RecordEntry[], _toolMode = false, legacyTool = false) {
   const scrolls: { x: number; y: number }[] = [];
   const snaps: boolean[] = [];
   const textTable: RawTextStyle[] = [], pageTextTables: RawTextStyle[][] = [];
+  const mathItalicFlags: (boolean | undefined)[] = [];
   const precisions: number[] = [], pagePrecisions: number[][] = [], angleUnitCodes: (number | undefined)[] = []; let angleUnitCode: number | undefined, background: string | undefined; const backgrounds: (string | undefined)[] = [];
   const pages: RawObj[][] = [], counters: number[] = [], names: (string | undefined)[] = [], resources: Uint8Array[] = [], fonts: string[] = [], transforms: { src: number; img: number; name: string }[][] = [];
   const tools: EmbeddedTool[] = [];
@@ -1105,6 +1108,9 @@ function parseRaw(recs: RecordEntry[], _toolMode = false, legacyTool = false) {
     // 页面设置：10040 = [精度][序号 0 距离/1 角度/2 其它]；原版参数选项逐页实测。
     else if (r.tag === 10040 && page && r.data.length >= 2) { pagePrecisions[pages.length - 1][r.data[1]] = r.data[0]; if (pages.length === 1) precisions[r.data[1]] = r.data[0]; }
     else if (r.tag === 10042 && page && r.data.length >= 2) { angleUnitCodes[pages.length - 1] = v.getUint16(0, true); if (pages.length === 1) angleUnitCode = v.getUint16(0, true); }
+    // 页设置 10002..10007 是参数选项里的六个复选框；第十七轮用原版改写实验确认 10005 = 数学标签用斜体（0 则点标签、度量名、公式里的名字都是正体），
+    // 10006、10007 对画面没有影响，其余含义未知。
+    else if (r.tag === 10005 && page && r.data.length >= 2) mathItalicFlags[pages.length - 1] = v.getUint16(0, true) !== 0;
     // 颜色表 10020 = [u16 序号][R G B][0]，共 15 项；序号 7 是绘图区背景（全库 1,308 份有这张表，268 份背景不是白色，截图核对）
     // 每页各有一张；幂函数.gsp 第 1 页白色、第 2 页黑色
     else if (r.tag === 10020 && page && r.data.length >= 5 && v.getUint16(0, true) === 7) { const c = rgb(r.data[2], r.data[3], r.data[4]); backgrounds[pages.length - 1] = c; if (pages.length === 1) background = c; }
@@ -1152,7 +1158,7 @@ function parseRaw(recs: RecordEntry[], _toolMode = false, legacyTool = false) {
       else if (r.tag === 2005 && r.data.length >= 24) { const n = v.getUint16(22, true); if (24 + n <= r.data.length) { cur.label = legacyText(r.data.subarray(24, 24 + n), legacyTool); cur.labelShown = v.getUint16(2, true) !== 0; cur.labelCustom = v.getUint16(4, true) !== 0; cur.labelPos = [v.getInt16(6, true), v.getInt16(8, true)]; } }
     }
   }
-  return { pages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts, transforms, startupButtons, tools };
+  return { pages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts, transforms, startupButtons, tools, mathItalicFlags };
 }
 
 /** 表格 2317 的文字：开头 (列数+2) 个“0”和各列表头，之后每行一个“0”再接每列一个单元。单元里第一个文字是数值，
@@ -1342,7 +1348,7 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
   const fileCompat = rd.records.find(r => r.tag === 902)?.data;
   const ownCompat = compat('file');
   const legacyDecimalRefs = fileCompat?.length === ownCompat.length && ownCompat.every((byte, i) => fileCompat[i] === byte);
-  const { pages: rawPages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts: fontTable, transforms: rawTransforms, startupButtons, tools: rawTools } = parseRaw(rd.records, opts.tool, opts.legacyTool);
+  const { pages: rawPages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts: fontTable, transforms: rawTransforms, startupButtons, tools: rawTools, mathItalicFlags } = parseRaw(rd.records, opts.tool, opts.legacyTool);
   const angleUnit = angleUnitCode === 0 ? 'rad' : angleUnitCode === 2 ? 'dir' : 'deg';
   const doc = newDoc('未命名');
   doc.pages = [];
@@ -1627,7 +1633,7 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
     if (tfs.length) page.transforms = tfs.map(t => ({ name: t.name, src: t.src, img: t.img }));   // 对象 ID 就是 1 起的序号
     const buttons = startupButtons[pi]?.filter(id => id >= 1 && id <= raw.length);
     if (buttons?.length) page.startupButtons = buttons;
-    for (const o of page.objects) if (o.def.k === 'sys') { const uy = page.objects.find(x => x.id === (o.def as { unitY: Id }).unitY); if (uy) uy.hidden = !(o.def.grid === 'rect' || o.def.grid === 'tri'); }   // 方形/极坐标网格只有一个尺度，纵轴单位点不显示
+    for (const o of page.objects) if (o.def.k === 'sys') { const uy = page.objects.find(x => x.id === (o.def as { unitY: Id }).unitY); if (uy && uy.def.k !== 'calc' && uy.def.k !== 'measure' && uy.def.k !== 'param') uy.hidden = !(o.def.grid === 'rect' || o.def.grid === 'tri'); }   // 用“单位长度”度量定义坐标轴时（0870），unitY 是计算对象，不是点，不能被当成单位点改隐藏状态   // 方形/极坐标网格只有一个尺度，纵轴单位点不显示
     doc.pages.push(page);
   });
   if (!doc.pages.length) doc.pages.push(emptyPage());
@@ -1656,6 +1662,9 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
   if (precisions.length || angleUnitCode !== undefined) {
     doc.settings.display = { ...DEFAULT_DISPLAY, ...doc.settings.display, fromFile: true, angleUnit, ...(precisions[0] !== undefined ? { distPrec: precisions[0] } : {}), ...(precisions[1] !== undefined ? { anglePrec: precisions[1] } : {}), ...(precisions[2] !== undefined ? { otherPrec: precisions[2] } : {}) };
   }
+  // 数学标签用斜体（页设置 10005）：第 1 页的值是文档级，其余页只在与文档级不同时记在页上。
+  if (mathItalicFlags[0] !== undefined) doc.settings.display = { ...DEFAULT_DISPLAY, ...doc.settings.display, fromFile: true, mathItalic: mathItalicFlags[0], mathItalicKnown: true };
+  doc.pages.forEach((pg, i) => { if (i > 0 && mathItalicFlags[i] !== undefined && mathItalicFlags[i] !== (mathItalicFlags[0] ?? DEFAULT_DISPLAY.mathItalic)) pg.display = { ...pg.display, mathItalic: mathItalicFlags[i] }; });
   void background;
   doc.pages.forEach((pg, i) => { const c = backgrounds[i]; if (c && c !== '#ffffff') pg.background = c; });   // 没有颜色表的页按原版缺省（白色）
   doc.current = 0;

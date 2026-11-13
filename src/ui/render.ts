@@ -15,7 +15,19 @@ import type { Pt } from '../core/geom';
 // 点型 0–3 的半径（逻辑像素）。原版 96 dpi 截图：点型 1 的填充直径约 2 像素（example-36.gsp 轴上的点），
 // 点型 2 的外径 9 像素、填充 7 像素（fixtures-p1/pic96 的自由点）；点型 3 未实测。
 export const POINT_RADIUS = [1.5, 1.5, 4, 6.5];
-export const LINE_WIDTH = [1, 2, 3, 5];
+// 迭代象的点按迭代象自己的点型画成无描边纯色小点（第十七轮实测：原版截图抗锯齿面积折算的半径，
+// 点型 0/1/2/3 = 0.9/1.4/2.15/2.95，取自 1221、1346、0454/0416、0451/0456；与原象的点型无关）。
+export const ITER_POINT_RADIUS = [0.9, 1.4, 2.15, 2.95];
+/** 迭代点的像素形状：n 是外框边长，rows 是 [行, 起列, 止列(不含)]，相对外框左上角。依据：原版 0454/0416（点型 2）、0451/0456（点型 3）、1346（点型 1）、1170/1221（点型 0）的像素逐个统计。 */
+const ITER_SPRITES: { n: number; rows: [number, number, number][] }[] = [
+  { n: 2, rows: [[0, 0, 2], [1, 0, 2]] },
+  { n: 3, rows: [[0, 0, 3], [1, 0, 3], [2, 0, 3]] },
+  { n: 5, rows: [[0, 1, 4], [1, 0, 5], [2, 0, 5], [3, 0, 5], [4, 1, 4]] },
+  { n: 7, rows: [[0, 2, 5], [1, 1, 6], [2, 0, 7], [3, 0, 7], [4, 0, 7], [5, 1, 6], [6, 2, 5]] },
+];
+// 线宽码 0..3 的像素宽度：原版夹具实测（把 0669 全部对象头的线宽码改成 0/1/2/3，截图量得 1/1/3/5 像素；码 4 原版拒绝打开）。
+export const LINE_WIDTH = [1, 1, 3, 5];
+const VALUE_DX = 4, VALUE_DY = 5;
 let SEL_POINT = '#d000d0', SEL_LINE = 'rgba(224,112,224,0.55)';
 const FONT_SANS = "16px Tahoma,'Microsoft YaHei','Segoe UI',sans-serif";   // 原版度量值文字约 16 逻辑像素的 Tahoma（150% 缩放下与原版逐像素对照得出）
 let FONT_LABEL = "italic bold 16px 'Times New Roman',serif";
@@ -36,12 +48,13 @@ let MATH_ITALIC = true;
 function catFont(cat: TextCat, _base: string, bold = false, italic = false): string {
   // 字号：文件样式表里的数值就是逻辑像素（逐工具截图对照）；坐标轴数字按已对照的比例。
   const o = TS[cat] ?? {}, def = TEXT_DEFAULTS[cat], px = Math.round(def.px * ((o.size ?? def.style.size) / def.style.size) * 10) / 10;
-  const name = o.name ?? def.style.name, wantBold = o.bold ?? (bold || def.style.bold), wantItalic = o.italic ?? italic;
+  // 标签的斜体 = 样式表斜体 或 数学标签选项（原版改写 10005 实验：样式表斜体为假、选项开启时标签仍是斜体；样式表斜体为真、选项关闭时也是斜体）。
+  const name = o.name ?? def.style.name, wantBold = o.bold ?? (bold || def.style.bold), wantItalic = cat === 'label' ? !!o.italic || italic : o.italic ?? italic;
   return `${wantItalic ? 'italic ' : ''}${wantBold ? 'bold ' : ''}${px}px ${fontStack(name)}`;
 }
 function objectFont(o: Obj, cat: TextCat): string {
   const f = o.font;
-  return f ? `${f.italic ? 'italic ' : ''}${f.bold ? 'bold ' : ''}${f.size}px ${fontStack(f.name)}` : catFont(cat, FONT_SANS);
+  return f ? `${f.italic || (cat === 'label' && MATH_ITALIC) ? 'italic ' : ''}${f.bold ? 'bold ' : ''}${f.size}px ${fontStack(f.name)}` : catFont(cat, FONT_SANS);
 }
 const catColor = (cat: TextCat, dflt: string) => TS[cat]?.color ?? dflt;
 /** 对象自己的样式表项带颜色（1203 后三个字段）时用它，否则用页面的该类文字默认色。 */
@@ -183,6 +196,8 @@ export function defaultName(o: Obj): string {
 }
 
 /** 文字型对象（度量、参数、计算、方程）要显示的整行文字。 */
+/** 画板上度量、计算和参数的负数用短横线 “–”（原版 0669 的 –2.82、0416 的 –1.00、1346 的 –2.18）；文字里嵌入的数值和表格不在此列。 */
+const dashNegative = (t: string) => t.replace(/^-/, '–');
 export function valueText(page: Page, results: Results, o: Obj): string | undefined {
   if (o.def.k === 'picfunc') {   // 原版显示成“f(x): 绘图 [1]”
     const { height, stroke } = o.def, s = byId(page, stroke);
@@ -205,7 +220,7 @@ export function valueText(page: Page, results: Results, o: Obj): string | undefi
     return `${measureName(page, results, o)} = ${value}`;
   };
   if (!s) return results.get(o.id)?.status === 'undefined' && !dependsOnMissingGeometry(page, results, o.id) ? valueLine('未定义') : undefined;
-  if (s.k === 'num') return valueLine(formatQ(s.q, o.decimals));
+  if (s.k === 'num') return valueLine(dashNegative(formatQ(s.q, o.decimals)));
   const name = measureName(page, results, o);
   if (s.k === 'coords') return `${name}: (${formatPlain(s.x)}, ${formatPlain(s.y)})`;
   if (s.k === 'text') return `${name}: ${s.text}`;
@@ -259,7 +274,10 @@ export function drawPage(ctx: CanvasRenderingContext2D, page: Page, results: Res
     });
   }
   // 线、圆、弧、轨迹
-  for (const x of objs) {
+  // 轨迹先于直线、圆、弧绘制：原版 0669 里深红色的点轨迹压在蓝色线段和绿色弧线下面（经验规则，原理未明）。
+  // 受控对照 420 份带轨迹的课件：彩色得分提高 8 份（0292 0.879→0.974、0810 0.499→0.632、0461、0291、0293 等）、降低 2 份（0837 多露出一道绿边、0341）。
+  const strokeObjs = [...objs.filter(o => o.def.k === 'locus'), ...objs.filter(o => o.def.k !== 'locus')];
+  for (const x of strokeObjs) {
     if (x.def.k === 'sys') continue;
     const shape = results.get(x.id)?.shape;
     flatColored(shape).forEach(({ s, color }) => {
@@ -267,19 +285,51 @@ export function drawPage(ctx: CanvasRenderingContext2D, page: Page, results: Res
     });
   }
   // 点
+  // 同一页的点型迭代象按迭代层交错绘制（第 k 层的各迭代象依次画完再画第 k+1 层），不是整个迭代象依次覆盖：
+  // 原版 1131（六色圆极限集）里先出现的白点盖在后出现的彩色点上、绿点只留在自己的簇里。受控对照（按对象顺序 / 反序 / 交错）的彩色得分：
+  // 1135 0.902/0.940/0.952，1131 0.736/0.715/0.760，1006 0.884/0.902/0.904，其余课件不变。
+  const interleaved = objs.filter(o => o.def.k === 'iterimg' && !sel.has(o.id) && !hl.has(o.id) && ITER_SPRITES[o.style.pointSize] && (() => { const m = results.get(o.id)?.shape; return m?.k === 'multi' && m.items.every(i => i.k === 'pt'); })());
+  if (interleaved.length > 1) {
+    const lists = interleaved.map(o => ({ o, items: (results.get(o.id)!.shape as { items: Shape[]; colors?: (string | undefined)[] }).items, colors: (results.get(o.id)!.shape as { colors?: (string | undefined)[] }).colors, sprite: ITER_SPRITES[o.style.pointSize], base: colorOf(o) }));
+    const most = Math.max(...lists.map(l => l.items.length));
+    ctx.save();
+    for (let k = 0; k < most; k++) for (const l of lists) {
+      const it = l.items[k]; if (!it || it.k !== 'pt' || !inView(it.p)) continue;
+      ctx.fillStyle = l.colors?.[k] ?? l.base;
+      const left = Math.round(it.p.x - l.sprite.n / 2), top = Math.round(it.p.y - l.sprite.n / 2);
+      for (const [dy, a, b] of l.sprite.rows) ctx.fillRect(left + a, top + dy, b - a, 1);
+    }
+    ctx.restore();
+  }
   for (const x of objs) {
+    if (interleaved.length > 1 && interleaved.includes(x)) continue;
     const shape = results.get(x.id)?.shape;
     const selected = sel.has(x.id), highlighted = hl.has(x.id);
     if (shape?.k === 'pt' && inView(shape.p)) drawPoint(ctx, x, shape.p, selected, highlighted);
     if (shape?.k !== 'multi') continue;
     // 整组共用 Canvas 状态，但仍按原顺序逐点填充和描边，保留重叠、透明度与高亮。
-    // 迭代出来的点一律画成小点（0454：对象头点型 2，原版画 3 像素小点）
-    const iterated = x.def.k === 'iterimg', r = iterated ? 2.5 : POINT_RADIUS[x.style.pointSize] ?? 3.5;
+    // 迭代出来的点画成无描边小点，半径按迭代象自己的点型查 ITER_POINT_RADIUS
+    const iterated = x.def.k === 'iterimg', r = iterated ? ITER_POINT_RADIUS[x.style.pointSize] ?? 2.15 : POINT_RADIUS[x.style.pointSize] ?? 3.5;
     ctx.save();
     ctx.fillStyle = colorOf(x);
     const outline = !iterated && !selected && !highlighted;   // 迭代点是无描边的纯色小点（0416、0454 的原版画面）
     if (outline) { ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(0,0,0,0.55)'; }
     const base = colorOf(x);
+    const sprite = iterated && !selected && !highlighted ? ITER_SPRITES[x.style.pointSize] : undefined;
+    if (sprite) {
+      // 原版迭代点是不抗锯齿的像素块（实测 2×2、3×3、去角的 5×5 与 7×7）；同色的点合成一条路径一次填充。
+      let current: string | undefined;
+      ctx.beginPath();
+      for (const { s, color } of flatColored(shape)) if (s.k === 'pt' && inView(s.p)) {
+        const c = color ?? base;
+        if (c !== current) { if (current !== undefined) ctx.fill(); ctx.beginPath(); ctx.fillStyle = c; current = c; }
+        const left = Math.round(s.p.x - sprite.n / 2), top = Math.round(s.p.y - sprite.n / 2);
+        for (const [dy, a, b] of sprite.rows) ctx.rect(left + a, top + dy, b - a, 1);
+      }
+      if (current !== undefined) ctx.fill();
+      ctx.restore();
+      continue;
+    }
     for (const { s, color } of flatColored(shape)) if (s.k === 'pt' && inView(s.p)) {
       if (selected || highlighted) pointRings(ctx, s.p, r, selected, highlighted);
       ctx.fillStyle = color ?? base;
@@ -368,30 +418,47 @@ function drawSystem(ctx: CanvasRenderingContext2D, o: Obj, results: Results, opt
   if (showX) { ctx.moveTo(ox - ex.x * far, oy - ex.y * far); ctx.lineTo(ox + ex.x * far, oy + ex.y * far); }
   if (showY) { ctx.moveTo(ox - ey.x * far, oy - ey.y * far); ctx.lineTo(ox + ey.x * far, oy + ey.y * far); }
   ctx.stroke();
-  // 刻度：每个单位一个小刻度；标签的间隔按轴取（原版 150% 缩放实测：x 轴标签每 5 个单位、y 轴每 2 个单位，即横向要求的间隔比纵向大）
-  const stepX = piX ? Math.max(1, Math.ceil(60 / (lx * gx))) : piY ? Math.max(1, Math.ceil(100 / (lx * gx))) : tickStep(lx, 100);
-  const stepY = piY ? Math.max(1, Math.ceil(60 / (ly * gy))) : piX ? Math.max(1, Math.ceil(50 / (ly * gy))) : tickStep(ly, 50);
-  const rangeX = Math.ceil(far / (lx * gx)), rangeY = Math.ceil(far / (ly * gy));
+  // 刻度与数字（原版夹具实测，第十七轮）：十进制轴的数字按 1-2-5 序列取间距不小于 80 像素（x，y 取 40）的最小值，
+  // 刻度是数字步长的 1/10（尾数 1）、1/4（尾数 2）、1/5（尾数 5），例如单位 100 像素：数字每 1、刻度每 0.1；单位 3.16：数字每 50、刻度每 10。
+  // 有 π 刻度的轴仍按原来的整数步长。
+  const dx = !piX && !piY ? decimalSteps(lx, 80) : undefined, dy = !piY && !piX ? decimalSteps(ly, 40) : undefined;
+  const tx = dx ? dx.tick : gx, ty = dy ? dy.tick : gy;
+  const stepX = dx ? dx.every : piX ? Math.max(1, Math.ceil(60 / (lx * gx))) : piY ? Math.max(1, Math.ceil(100 / (lx * gx))) : tickStep(lx, 100);
+  const stepY = dy ? dy.every : piY ? Math.max(1, Math.ceil(60 / (ly * gy))) : piX ? Math.max(1, Math.ceil(50 / (ly * gy))) : tickStep(ly, 50);
+  const rangeX = Math.ceil(far / (lx * tx)), rangeY = Math.ceil(far / (ly * ty));
   const minus = (n: number) => String(n).replace('-', '−');
   const tickPath = new Path2D();   // 整条轴的刻度一次描边
+  const half = 5;   // 刻度总长约 10 像素（含轴线所在行）
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (let i = -rangeX; i <= rangeX && showX; i++) {
     if (i === 0) continue;
-    const px = origin.x + ux.x * i * gx, py = origin.y + ux.y * i * gx;
+    const px = origin.x + ux.x * i * tx, py = origin.y + ux.y * i * tx;
     if (px < v.x0 - 20 || px > v.x1 + 20 || py < v.y0 - 20 || py > v.y1 + 20) continue;
-    tickPath.moveTo(sx(px) - ey.x * 3, oy + (py - origin.y) - ey.y * 3); tickPath.lineTo(sx(px) + ey.x * 3, oy + (py - origin.y) + ey.y * 3);
-    if (i % stepX === 0) { if (piX) drawPiTick(ctx, i * piStepX, px, py + 5, false); else ctx.fillText(minus(Number((i * gx).toPrecision(10))), px, py + 5); }
+    tickPath.moveTo(sx(px) - ey.x * half, oy + (py - origin.y) - ey.y * half); tickPath.lineTo(sx(px) + ey.x * half, oy + (py - origin.y) + ey.y * half);
+    if (i % stepX === 0) { if (piX) drawPiTick(ctx, i * piStepX, px, py + 5, false); else ctx.fillText(minus(Number((i * tx).toPrecision(10))), px, py + 5); }
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (let j = -rangeY; j <= rangeY && showY; j++) {
     if (j === 0) continue;
-    const px = origin.x + uy.x * j * gy, py = origin.y + uy.y * j * gy;
+    const px = origin.x + uy.x * j * ty, py = origin.y + uy.y * j * ty;
     if (px < v.x0 - 20 || px > v.x1 + 20 || py < v.y0 - 20 || py > v.y1 + 20) continue;
-    tickPath.moveTo(ox + (px - origin.x) - ex.x * 3, sy(py) - ex.y * 3); tickPath.lineTo(ox + (px - origin.x) + ex.x * 3, sy(py) + ex.y * 3);
-    if (j % stepY === 0) { if (piY) drawPiTick(ctx, j * piStepY, px - 5, py, true); else ctx.fillText(minus(Number((j * gy).toPrecision(10))), px - 5, py); }
+    tickPath.moveTo(ox + (px - origin.x) - ex.x * half, sy(py) - ex.y * half); tickPath.lineTo(ox + (px - origin.x) + ex.x * half, sy(py) + ex.y * half);
+    if (j % stepY === 0) { if (piY) drawPiTick(ctx, j * piStepY, px - 5, py, true); else ctx.fillText(minus(Number((j * ty).toPrecision(10))), px - 5, py); }
   }
   ctx.stroke(tickPath);
   ctx.restore();
+}
+/** 十进制坐标轴的刻度步长：数字间距取 1-2-5 序列里不小于 minSpacing 像素的最小值，刻度为数字步长的 1/10、1/4、1/5（按尾数 1、2、5）；every 是每隔几个刻度写一个数字。 */
+export function decimalSteps(unitPx: number, minSpacing: number): { label: number; tick: number; every: number } {
+  const want = minSpacing / unitPx + 1e-9;   // 严格大于：夹具里恰好 80 像素的单位 8、16 都被原版舍掉（只有单位 4 被接受，是已知的单点不吻合）
+  let k = Math.floor(Math.log10(want)) - 1, label = 0;
+  for (; ; k++) {
+    const hit = [1, 2, 5].map(m => m * 10 ** k).find(l => l >= want);
+    if (hit !== undefined) { label = hit; break; }
+  }
+  const mantissa = Math.round(label / 10 ** Math.floor(Math.log10(label) + 1e-9));
+  const every = mantissa === 1 ? 10 : mantissa === 2 ? 4 : 5;
+  return { label, tick: label / every, every };
 }
 function tickStep(px: number, minSpacing: number): number { const want = minSpacing / px; const m = [1, 2, 5, 10, 20, 50, 100]; return m.find(s => s >= want) ?? 100; }
 
@@ -471,13 +538,24 @@ function drawRegion(ctx: CanvasRenderingContext2D, o: Obj, s: Shape, selected: b
   ctx.restore();
 }
 
+/** 画布当前是 1:1 缩放（没有放大、也没有高分屏倍率）。没有变换接口的替身画布按 1:1 处理。 */
+function unitScale(ctx: CanvasRenderingContext2D): boolean {
+  if (typeof ctx.getTransform !== 'function') return false;
+  const m = ctx.getTransform();
+  if (!m || typeof m.a !== 'number') return false;
+  return Math.abs(m.a - 1) < 1e-6 && Math.abs(m.d - 1) < 1e-6 && !m.b && !m.c;
+}
 export function strokeShape(ctx: CanvasRenderingContext2D, o: Obj, s: Shape, selected: boolean, highlighted: boolean, color?: string) {
   const w = LINE_WIDTH[o.style.width] ?? 2;
+  // 原版（GDI）画 1、3、5 像素的直线是对齐像素的实线（0414 棋盘边框：原版一行 #c0c0c0，落在整数坐标上的抗锯齿线只有一半浓度）。
+  // 画布缩放为 1 时把奇数线宽的直线端点取整并移到像素中心；放大或高分屏缩放时保持精确位置，避免缩放时线条跳动。
+  const crisp = w % 2 === 1 && unitScale(ctx);
+  const sn = (v: number) => (crisp ? Math.round(v) + 0.5 : v);
   const path = () => {
     ctx.beginPath();
     if (s.k === 'line') {
       const clipped = clipStraight(s.s, currentView);
-      if (clipped) { ctx.moveTo(clipped[0].x, clipped[0].y); ctx.lineTo(clipped[1].x, clipped[1].y); }
+      if (clipped) { ctx.moveTo(sn(clipped[0].x), sn(clipped[0].y)); ctx.lineTo(sn(clipped[1].x), sn(clipped[1].y)); }
     } else if (s.k === 'circle') ctx.arc(s.c.c.x, s.c.c.y, s.c.r, 0, TAU);
     else if (s.k === 'arc') ctx.arc(s.c.x, s.c.y, s.r, -s.a0, -(s.a0 + s.sweep), s.sweep >= 0);
     else if (s.k === 'paths') for (const p of s.paths) {
@@ -632,21 +710,23 @@ function drawTextual(ctx: CanvasRenderingContext2D, page: Page, results: Results
   if (!text || !at) return;
   ctx.save();
   ctx.font = objectFont(o, 'value'); ctx.textBaseline = 'top';
+  // 原版把度量、计算、参数的文字画在文件位置右下方：左 4 像素、上 5 像素（改后复测各份外框差 ≤1 像素）（第十七轮 0669、0416、1162、1346、0454、0813 的墨迹外框对照）。
+  const vx = at.x + VALUE_DX, vy = at.y + VALUE_DY;
   const math = mathParts(page, results, o, ctx);
   if (math) {
     // 没有自定义标签的计算和函数定义按公式排版
     const size = Number(/([\d.]+)px/.exec(ctx.font)?.[1]) || 16;
     ctx.fillStyle = o.font?.color && o.font.color !== '#000000' ? o.font.color : o.style.color === '#000000' ? catColor('value', '#000') : o.style.color;
-    const box = drawMathLine(ctx, math, ctx.font, size, at.x, at.y);
-    if (selected) { ctx.fillStyle = 'rgba(224,112,224,0.4)'; ctx.fillRect(at.x - 3, at.y - 2, box.w + 6, box.h + 4); ctx.strokeStyle = SEL_POINT; ctx.strokeRect(at.x - 3, at.y - 2, box.w + 6, box.h + 4); }
+    const box = drawMathLine(ctx, math, ctx.font, size, vx, vy);
+    if (selected) { ctx.fillStyle = 'rgba(224,112,224,0.4)'; ctx.fillRect(vx - 3, vy - 2, box.w + 6, box.h + 4); ctx.strokeStyle = SEL_POINT; ctx.strokeRect(vx - 3, vy - 2, box.w + 6, box.h + 4); }
     ctx.restore();
     return;
   }
   const w = ctx.measureText(text).width;
-  if (selected) { const h = Math.max(24, (o.font?.size ?? 18) + 6); ctx.fillStyle = 'rgba(224,112,224,0.4)'; ctx.fillRect(at.x - 3, at.y - 2, w + 6, h); ctx.strokeStyle = SEL_POINT; ctx.strokeRect(at.x - 3, at.y - 2, w + 6, h); }
+  if (selected) { const h = Math.max(24, (o.font?.size ?? 18) + 6); ctx.fillStyle = 'rgba(224,112,224,0.4)'; ctx.fillRect(vx - 3, vy - 2, w + 6, h); ctx.strokeStyle = SEL_POINT; ctx.strokeRect(vx - 3, vy - 2, w + 6, h); }
   ctx.fillStyle = o.font?.color && o.font.color !== '#000000' ? o.font.color : o.style.color === '#000000' ? catColor('value', '#000') : o.style.color;
-  drawValueLine(ctx, text, at, o.def.k === 'param' && o.def.showEdit);
-  if (o.font?.underline) ctx.fillRect(at.x, at.y + o.font.size, w, 1); else if (!o.font) underlineIf(ctx, 'value', text, at.x, at.y);
+  drawValueLine(ctx, text, { x: vx, y: vy }, o.def.k === 'param' && o.def.showEdit, MATH_ITALIC);
+  if (o.font?.underline) ctx.fillRect(vx, vy + o.font.size, w, 1); else if (!o.font) underlineIf(ctx, 'value', text, vx, vy);
   ctx.restore();
 }
 
@@ -672,29 +752,50 @@ function mathParts(page: Page, results: Results, o: Obj, ctx: CanvasRenderingCon
   const box = layoutExpr(ctx, expr, { font: ctx.font, size, nameOf, varName, italicVars: MATH_ITALIC });
   if (d.k === 'func') return [`${funcHead(d)} = `, box];
   const s = results.get(o.id);
-  const value = s?.shape?.k === 'num' ? formatQ(s.shape.q, o.decimals) : s?.status === 'undefined' && !dependsOnMissingGeometry(page, results, o.id) ? '未定义' : undefined;
+  const value = s?.shape?.k === 'num' ? dashNegative(formatQ(s.shape.q, o.decimals)) : s?.status === 'undefined' && !dependsOnMissingGeometry(page, results, o.id) ? '未定义' : undefined;
   return value === undefined ? undefined : [box, ` = ${value}`];
 }
 
 /** 名字里的 [..] 画成下标；参数的数值画在小方框里（原版的可编辑数值）。 */
-function drawValueLine(ctx: CanvasRenderingContext2D, text: string, at: Pt, boxed: boolean) {
-  const split = boxed ? text.lastIndexOf(' = ') : -1;
+const LATIN_NAME = /([A-Za-zΑ-Ωα-ω′'″]+)/;
+function drawValueLine(ctx: CanvasRenderingContext2D, text: string, at: Pt, boxed: boolean, italicName = false) {
+  const last = text.lastIndexOf(' = ');
+  const split = boxed ? last : -1;
   const head = split >= 0 ? text.slice(0, split + 3) : text, tail = split >= 0 ? text.slice(split + 3) : '';
   const size = Number(/([\d.]+)px/.exec(ctx.font)?.[1]) || 16, font = ctx.font;
-  let x = at.x;
+  // 名字部分（最后一个“ = ”之前）按数学标签选项画斜体：只有拉丁、希腊字母和撇号斜体，数字、汉字和符号保持正体（原版 0669、0454、0416 对照）。
+  const nameEnd = italicName && last >= 0 && !/\bitalic\b/.test(font) ? last : -1;
+  const italicFont = `italic ${font}`;
+  let x = at.x, pos = 0;
+  const draw = (s: string, f: string, y: number) => { ctx.font = f; ctx.fillText(s, x, y); x += ctx.measureText(s).width; };
   for (const part of head.split(/(\[[^\]]*\])/)) {
     if (!part) continue;
+    const start = pos; pos += part.length;
+    const inName = start < nameEnd;
     if (part.startsWith('[')) {
-      ctx.font = font.replace(/[\d.]+px/, `${size * 0.72}px`);
-      const sub = part.slice(1, -1); ctx.fillText(sub, x, at.y + size * 0.35); x += ctx.measureText(sub).width;
-      ctx.font = font;
-    } else { ctx.fillText(part, x, at.y); x += ctx.measureText(part).width; }
+      const sub = part.slice(1, -1), f = (inName && !/^[\d.]+$/.test(sub) ? italicFont : font).replace(/[\d.]+px/, `${size * 0.72}px`);
+      draw(sub, f, at.y + size * 0.35);
+    } else if (inName) {
+      const cut = Math.min(part.length, nameEnd - start);
+      for (const piece of part.slice(0, cut).split(LATIN_NAME)) if (piece) draw(piece, LATIN_NAME.test(piece) && piece.length === (piece.match(LATIN_NAME)?.[0].length ?? -1) ? italicFont : font, at.y);
+      if (cut < part.length) draw(part.slice(cut), font, at.y);
+    } else draw(part, font, at.y);
   }
+  ctx.font = font;
   if (tail) {
     const w = ctx.measureText(tail).width;
     ctx.fillText(tail, x + 3, at.y);
     ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1; ctx.strokeRect(x, at.y - 2, w + 6, size + 6); ctx.restore();
   }
+}
+
+/** 文字里引用另一段文字时用它展开后的内容（0870 的“矩形DEFG的面积”引用的文字里还嵌着四个对象名）；嵌套深度有限，防止互相引用。 */
+let nestedDepth = 0;
+function nestedText(page: Page, results: Results, ro: Obj): string {
+  if (ro.def.k !== 'text') return '?';
+  if (nestedDepth >= 4) return ro.def.text;
+  nestedDepth++;
+  try { return embeddedText(page, results, ro).text; } finally { nestedDepth--; }
 }
 
 /** 组合文本中的按钮仍是可操作对象；数值、标签在同一处展开，绘制和命中共用布局。 */
@@ -717,7 +818,7 @@ export function embeddedText(page: Page, results: Results, o: Obj, values?: Extr
     text += o.def.text.slice(end, match.index);
     const index = Number(match[1]), ro = byId(page, o.def.refs?.[index] ?? -1);
     const rs = values ? values[index] : ro && results.get(ro.id)?.shape;
-    let value = ro?.label ?? (ro?.def.k === 'text' ? ro.def.text : '?');
+    let value = ro?.label ?? (ro?.def.k === 'text' ? nestedText(page, results, ro) : '?');
     if (match[2] === 'A') value = ro?.label ?? (ro?.def.k === 'param' || ro?.def.k === 'func' ? ro.def.name : '');
     else if (match[2] === 'D') value = rs?.k === 'num' ? ` ${rs.q.v < 0 ? '−' : '+'} ${formatQ({ ...rs.q, v: Math.abs(rs.q.v) }, ro?.decimals)}` : '?';
     else if (ro?.def.k === 'button') value = ro.def.text;

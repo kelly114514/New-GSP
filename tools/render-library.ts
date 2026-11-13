@@ -14,6 +14,8 @@ const only = selection ? new Set(selection.slice('--only='.length).split(',').ma
   return Number(s);
 })) : undefined;
 const overwrite = options.includes('--overwrite');
+const initOption = options.find(o => o.startsWith('--init='));   // 每个页面加载前先执行的脚本，用于临时开关做对照实验
+const initScript = initOption?.slice('--init='.length);
 const timeoutOption = options.find(o => o.startsWith('--timeout-ms='));
 const timeoutMs = timeoutOption ? Number(timeoutOption.slice('--timeout-ms='.length)) : 60000;
 if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 600000) throw new Error('截图超时应为 1000 至 600000 毫秒');
@@ -26,6 +28,7 @@ async function fresh(relaunch = false) {
   // 超时后页面可能仍在死循环里，关页面会卡住：直接重启浏览器
   if (relaunch) { await Promise.race([browser.close(), new Promise(r => setTimeout(r, 5000))]); browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true }); }
   page = await browser.newPage({ viewport: { width: 1200, height: 700 }, deviceScaleFactor: 1 });
+  if (initScript) await page.addInitScript(initScript);
   await page.goto('http://127.0.0.1:5173/'); await page.waitForFunction(() => !!(window as { __app?: unknown }).__app);
 }
 await fresh();

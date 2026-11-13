@@ -439,8 +439,12 @@ function mapShape(s: Shape, t: TMap): Shape | undefined {
 
 /** 迭代的次数上限和状态总数上限：防止深度很大时卡死（原版也有上限，具体数值未知）。 */
 // 原版样例 example-36.gsp 以参数 n=120 迭代 119 次，原版绘图区画出全部 119 个矩形，所以次数不能只到 20。
-export const ITER_MAX_DEPTH = 60000;   // IFS-五角繁星的三种作法.gsp 迭代 30000 次；放宽到 25 万会让 1203 等慢 10 倍并使 1135 栈溢出，所以保持
-const ITER_MAX_STATES = 60000;
+// 层数上限 10 万（1261/1262 要求 95000、100000 层）；状态总数上限 10 万。第十七轮用整库截图对照定的：
+// 1203（5 映射 7 层，共 97,656 个状态）原版画全，旧上限 6 万只画出 58% 的墨量（0.59 → 0.998）；1130（4 映射 8 层，87,381 个）也画全；
+// 1135（5 映射 10 层）原版必有上限：6 万墨量 17004、10 万 17494、25 万 18802，原版 18100。放宽到 25 万会让 1135 的求值从 1.3 秒涨到 7 秒，所以取 10 万。
+// 此前说的“放宽会栈溢出”出在 shown.push(...states) 的参数展开，已改成逐个追加。
+export const ITER_MAX_DEPTH = 100000;
+const ITER_MAX_STATES = 100000;
 type IterDef = Extract<Def, { k: 'iterate' }>;
 interface IterPlan {
   body: Set<Id>;
@@ -505,6 +509,11 @@ function underState(d: IterDef, state: Result[], get: Get, page: Page, ctx: Eval
   return g;
 }
 
+/** 随机取点的参数范围：圆取整圈，直线取 [-3,3]、射线/线段取 [0,3]/[0,1]。 */
+function randomRange(path: Shape): { circle: boolean; lo: number; hi: number } {
+  return { circle: path.k === 'circle' || path.k === 'disk', lo: path.k === 'line' && path.s.ext === 'line' ? -3 : 0, hi: path.k === 'line' && path.s.ext !== 'segment' ? 3 : 1 };
+}
+
 /** 求值 iterate：逐层把前像换成映射的初象，记下要显示的各层状态；每个迭代象再在这些状态下求自己的原象。 */
 function evalIterate(d: IterDef, get: Get, page: Page, ctx: EvalCtx, results: Results): Result {
   const dv = 'param' in d.depth ? plainOf(get, d.depth.param) : d.depth.fixed;
@@ -522,25 +531,36 @@ function evalIterate(d: IterDef, get: Get, page: Page, ctx: EvalCtx, results: Re
     let ob = byId(page, preId);
     if (d.random && ob?.def.k !== 'onpath') { const target = byId(page, d.maps[0]?.[i]); if (target?.def.k === 'onpath') ob = target; }
     if (!d.random || ob?.def.k !== 'onpath') return undefined;
-    const path = sh(get, ob.def.path);
-    return path ? { path, circle: path.k === 'circle' || path.k === 'disk', lo: path.k === 'line' && path.s.ext === 'line' ? -3 : 0, hi: path.k === 'line' && path.s.ext !== 'segment' ? 3 : 1 } : undefined;
+    const pathId = ob.def.path, path = sh(get, pathId);
+    // 路径依赖迭代里的前像或体内对象时（0813 蒲丰投针：针尖所在圆的圆心由本层同时随机选出的两个点决定），每次随机取点前要在本层的状态下重算路径。
+    const live = d.pre.includes(pathId) || d.body.includes(pathId);
+    return path ? { path, pathId, live, ...randomRange(path) } : undefined;
   });
   let seed = (d.salt ?? 0x2f5f5538) >>> 0;
   const rnd = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   for (let level = 0; level <= depth && states.length; level++) {
     if (d.maps.length === 1 && states.length === 1) chain.push(states[0]);
-    if (level >= 1 && (!d.finalOnly || level === depth || capped)) shown.push(...states);
+    // 逐个追加：一层的状态可达数万个，参数展开会让调用栈溢出（1135 放宽状态上限时的栈溢出就出在这里）。
+    if (level >= 1 && (!d.finalOnly || level === depth || capped)) for (const st of states) shown.push(st);
     if (level === depth || capped) break;
     const next: Result[][] = [];
     outer: for (const st of states) {
       const g = underState(d, st, get, page, ctx, results);
       for (const mp of d.maps) {
-        const ns = mp.map((id, i) => {
+        const ns: Result[] = [];
+        for (let i = 0; i < mp.length; i++) {
           const rp = randomPaths[i];
-          if (!rp) return g(id);
-          const u = rnd(), p = pathPointAt(rp.path, rp.circle ? u * G.TAU : rp.lo + (rp.hi - rp.lo) * u);
-          return p ? OK({ k: 'pt', p }) : UNDEF;
-        });
+          if (!rp) { ns.push(g(mp[i])); continue; }
+          let { path, circle, lo, hi } = rp;
+          if (rp.live) {
+            // 本层前面已挑好的随机前像替换进状态，再求这个前像的路径。
+            const partial = st.map((r, j) => (j < i && randomPaths[j] ? ns[j] : r));
+            const live = sh(underState(d, partial, get, page, ctx, results), rp.pathId);
+            if (live) ({ path, circle, lo, hi } = { path: live, ...randomRange(live) });
+          }
+          const u = rnd(), p = pathPointAt(path, circle ? u * G.TAU : lo + (hi - lo) * u);
+          ns.push(p ? OK({ k: 'pt', p }) : UNDEF);
+        }
         if (ns.every(r => r.status === 'ok' && r.shape)) { next.push(ns); if (++total >= ITER_MAX_STATES) { capped = true; break outer; } }
       }
     }

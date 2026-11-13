@@ -205,6 +205,8 @@ export interface DisplayPrefs {
   mathItalic: boolean;
   /** 显示设置来自原版文件；未找到可靠记录的数学标签斜体选项继承程序默认值。用户修改后去掉标记。 */
   fromFile?: boolean;
+  /** 文件里有页设置记录 10005（第十七轮原版实测：它就是“数学标签用斜体”），mathItalic 取自文件；没有该记录的文件继承程序默认值。 */
+  mathItalicKnown?: boolean;
   /** 与出厂样式不同的那些项；没有的类别按原样画。 */
   textStyles?: Partial<Record<TextCat, Partial<TextStyle>>>;
 }
@@ -212,8 +214,8 @@ export const DEFAULT_DISPLAY: DisplayPrefs = { angleUnit: 'deg', anglePrec: 2, d
 
 export function pageDisplay(doc: Doc, page: Page, fallback: DisplayPrefs = DEFAULT_DISPLAY): DisplayPrefs {
   const source = doc.settings.display;
-  // 原版文本样式表记录的是标签字体的斜体，不能据此推断程序的“数学标签用斜体”选项。
-  return { ...DEFAULT_DISPLAY, ...fallback, ...source, ...(source?.fromFile ? { mathItalic: fallback.mathItalic } : {}), ...page.display };
+  // 原版文本样式表记录的是标签字体的斜体，不能据此推断程序的“数学标签用斜体”选项；该选项在页设置 10005（有记录时按文件）。
+  return { ...DEFAULT_DISPLAY, ...fallback, ...source, ...(source?.fromFile && !source.mathItalicKnown ? { mathItalic: fallback.mathItalic } : {}), ...page.display };
 }
 
 /** 文档内嵌的自定义工具：文件里的 1002…1003 记录原样保存（base64），要用时再解析；序号都是工具内部的 1 起序号。 */

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { decodeGsp, decodeFile, encodeGsp, encodeFile, encodeNgsp } from '../src/gsp/codec';
 import { compareContent, sourceSnapshot } from '../src/gsp/semantic';
-import { DEFAULT_DISPLAY, defaultStyle, newDoc, type Doc, type Def } from '../src/core/model';
+import { DEFAULT_DISPLAY, defaultStyle, newDoc, pageDisplay, type Doc, type Def } from '../src/core/model';
 import { readRecords } from '../src/gsp/records';
 import { evaluatePage } from '../src/core/engine';
 import { applyDisplay, valueText } from '../src/ui/render';
@@ -170,8 +170,14 @@ describe('保存完整性与失败保护', () => {
     const nonItalicLabel = encodeFile(doc, undefined);
     if (!nonItalicLabel.ok) throw new Error(nonItalicLabel.reason);
     expect(compareContent(doc, decodeGsp(nonItalicLabel.bytes).doc)).toEqual([]);
+    // 页设置 10005 就是“数学标签用斜体”（第十七轮原版改写实验），关闭后可以无损写回并读回。
     doc.settings.display.mathItalic = false;
-    rejectWithoutLoss(doc, 'settings.display');
+    const noMathItalic = encodeFile(doc, undefined);
+    if (!noMathItalic.ok) throw new Error(noMathItalic.reason);
+    const reread = decodeGsp(noMathItalic.bytes).doc;
+    expect(compareContent(doc, reread)).toEqual([]);
+    expect(pageDisplay(reread, reread.pages[0]).mathItalic).toBe(false);
+    expect(readRecords(noMathItalic.bytes).records.filter(r => r.tag === 10005).map(r => r.data[0])).toEqual([0]);
   });
   it('旧版新版课件缺省的显示选项沿用默认值', () => {
     const doc = pointDoc();
@@ -240,7 +246,7 @@ it.skipIf(!existsSync(precisionFixture) || !existsSync(precisionOriginal))('原�
   expect(after.pages[0].objects.filter(o => o.decimals !== undefined).map(o => o.decimals)).toEqual([3, 4, 1]);
   applyDisplay(before.settings.display!);
   const page = before.pages[0], values = evaluatePage(page);
-  expect(valueText(page, values, page.objects[4])).toContain('2.646 厘米');
+  expect(valueText(page, values, page.objects[4])).toContain('2.646厘米');
   expect(valueText(page, values, page.objects[5])).toContain('90.0000°');
   expect(valueText(page, values, page.objects[6])).toContain('0.3');
 });
