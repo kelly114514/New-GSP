@@ -10,9 +10,16 @@ import type { DocView } from './ui/docview';
 type Speed = 'slow' | 'medium' | 'fast' | 'high' | number;
 type Direction = 'forward' | 'backward' | 'bounce' | 'random';
 const PX_PER_SEC = { slow: 50, medium: 120, fast: 260, high: 600 };
+// 原版 PrintWindow 夹具中的线段和圆弧长，三档约为每秒 35、105、175 页面像素。
+const ANIMATION_PX_PER_SEC = { slow: 35, medium: 105, fast: 175, high: 600 };
 
 interface Run { view: DocView; page: Page; id: Id; dir: Direction; speed: Speed; sign: 1 | -1; v?: { x: number; y: number } }
 interface Move { view: DocView; page: Page; id: Id; from: G.Pt; to: G.Pt; elapsed: number; dur: number; follow?: { id: Id; speed: Speed }; t?: [number, number]; value?: [number, number]; sys?: Id }
+export interface AnimatorRuntime { now(): number; random(): number; requestFrame(cb: FrameRequestCallback): number; cancelFrame(id: number): void }
+const DEFAULT_RUNTIME: AnimatorRuntime = {
+  now: () => performance.now(), random: () => Math.random(),
+  requestFrame: cb => requestAnimationFrame(cb), cancelFrame: id => cancelAnimationFrame(id),
+};
 
 /** 能反向移动的构造点，换成原象和对应的目标位置。 */
 function movePointSource(st: Store, id: Id, target: G.Pt): { id: Id; target: G.Pt; along?: Id[] } {
@@ -49,11 +56,12 @@ export class Animator {
   factor = 1;
   paused = false;
 
-  constructor(private app: App) {}
+  constructor(private app: App, private runtime: AnimatorRuntime = DEFAULT_RUNTIME) {}
   get running() { return this.runs.length > 0 || this.moves.length > 0; }
   private isAnimating(view: DocView, id: Id) { return this.runs.some(r => r.view === view && r.page === view.store.page && r.id === id); }
 
   private speedPx(s: Speed) { return typeof s === 'number' ? s : PX_PER_SEC[s]; }
+  private animationSpeedPx(s: Speed) { return typeof s === 'number' ? s : ANIMATION_PX_PER_SEC[s]; }
 
   /** 要动画的对象展开成可运动的单元：路径点、参数、自由点（几何对象则取其依赖的自由点）。 */
   private units(view: DocView, objs: Obj[]): Obj[] {
@@ -77,9 +85,9 @@ export class Animator {
     return running.size > 0 && this.units(view, objs).some(o => running.has(o.id));
   }
   /** 只停所选对象的动画。 */
-  stopFor(view: DocView, objs: Obj[]) { const ids = new Set(this.units(view, objs).map(o => o.id)); this.runs = this.runs.filter(r => r.view !== view || !ids.has(r.id)); if (!this.running && this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } this.app.refresh(); }
+  stopFor(view: DocView, objs: Obj[]) { const ids = new Set(this.units(view, objs).map(o => o.id)); this.runs = this.runs.filter(r => r.view !== view || !ids.has(r.id)); if (!this.running && this.raf) { this.runtime.cancelFrame(this.raf); this.raf = 0; } this.app.refresh(); }
   /** 只改所选对象的动画速度。 */
-  speedFor(view: DocView, objs: Obj[], f: number) { const ids = new Set(this.units(view, objs).map(o => o.id)); for (const r of this.runs) if (r.view === view && ids.has(r.id)) r.speed = Math.min(2400, Math.max(6, this.speedPx(r.speed) * f)); }
+  speedFor(view: DocView, objs: Obj[], f: number) { const ids = new Set(this.units(view, objs).map(o => o.id)); for (const r of this.runs) if (r.view === view && ids.has(r.id)) r.speed = Math.min(2400, Math.max(6, this.animationSpeedPx(r.speed) * f)); }
   toggle(view: DocView, objs: Obj[], speed?: Speed, dir?: Direction) {
     const targets = this.units(view, objs);
     if (!targets.length) return;
@@ -88,7 +96,7 @@ export class Animator {
     else for (const o of targets) {
       if (this.isAnimating(view, o.id)) continue;
       const d = dir ?? o.anim?.direction ?? 'forward';
-      const ang = Math.random() * Math.PI * 2;
+      const ang = this.runtime.random() * Math.PI * 2;
       this.runs.push({ view, page: view.store.page, id: o.id, dir: d, speed: speed ?? o.anim?.speed ?? 'medium', sign: d === 'backward' ? -1 : 1, v: o.def.k === 'free' ? { x: Math.cos(ang), y: Math.sin(ang) } : undefined });
     }
     this.paused = false;
@@ -135,11 +143,11 @@ export class Animator {
   setFactor(f: number) { this.factor = Math.min(8, Math.max(0.125, f)); this.app.motion.refresh(); }
   speedUp(f: number) { this.factor = Math.min(8, Math.max(0.125, this.factor * f)); }
   stopAll() { this.runs = []; this.moves = []; this.paused = false; this.app.refresh(); }
-  stopView(v: DocView) { this.runs = this.runs.filter(r => r.view !== v); this.moves = this.moves.filter(m => m.view !== v); if (!this.running && this.raf) { cancelAnimationFrame(this.raf); this.raf = 0; } }
+  stopView(v: DocView) { this.runs = this.runs.filter(r => r.view !== v); this.moves = this.moves.filter(m => m.view !== v); if (!this.running && this.raf) { this.runtime.cancelFrame(this.raf); this.raf = 0; } }
   /** 删除对象后丢弃指向它们的动画。 */
   prune(v: DocView) { this.runs = this.runs.filter(r => r.view !== v || !!v.store.get(r.id)); }
 
-  private kick() { if (!this.raf && this.running && !this.paused) { this.last = performance.now(); this.raf = requestAnimationFrame(t => this.tick(t)); } }
+  private kick() { if (!this.raf && this.running && !this.paused) { this.last = this.runtime.now(); this.raf = this.runtime.requestFrame(t => this.tick(t)); } }
 
   private tick(now: number) {
     this.raf = 0;
@@ -152,7 +160,7 @@ export class Animator {
       const st = r.view.store, o = st.get(r.id);
       if (!o || r.page !== st.page) { this.runs = this.runs.filter(x => x !== r); continue; }
       st.ctx.tOverride ??= new Map(); st.ctx.valOverride ??= new Map();
-      const px = this.speedPx(r.speed);
+      const px = this.animationSpeedPx(r.speed);
       if (o.def.k === 'free' && r.v) {
         st.ctx.posOverride ??= new Map();
         const cur = st.ctx.posOverride.get(r.id) ?? { x: o.def.x, y: o.def.y };
@@ -160,7 +168,7 @@ export class Animator {
         let nx = cur.x + r.v.x * px * dt * r.sign, ny = cur.y + r.v.y * px * dt * r.sign;
         if (nx < vr.x0 + 10 || nx > vr.x1 - 10) { r.v.x = -r.v.x; nx = Math.min(vr.x1 - 10, Math.max(vr.x0 + 10, nx)); }
         if (ny < vr.y0 + 10 || ny > vr.y1 - 10) { r.v.y = -r.v.y; ny = Math.min(vr.y1 - 10, Math.max(vr.y0 + 10, ny)); }
-        if (r.dir === 'random' && Math.random() < 0.03) { const a = Math.random() * Math.PI * 2; r.v = { x: Math.cos(a), y: Math.sin(a) }; }
+        if (r.dir === 'random' && this.runtime.random() < 0.03) { const a = this.runtime.random() * Math.PI * 2; r.v = { x: Math.cos(a), y: Math.sin(a) }; }
         st.ctx.posOverride.set(r.id, { x: nx, y: ny });
         mark(r.view, r.id);
       } else if (o.def.k === 'onpath') {
@@ -174,7 +182,7 @@ export class Animator {
         const lo = path.k === 'line' && path.s.ext !== 'segment' ? (absolute ? (path.s.ext === 'ray' ? 0 : -1500) : -2) : 0;
         const hi = absolute ? 1500 : path.k === 'line' && path.s.ext !== 'segment' ? 3 : path.k === 'circle' || path.k === 'disk' ? Infinity : 1;
         const wraps = path.k === 'poly' || path.k === 'circle' || path.k === 'disk';
-        if (r.dir === 'random') r.sign = Math.random() < 0.05 ? (r.sign === 1 ? -1 : 1) : r.sign;
+        if (r.dir === 'random') r.sign = this.runtime.random() < 0.05 ? (r.sign === 1 ? -1 : 1) : r.sign;
         t += step * r.sign;
         if (!wraps) { if (r.dir === 'bounce' || r.dir === 'random') { if (t > hi) { t = hi - (t - hi); r.sign = -1; } if (t < lo) { t = lo + (lo - t); r.sign = 1; } } else if (t > hi) t = lo; else if (t < lo) t = hi; }
         st.ctx.tOverride.set(r.id, t);
@@ -216,7 +224,7 @@ export class Animator {
     }
     for (const [v, ids] of touched) { v.store.recompute(ids); v.invalidate(); }
     this.app.motion.refresh();
-    if (this.running) this.raf = requestAnimationFrame(t => this.tick(t));
+    if (this.running) this.raf = this.runtime.requestFrame(t => this.tick(t));
     else this.app.refresh();
   }
 

@@ -1769,12 +1769,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\侯仰顺作品\\三角形内角和定理(蚂蚁制作).gsp"
 },
 "0093": {
-"score": 0.914,
+"score": 0.9377,
 "origCovered": 0.9901,
-"newCovered": 0.914,
+"newCovered": 0.9377,
 "colorScore": 0.9372,
 "origInk": 99505,
-"newInk": 113559,
+"newInk": 110531,
 "origBackground": [
 253,
 224,
@@ -3878,12 +3878,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\孙禄京作品\\2012年广安中考试题.gsp"
 },
 "0204": {
-"score": 0.9822,
-"origCovered": 0.9854,
-"newCovered": 0.9822,
+"score": 0.9875,
+"origCovered": 0.9883,
+"newCovered": 0.9875,
 "colorScore": 0.9739,
 "origInk": 108790,
-"newInk": 107808,
+"newInk": 107412,
 "origBackground": [
 214,
 241,
@@ -5094,12 +5094,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\孟令岩作品\\投币模拟试验（共两版）（石岩）.gsp"
 },
 "0268": {
-"score": 0.9178,
-"origCovered": 0.9252,
-"newCovered": 0.9178,
+"score": 0.9226,
+"origCovered": 0.9228,
+"newCovered": 0.9226,
 "colorScore": 0.7296,
 "origInk": 50395,
-"newInk": 46843,
+"newInk": 46547,
 "origBackground": [
 255,
 255,
@@ -9958,12 +9958,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\群师作品\\技巧型案例\\分段赋色法.gsp"
 },
 "0524": {
-"score": 0.9252,
-"origCovered": 0.9365,
-"newCovered": 0.9252,
+"score": 0.9339,
+"origCovered": 0.938,
+"newCovered": 0.9339,
 "colorScore": 0.0687,
 "origInk": 21321,
-"newInk": 22913,
+"newInk": 22704,
 "origBackground": [
 250,
 250,
@@ -11117,12 +11117,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\群师作品\\技巧型案例\\构造半径为5的圆中，过定点且长为9的弦2.gsp"
 },
 "0585": {
-"score": 0.9038,
-"origCovered": 0.9038,
-"newCovered": 0.9869,
+"score": 0.8941,
+"origCovered": 0.8941,
+"newCovered": 0.9816,
 "colorScore": 0.2479,
 "origInk": 203731,
-"newInk": 183806,
+"newInk": 183225,
 "origBackground": [
 255,
 255,
@@ -16190,12 +16190,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\群师作品\\综合杂例类\\GSP光反射路径化折为直 (30)mirrf.gsp"
 },
 "0852": {
-"score": 0.9069,
+"score": 0.9098,
 "origCovered": 0.9797,
-"newCovered": 0.9069,
-"colorScore": 0.895,
+"newCovered": 0.9098,
+"colorScore": 0.8968,
 "origInk": 69947,
-"newInk": 84940,
+"newInk": 84549,
 "origBackground": [
 0,
 0,
@@ -16532,12 +16532,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\群师作品\\综合杂例类\\三角形内切椭圆.gsp"
 },
 "0870": {
-"score": 0.8256,
-"origCovered": 0.8453,
-"newCovered": 0.8256,
+"score": 0.8375,
+"origCovered": 0.8529,
+"newCovered": 0.8375,
 "colorScore": 0.4267,
 "origInk": 27348,
-"newInk": 28098,
+"newInk": 28132,
 "origBackground": [
 255,
 255,
@@ -17392,7 +17392,7 @@
 "newCovered": 0.9895,
 "colorScore": 0.8776,
 "origInk": 25118,
-"newInk": 25269,
+"newInk": 25258,
 "origBackground": [
 255,
 255,
@@ -19059,12 +19059,12 @@
 "file": "sketchpad5\\Samples\\5.x实例\\群师作品\\综合杂例类\\莫比乌斯环.gsp"
 },
 "1003": {
-"score": 0.93,
-"origCovered": 0.9312,
-"newCovered": 0.93,
+"score": 0.9302,
+"origCovered": 0.9313,
+"newCovered": 0.9302,
 "colorScore": 0.791,
 "origInk": 42394,
-"newInk": 41718,
+"newInk": 41734,
 "origBackground": [
 255,
 255,
@@ -21569,10 +21569,10 @@
 "1135": {
 "score": 0.9941,
 "origCovered": 0.9941,
-"newCovered": 0.9946,
+"newCovered": 0.9953,
 "colorScore": 0.9522,
 "origInk": 18100,
-"newInk": 17494,
+"newInk": 16964,
 "origBackground": [
 0,
 0,
@@ -23163,12 +23163,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\mandelbrot集.gsp"
 },
 "1219": {
-"score": 0.6955,
+"score": 0.6948,
 "origCovered": 0.8939,
-"newCovered": 0.6955,
+"newCovered": 0.6948,
 "colorScore": 0.6659,
 "origInk": 29272,
-"newInk": 53842,
+"newInk": 53956,
 "origBackground": [
 0,
 0,
@@ -23258,12 +23258,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\Meet10_10_0一.gsp"
 },
 "1224": {
-"score": 0.8046,
+"score": 0.8039,
 "origCovered": 0.8461,
-"newCovered": 0.8046,
+"newCovered": 0.8039,
 "colorScore": 0.6235,
 "origInk": 30689,
-"newInk": 37847,
+"newInk": 37946,
 "origBackground": [
 0,
 0,
@@ -23315,12 +23315,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\MoebiusMandel(Normal).gsp"
 },
 "1227": {
-"score": 0.7729,
+"score": 0.7713,
 "origCovered": 0.876,
-"newCovered": 0.7729,
+"newCovered": 0.7713,
 "colorScore": 0.7801,
 "origInk": 20139,
-"newInk": 27733,
+"newInk": 27849,
 "origBackground": [
 0,
 0,
@@ -23467,12 +23467,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\M集框架.gsp"
 },
 "1235": {
-"score": 0.7467,
+"score": 0.7448,
 "origCovered": 0.9016,
-"newCovered": 0.7467,
+"newCovered": 0.7448,
 "colorScore": 0.7313,
 "origInk": 14615,
-"newInk": 23436,
+"newInk": 23556,
 "origBackground": [
 0,
 0,
@@ -23505,12 +23505,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\M集边界的另类作法.gsp"
 },
 "1237": {
-"score": 0.8512,
-"origCovered": 0.8512,
-"newCovered": 0.8966,
+"score": 0.8495,
+"origCovered": 0.8495,
+"newCovered": 0.9006,
 "colorScore": 0.419,
 "origInk": 38203,
-"newInk": 32375,
+"newInk": 32130,
 "origBackground": [
 255,
 255,
@@ -23524,12 +23524,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\N set z^-5+1=0,z=c+c^-1.gsp"
 },
 "1238": {
-"score": 0.8493,
-"origCovered": 0.8493,
-"newCovered": 0.9149,
+"score": 0.8482,
+"origCovered": 0.8482,
+"newCovered": 0.9202,
 "colorScore": 0.269,
 "origInk": 39560,
-"newInk": 31581,
+"newInk": 31332,
 "origBackground": [
 255,
 255,
@@ -23543,12 +23543,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\N set：z^4+1=0，transf：z=u+u^-1，u=(aw+b)(cw+d)^-1.gsp"
 },
 "1239": {
-"score": 0.8806,
-"origCovered": 0.8806,
-"newCovered": 0.92,
+"score": 0.8803,
+"origCovered": 0.8803,
+"newCovered": 0.9244,
 "colorScore": 0.2277,
 "origInk": 30488,
-"newInk": 25469,
+"newInk": 25305,
 "origBackground": [
 255,
 255,
@@ -23562,12 +23562,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\N set：z^9+1=0，transf：z=(aw+b)(cw+d)^-1.gsp"
 },
 "1240": {
-"score": 0.8339,
-"origCovered": 0.8339,
-"newCovered": 0.8999,
+"score": 0.8319,
+"origCovered": 0.8319,
+"newCovered": 0.905,
 "colorScore": 0.2023,
 "origInk": 31790,
-"newInk": 25499,
+"newInk": 25240,
 "origBackground": [
 255,
 255,
@@ -23581,12 +23581,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\N set：z^c+1=0，c=10.35107+2.91042i.gsp"
 },
 "1241": {
-"score": 0.8497,
-"origCovered": 0.8497,
-"newCovered": 0.9148,
+"score": 0.8481,
+"origCovered": 0.8481,
+"newCovered": 0.9193,
 "colorScore": 0.2245,
 "origInk": 34900,
-"newInk": 28467,
+"newInk": 28234,
 "origBackground": [
 255,
 255,
@@ -24683,12 +24683,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\仿射-分形蕨.gsp"
 },
 "1299": {
-"score": 0.8422,
-"origCovered": 0.8763,
-"newCovered": 0.8422,
+"score": 0.8478,
+"origCovered": 0.8725,
+"newCovered": 0.8478,
 "colorScore": 0.6782,
 "origInk": 18837,
-"newInk": 18855,
+"newInk": 18594,
 "origBackground": [
 255,
 255,
@@ -24702,12 +24702,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\例15【Julia set 4.2】.gsp"
 },
 "1300": {
-"score": 0.8835,
-"origCovered": 0.8835,
-"newCovered": 0.9052,
+"score": 0.8804,
+"origCovered": 0.8804,
+"newCovered": 0.9112,
 "colorScore": 0.6073,
 "origInk": 22555,
-"newInk": 20825,
+"newInk": 20561,
 "origBackground": [
 255,
 255,
@@ -24721,12 +24721,12 @@
 "file": "sketchpad5\\Samples\\分形艺术\\例15【Julia set 4.3】.gsp"
 },
 "1301": {
-"score": 0.8607,
-"origCovered": 0.8607,
-"newCovered": 0.927,
+"score": 0.8593,
+"origCovered": 0.8593,
+"newCovered": 0.9307,
 "colorScore": 0.4059,
 "origInk": 44718,
-"newInk": 36757,
+"newInk": 36514,
 "origBackground": [
 255,
 255,

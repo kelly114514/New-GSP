@@ -7,7 +7,7 @@ import { parameterColor } from './color';
 import { imageBox, imageCorners } from './image';
 import { warpBounds, warpCells, warpGrid, warpVertex, type WarpMesh } from './warp';
 import { imageHeightAt, imageHeightPaths, readHeightMask, type HeightMask } from './image-height';
-import { compileFuncValue, compileIterBody, iterFast, programValid, runFast, type FastProgram } from './iterfast';
+import { compileFuncValue, compileIterBody, iterFast, prepareFast, programValid, runFast, runFastPointInto, runFastStep, type FastProgram } from './iterfast';
 
 export type Shape =
   | { k: 'pt'; p: Pt }
@@ -439,12 +439,25 @@ function mapShape(s: Shape, t: TMap): Shape | undefined {
 
 /** 迭代的次数上限和状态总数上限：防止深度很大时卡死（原版也有上限，具体数值未知）。 */
 // 原版样例 example-36.gsp 以参数 n=120 迭代 119 次，原版绘图区画出全部 119 个矩形，所以次数不能只到 20。
-// 层数上限 10 万（1261/1262 要求 95000、100000 层）；状态总数上限 10 万。第十七轮用整库截图对照定的：
+// 单映射层数上限与多映射状态总数上限分开配置；当前都取 10 万。层数上限 10 万（1261/1262 要求 95000、100000 层）；状态总数上限 10 万。第十七轮用整库截图对照定的：
 // 1203（5 映射 7 层，共 97,656 个状态）原版画全，旧上限 6 万只画出 58% 的墨量（0.59 → 0.998）；1130（4 映射 8 层，87,381 个）也画全；
 // 1135（5 映射 10 层）原版必有上限：6 万墨量 17004、10 万 17494、25 万 18802，原版 18100。放宽到 25 万会让 1135 的求值从 1.3 秒涨到 7 秒，所以取 10 万。
 // 此前说的“放宽会栈溢出”出在 shown.push(...states) 的参数展开，已改成逐个追加。
 export const ITER_MAX_DEPTH = 100000;
-const ITER_MAX_STATES = 100000;
+export const ITER_MAX_MULTI_STATES = 100000;
+
+/** 原版在超限时显示最后一个完整层，不画下一层的一部分。 */
+function iterationDepth(requested: number, branches: number): number {
+  const depth = Math.max(0, Math.min(ITER_MAX_DEPTH, Math.floor(requested + 1e-9)));
+  if (branches <= 1) return depth;
+  let size = 1, total = 0;
+  for (let level = 0; level < depth; level++) {
+    size *= branches;
+    total += size;
+    if (total > ITER_MAX_MULTI_STATES) return level;
+  }
+  return depth;
+}
 type IterDef = Extract<Def, { k: 'iterate' }>;
 interface IterPlan {
   body: Set<Id>;
@@ -518,10 +531,60 @@ function randomRange(path: Shape): { circle: boolean; lo: number; hi: number } {
 function evalIterate(d: IterDef, get: Get, page: Page, ctx: EvalCtx, results: Results): Result {
   const dv = 'param' in d.depth ? plainOf(get, d.depth.param) : d.depth.fixed;
   if (dv === undefined || !Number.isFinite(dv)) return UNDEF;
-  const depth = Math.max(0, Math.min(ITER_MAX_DEPTH, Math.floor(dv + 1e-9)));
+  const depth = iterationDepth(dv, d.maps.length);
   const pre = d.pre.map(id => get(id));
   const bad = pre.find(r => r.status !== 'ok' || !r.shape);
   if (bad) return bad.status === 'missing' || bad.status === 'unsupported' ? MISSING : UNDEF;
+
+  // 多映射的点型迭代也可按数组槽位执行映射，避免每个状态都建立通用 Get 闭包和临时 Map。
+  // 仅在完整映射程序均可编译、所有外部依赖有效时启用；任一步不适用就从初始状态回退下方通用实现。
+  if (d.maps.length > 1 && !d.random && iterFast.enabled && !ctx.posOverride?.size) {
+    const program = fastProgramOf(d, page);
+    if (program?.multi?.length === d.maps.length) {
+      const bases = program.multi.map(p => prepareFast(p, get));
+      if (bases.every((b): b is Float64Array => !!b)) {
+        // 最常见的几何 IFS：单个点前像、各映射都产生一个点。状态展开只存平坦坐标，
+        // 避免每个候选状态都创建 Result[] 和 Result；仅对最终需要展示的层建立对象。
+        if (pre.length === 1 && pre[0].shape?.k === 'pt' && program.multi.every(p => p.pre.length === 1 && p.pre[0].kind === 'pt')) {
+          let coords = new Float64Array([pre[0].shape.p.x, pre[0].shape.p.y]), total = 0, capped = false, supported = true;
+          const shown: Result[][] = [];
+          for (let level = 0; level <= depth && coords.length; level++) {
+            const shouldShow = level >= 1 && (!d.finalOnly || level === depth || capped);
+            if (shouldShow) for (let i = 0; i < coords.length; i += 2)
+              shown.push([{ shape: { k: 'pt', p: { x: coords[i], y: coords[i + 1] } }, status: 'ok' } as Result]);
+            if (level === depth || capped) break;
+            const capacity = Math.min(coords.length / 2 * program.multi.length, ITER_MAX_MULTI_STATES - total);
+            const next = new Float64Array(capacity * 2); let written = 0;
+            outer: for (let i = 0; i < coords.length; i += 2) for (let m = 0; m < program.multi.length; m++) {
+              if (!runFastPointInto(program.multi[m], bases[m], coords[i], coords[i + 1], next, written * 2)) { supported = false; break outer; }
+              written++; if (++total >= ITER_MAX_MULTI_STATES) { capped = true; break outer; }
+            }
+            if (!supported) break;
+            coords = written === capacity ? next : next.slice(0, written * 2);
+          }
+          if (supported) return OK({ k: 'iter', states: shown, ...(depth === 0 ? { zeroDepth: true as const } : {}) });
+        }
+        let states: Result[][] = [pre], total = 0, capped = false;
+        const shown: Result[][] = [];
+        let supported = true;
+        for (let level = 0; level <= depth && states.length; level++) {
+          if (level >= 1 && (!d.finalOnly || level === depth || capped)) for (const st of states) shown.push(st);
+          if (level === depth || capped) break;
+          const next: Result[][] = [];
+          outer: for (const st of states) for (let m = 0; m < program.multi.length; m++) {
+            const ns = runFastStep(program.multi[m], bases[m], st);
+            if (!ns) { supported = false; break outer; }
+            next.push(ns);
+            if (++total >= ITER_MAX_MULTI_STATES) { capped = true; break outer; }
+          }
+          if (!supported) break;
+          states = next;
+        }
+        if (supported) return OK({ k: 'iter', states: shown, ...(depth === 0 ? { zeroDepth: true as const } : {}) });
+      }
+    }
+  }
+
   let states: Result[][] = [pre], total = 0, capped = false;
   const shown: Result[][] = [], chain: Result[][] = [];
   // 原版迭代对话框的“到随机位置”：前像中的路径点每一层取路径上的随机位置（IFS-五角繁星的三种作法.gsp、谢氏（随机）.gsp 的随机选择，
@@ -561,7 +624,7 @@ function evalIterate(d: IterDef, get: Get, page: Page, ctx: EvalCtx, results: Re
           const u = rnd(), p = pathPointAt(path, circle ? u * G.TAU : lo + (hi - lo) * u);
           ns.push(p ? OK({ k: 'pt', p }) : UNDEF);
         }
-        if (ns.every(r => r.status === 'ok' && r.shape)) { next.push(ns); if (++total >= ITER_MAX_STATES) { capped = true; break outer; } }
+        if (ns.every(r => r.status === 'ok' && r.shape)) { next.push(ns); if (++total >= ITER_MAX_MULTI_STATES) { capped = true; break outer; } }
       }
     }
     states = next;
@@ -582,6 +645,26 @@ function evalIterImage(d: Extract<Def, { k: 'iterimg' }>, get: Get, page: Page, 
   const it = get(d.iter), s = it.shape, io = byId(page, d.iter);
   if (s?.k !== 'iter' || io?.def.k !== 'iterate') return it.status === 'missing' ? MISSING : UNDEF;
   const source = byId(page, d.src)?.def, items: Shape[] = [], colors: (string | undefined)[] = [];
+  const iter = io.def;
+  // 同一批状态经常还要计算数个点型迭代象。复用映射程序，避免对每个点再次展开几何依赖。
+  if (iterFast.enabled && !ctx.posOverride?.size && iter.maps.length > 1 && iter.pre.length === 1 && s.states.length) {
+    const mapIndex = iter.maps.findIndex(map => map.length === 1 && map[0] === d.src);
+    const program = mapIndex >= 0 ? fastProgramOf(iter, page)?.multi?.[mapIndex] : undefined;
+    if (program?.pre[0]?.kind === 'pt') {
+      const workspace = prepareFast(program, get);
+      if (workspace) {
+        const coord = new Float64Array(2);
+        const points: Shape[] = new Array(s.states.length);
+        let count = 0;
+        for (const state of s.states) {
+          const input = state[0]?.shape;
+          if (input?.k !== 'pt' || !runFastPointInto(program, workspace, input.p.x, input.p.y, coord, 0)) break;
+          points[count++] = { k: 'pt', p: { x: coord[0], y: coord[1] } };
+        }
+        if (count === points.length) return OK({ k: 'multi', items: points });
+      }
+    }
+  }
   for (const st of s.states) {
     const valueAt = underState(io.def, st, get, page, ctx, results);
     const r = valueAt(d.src);
@@ -683,11 +766,11 @@ function evalSingleMapLastIterPoint(d: Extract<Def, { k: 'iterimg' }>, iter: Ite
   if (!retainAll && iterFast.enabled && !ctx.posOverride?.size) {
     const program = fastProgramOf(iter, page);
     if (program) {
-      const run = runFast(program, get, state, Math.min(depth, ITER_MAX_STATES));
+      const run = runFast(program, get, state, depth);
       if (run.levels > 0) { level = run.levels; state = run.state; }
     }
   }
-  for (; level < depth && level < ITER_MAX_STATES;) {
+  for (; level < depth && level < ITER_MAX_DEPTH;) {
     gen++;
     const next: Result[] = spare ?? new Array<Result>(width);
     let bad = false;
@@ -698,8 +781,8 @@ function evalSingleMapLastIterPoint(d: Extract<Def, { k: 'iterimg' }>, iter: Ite
     if (retainAll) { chain.push(state); if (!iter.finalOnly) shown.push(state); }
   }
   if (retainAll) {
-    if (iter.finalOnly && (level === depth || level === ITER_MAX_STATES)) shown.push(state);
-  } else if (iter.finalOnly ? level === depth || level === ITER_MAX_STATES : level >= 1) shown.push(state);
+    if (iter.finalOnly && level === depth) shown.push(state);
+  } else if (iter.finalOnly ? level === depth : level >= 1) shown.push(state);
   if (lastOnly && !iter.finalOnly && shown.length) {
     // 末状态求不出末点时，要往前找前一层：回到完整保留的做法。
     for (const src of lastOnly) {

@@ -3,7 +3,7 @@ import { classOf } from '../core/construct';
 import { drawMathLine, fontStack, layoutExpr, layoutRich, type MathBox } from './mathlayout';
 import { BUTTON_BAR } from '../core/button';
 import { drawWarp, strokeWarpOutline } from './warp-draw';
-import { boxOf, type Rect } from '../core/hit';
+import { boxOf, tableSizes, type Rect } from '../core/hit';
 import { display as numDisplay, formatPlain, formatQ, exprToText, type Expr } from '../core/expr';
 import { functionExpression, type Results, type Shape } from '../core/engine';
 import { TEXT_DEFAULTS, type DisplayPrefs, type Id, type Obj, type Page, type TextCat, type TextRun } from '../core/model';
@@ -702,9 +702,10 @@ function drawTextual(ctx: CanvasRenderingContext2D, page: Page, results: Results
     return;
   }
   if ((o.def.k === 'table' || o.def.k === 'itertable') && s?.k === 'table' && at) {
-    const nm = (id: Id) => { const c = byId(page, id); return c ? measureName(page, results, c) : ''; };
-    const names = o.def.k === 'table' ? o.def.cols.map(nm) : ['n', ...o.def.cols.map(nm)];
-    drawTable(ctx, page, o, { ...s, cols: s.cols.map((c, i) => ({ ...c, name: names[i] || c.name })) }, at, selected); return; }
+    const sources = o.def.cols.map(id => byId(page, id));
+    if (o.def.k === 'itertable') sources.unshift(undefined);
+    drawTable(ctx, page, results, o, s, sources, at, selected); return;
+  }
   const k = o.def.k;
   if ((k === 'measure' || k === 'param' || k === 'calc' || k === 'func' || k === 'picfunc') && at) text = valueText(page, results, o);
   if (!text || !at) return;
@@ -936,23 +937,46 @@ export function wrap(ctx: CanvasRenderingContext2D, text: string, width: number)
 }
 
 const tableWidthCache = new WeakMap<object, { key: string; widths: number[] }>();
-function drawTable(ctx: CanvasRenderingContext2D, page: Page, o: Obj, s: Extract<Shape, { k: 'table' }>, at: Pt, selected: boolean) {
+function drawTable(ctx: CanvasRenderingContext2D, page: Page, results: Results, o: Obj, s: Extract<Shape, { k: 'table' }>, sources: (Obj | undefined)[], at: Pt, selected: boolean) {
   // 原版 0325 截图实测：黑色 1 像素外框，表头高 22、数据行高 20，行间和列间是 50% 灰的 1 像素线；
   // 列宽 = 该列最宽文字 + 约 10 像素；文字居中；无法读成数的单元（原版画的无穷大符号）显示 ∞。
-  const scale = Math.max(1, (o.font?.size ?? 14) / 14), headH = 22 * scale, rowH = 20 * scale;
+  const scale = Math.max(1, (o.font?.size ?? 14) / 14), rowH = 20 * scale;
   ctx.save();
   ctx.font = objectFont(o, 'table'); ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
   const cols = Math.max(1, s.cols.length);
+  const nameOf = (id: Id) => { const source = byId(page, id); return source ? measureName(page, results, source) : '?'; };
+  const options = { font: ctx.font, size: Number(/([\d.]+)px/.exec(ctx.font)?.[1]) || 14, nameOf, varName: 'x', italicVars: MATH_ITALIC };
+  const labels: string[] = [];
+  const headers = Array.from({ length: cols }, (_, i) => {
+    const source = sources[i];
+    const label = (source && measureName(page, results, source)) || (o.def.k === 'itertable' && i === 0 ? 'n' : s.cols[i]?.name ?? '');
+    labels.push(label);
+    // 迭代数据表的列沿用数值初象名称。普通测量表的表头才展开公式。
+    if (o.def.k === 'itertable') return undefined;
+    const def = source?.def;
+    if (source && def?.k === 'calc' && !displayLabel(page, source)) return layoutExpr(ctx, inlineUnnamedCalcs(page, def.expr), options);
+    if (!label) return undefined;
+    const slash = source && def?.k === 'measure' && def.m === 'ratio' && !displayLabel(page, source) ? label.indexOf('/') : -1;
+    if (slash < 0) return layoutExpr(ctx, { t: 'ref', id: 0 }, { ...options, nameOf: () => label });
+    const names = [label.slice(0, slash), label.slice(slash + 1)];
+    return layoutExpr(ctx, { t: 'bin', op: '/', a: { t: 'ref', id: 0 }, b: { t: 'ref', id: 1 } }, { ...options, nameOf: id => names[id] });
+  });
+  const headH = Math.max(22 * scale, ...headers.map(h => h ? Math.ceil(h.asc + h.desc + 4 * scale) : 0));
   const cell = (v: number, i: number) => Number.isNaN(Number(v)) ? '∞' : (i === 0 && s.intFirst ? String(v) : formatPlain(Number(v))).replace('-', '−');
   // 列宽只与内容、字体和表头有关：同一份结果（s.rows 是同一个数组）重绘时不再逐格量字。
-  const key = `${ctx.font}|${s.cols.map(c => c.name).join('')}|${scale}`;
+  const key = `${ctx.font}|${JSON.stringify(labels)}|${headers.map(h => h?.w ?? 0).join(',')}|${scale}`;
   let cache = tableWidthCache.get(s.rows);
   if (!cache || cache.key !== key) {
-    cache = { key, widths: Array.from({ length: cols }, (_, i) => Math.max(ctx.measureText(s.cols[i]?.name ?? '').width, ...s.rows.map(row => ctx.measureText(cell(row[i], i)).width)) + 10 * scale) };
+    cache = { key, widths: Array.from({ length: cols }, (_, i) => {
+      let width = headers[i]?.w ?? ctx.measureText(labels[i]).width;
+      for (const row of s.rows) width = Math.max(width, ctx.measureText(cell(row[i], i)).width);
+      return width + 10 * scale;
+    }) };
     tableWidthCache.set(s.rows, cache);
   }
   const widths = cache.widths;
   const totalW = widths.reduce((a, b) => a + b, 0), totalH = headH + rowH * s.rows.length;
+  tableSizes.set(s, { w: totalW, h: totalH });
   // 只画落在当前视口内的行（超长表格不必每帧画出全部行）。
   const view = currentView;
   const first = view ? Math.max(0, Math.floor((view.y0 - at.y - headH) / rowH) - 1) : 0;
@@ -968,11 +992,15 @@ function drawTable(ctx: CanvasRenderingContext2D, page: Page, o: Obj, s: Extract
   const write = (text: string, cx: number, y: number) => { ctx.fillText(text, cx, y); if (o.font?.underline) ctx.fillRect(cx - ctx.measureText(text).width / 2, y + o.font.size / 2, ctx.measureText(text).width, 1); };
   x = at.x;
   for (let i = 0; i < cols; i++) {
-    write(s.cols[i]?.name ?? '', x + widths[i] / 2, at.y + headH / 2);
+    const header = headers[i];
+    if (header) {
+      ctx.textAlign = 'left';
+      header.draw(ctx, x + (widths[i] - header.w) / 2, at.y + (headH + header.asc - header.desc) / 2);
+      ctx.textAlign = 'center';
+    } else write(labels[i], x + widths[i] / 2, at.y + headH / 2);
     for (let r = first; r <= last; r++) write(cell(s.rows[r][i], i), x + widths[i] / 2, at.y + headH + rowH * (r + 0.5));
     x += widths[i];
   }
-  void page;
   ctx.restore();
 }
 

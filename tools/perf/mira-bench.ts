@@ -5,9 +5,11 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { Store } from '../../src/core/store';
 import { decodeFile } from '../../src/gsp/codec';
+import { iterFast } from '../../src/core/iterfast';
 
 const argv = process.argv.slice(2);
 const opt = (name: string) => { const i = argv.indexOf(name); return i >= 0 ? argv.splice(i, 2)[1] : undefined; };
+const noFast = argv.includes('--no-fast'); if (noFast) argv.splice(argv.indexOf('--no-fast'), 1);
 const out = opt('--out'), cmp = opt('--compare'), pageArg = opt('--page');
 const file = argv[0] ?? '../sketchpad5/Samples/分形艺术/Mira分形-三鹰翅.gsp';
 
@@ -17,6 +19,7 @@ const hashOf = (v: unknown) => createHash('sha1')
 
 const st = new Store(decodeFile(new Uint8Array(readFileSync(file)), file).doc);
 st.protectedReason = undefined;
+if (noFast) iterFast.enabled = false;
 if (pageArg !== undefined) st.doc.current = Number(pageArg);
 const t0 = performance.now();
 st.recompute();

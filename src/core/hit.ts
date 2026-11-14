@@ -20,11 +20,16 @@ export const hitRadii = (p: Power) => { const r = R[p], k = 1 / view.zoom; retur
 export interface Rect { x0: number; y0: number; x1: number; y1: number }
 export const normRect = (a: Pt, b: Pt): Rect => ({ x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y) });
 
+// 画过的表格使用实际排版尺寸，避免分数表头增高后命中范围仍按纯文本估算。
+export const tableSizes = new WeakMap<Shape, { w: number; h: number }>();
+
 /** 文本、按钮、图片等盒形对象的外框。 */
 export function boxOf(o: Obj, r: Shape | undefined): Rect | undefined {
   if (!r) return undefined;
   if (r.k === 'box') return { x0: r.at.x, y0: r.at.y, x1: r.at.x + r.w, y1: r.at.y + r.h };
   if (o.at && (r.k === 'num' || r.k === 'coords' || r.k === 'text' || r.k === 'table' || r.k === 'func')) {
+    const actual = r.k === 'table' ? tableSizes.get(r) : undefined;
+    if (actual) return { x0: o.at.x, y0: o.at.y, x1: o.at.x + actual.w, y1: o.at.y + actual.h };
     const scale = Math.max(1, (o.font?.size ?? (r.k === 'table' ? 14 : 18)) / (r.k === 'table' ? 14 : 18));
     // 表格的尺寸与 render.ts 的 drawTable 一致（没有画布时按每字符约 7.9 像素估算列宽）。
     const tableW = r.k === 'table' ? Array.from({ length: Math.max(1, r.cols.length) }, (_, i) => Math.max(r.cols[i]?.name.length ?? 0, ...r.rows.map(row => (Number.isFinite(row[i]) ? (r.intFirst && i === 0 ? String(row[i]) : Math.abs(row[i]).toFixed(2)) : '∞').length + (row[i] < 0 ? 1 : 0))) * 7.9 * scale + 10 * scale).reduce((a, b) => a + b, 0) : 0;
