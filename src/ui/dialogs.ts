@@ -1,13 +1,15 @@
 /** 对话框：分组、选项顺序与默认值按界面规格；文字用自己的话。全部是 DOM 模态框，返回 Promise。 */
 import type { App } from '../app';
-import { exprToText, fmtNum, FUNCS, formatQ, ParseError, type Expr } from '../core/expr';
-import { evaluateExpression } from '../core/engine';
-import { classOf, createSystem, findSys } from '../core/construct';
+import { exprToText, fmtNum, FUNCS, formatQ, parseExpr, ParseError, type Expr } from '../core/expr';
+import { evaluateExpression, type Shape } from '../core/engine';
+import { classOf, createSystem, findSys, marksUsable } from '../core/construct';
 import { hitAll } from '../core/hit';
 import { isExternalActionUrl } from '../core/link';
 import type { AngleBy, DisplayPrefs, FuncForm, Id, Obj, RatioBy, TextCat, TextStyle, TranslateBy, UnitKind } from '../core/model';
 import { childrenOf, pageDisplay, parentsOf, TEXT_CATS, TEXT_DEFAULTS } from '../core/model';
+import { labelFor } from '../core/store';
 import type { Sel } from '../commands';
+import { defaultParameterAnimation, makeParameterAnimation } from '../gsp/animation';
 import type { DocView } from './docview';
 import { funcHead, measureName, typeName } from './render';
 import { PAPERS } from './print';
@@ -133,7 +135,12 @@ export class Dialogs {
   private radios<T extends string>(name: string, items: [T, string, boolean?][], onchange?: (v: T) => void) {
     const wrap = h('div', { class: 'radios' });
     const inputs = items.map(([v, label, disabled]) => { const i = h('input', { type: 'radio', name, value: v, disabled: !!disabled }); i.onchange = () => onchange?.(v); wrap.append(h('label', {}, i, label)); return i; });
-    return { el: wrap, get value() { return (inputs.find(i => i.checked)?.value ?? items[0][0]) as T; }, set(v: T) { for (const i of inputs) i.checked = i.value === v; onchange?.(v); } };
+    return {
+      el: wrap,
+      get value() { return (inputs.find(i => i.checked)?.value ?? items[0][0]) as T; },
+      set(v: T) { for (const i of inputs) i.checked = i.value === v; onchange?.(v); },
+      setEnabled(v: T, enabled: boolean) { const input = inputs.find(i => i.value === v); if (input) input.disabled = !enabled; },
+    };
   }
   private parseNum(s: string, what: string): number {
     const v = Number(s.trim().replace('，', '.').replace(',', '.'));
@@ -143,73 +150,239 @@ export class Dialogs {
   private guard<T>(fn: () => T): { ok: T } | { error: string } { try { return { ok: fn() }; } catch (e) { return { error: e instanceof Error ? e.message : String(e) }; } }
 
   // ------------- 变换 -------------
+  private angleInput(v: DocView, polar = false) {
+    const unit = pageDisplay(v.store.doc, v.store.page).angleUnit;
+    const text = unit === 'rad' ? '弧度' : unit === 'dir' ? '方向度' : polar ? '°' : '度';
+    const degrees = (value: string) => {
+      if (unit !== 'rad') return this.parseNum(value, '角度');
+      const e = parseExpr(value.replace(/[，,]/g, '.'), { resolve: () => undefined });
+      const q = evaluateExpression(v.store.page, v.store.results, e, 'rad');
+      const deg = q?.u === 'none' ? q.v * 180 / Math.PI : NaN;
+      if (!Number.isFinite(deg)) throw new Error('角度需要填写有效弧度值');
+      return deg;
+    };
+    return { initial: unit === 'rad' ? 'π/2' : '90.0', text, degrees };
+  }
+
+  private markedAngleName(v: DocView) {
+    const angle = v.marks.angle;
+    if (!angle) return '';
+    if (Array.isArray(angle)) return `∠${angle.map(i => this.nameOf(v, i)).join('')}`;
+    const marker = v.store.get(angle.m)?.def;
+    return marker?.k === 'angle-mark'
+      ? `∠${[marker.a, marker.v, marker.b].map(i => this.nameOf(v, i)).join('')}`
+      : this.nameOf(v, angle.m);
+  }
+
+  private transformHit(v: DocView, e: PointerEvent, accepts: (o: Obj, shape: Shape) => boolean) {
+    if (e.button !== 0) return undefined;
+    const bounds = v.canvas.getBoundingClientRect();
+    if (e.clientX < bounds.left || e.clientX >= bounds.right || e.clientY < bounds.top || e.clientY >= bounds.bottom) return undefined;
+    const st = v.store;
+    for (const id of hitAll(st.page, st.results, v.toPage(e), this.app.settings.power)) {
+      const o = st.get(id), shape = st.results.get(id)?.shape;
+      if (o && shape && accepts(o, shape)) return { id, shape, def: o.def };
+    }
+    return undefined;
+  }
+
   /** 固定值 / 标记值的一组：单选 + 输入框 + 单位。 */
-  private fixedOrMarked(name: string, labels: [string, string], enabled: boolean, value: string, unit: string) {
+  private fixedOrMarked(name: string, labels: [string, string], value: string, unit: string, marked?: string, title = '以：') {
     const input = this.num(value, 64);
-    const pick = this.radios(name, [['fixed', labels[0]], ['marked', labels[1], !enabled]], x => { input.disabled = x === 'marked'; });
-    pick.set('fixed');
-    return { pick, input, el: h('div', { class: 'group' }, '以：', pick.el, h('div', { class: 'row' }, input, ` ${unit}`)) };
+    const fixed = h('div', { class: 'transform-fixed' }, h('div', { class: 'row' }, input, ` ${unit}`));
+    const ref = h('div', { class: 'transform-ref' }, marked);
+    const pick = this.radios(name, [['fixed', labels[0]], ['marked', labels[1], marked === undefined]], x => {
+      fixed.hidden = input.disabled = x === 'marked';
+      ref.hidden = x !== 'marked';
+    });
+    pick.set(marked === undefined ? 'fixed' : 'marked');
+    return {
+      pick, input, el: h('fieldset', { class: 'group' }, h('legend', {}, title), pick.el, fixed, ref),
+      mark(name: string | undefined) {
+        ref.textContent = name ?? '';
+        pick.setEnabled('marked', name !== undefined);
+        pick.set(name === undefined ? 'fixed' : 'marked');
+      },
+    };
   }
   translate(v: DocView, preview?: (by: TranslateBy) => Obj[]): Promise<TranslateBy | undefined> {
-    const m = v.marks, st = v.store;
-    const hasVec = !!m.vector && !!st.get(m.vector[0]) && !!st.get(m.vector[1]);
-    const hasDist = m.distance !== undefined && !!st.get(m.distance);
-    const hasAng = !!m.angle && (Array.isArray(m.angle) ? m.angle.every(i => !!st.get(i)) : !!st.get(m.angle.m));
-    const dist = this.fixedOrMarked('tdist', ['固定距离(F)', '标记距离(M)'], hasDist, '1.0', '厘米');
-    const ang = this.fixedOrMarked('tang', ['固定角度(F)', '标记角度(M)'], hasAng, '90.0', '°');
-    const dx = this.fixedOrMarked('tdx', ['固定距离(F)', '标记距离(M)'], hasDist, '1.0', '厘米（向右为正）');
-    const dy = this.fixedOrMarked('tdy', ['固定距离(F)', '标记距离(M)'], hasDist, '1.0', '厘米（向上为正）');
+    const m = v.marks;
+    const { vector: hasVec, angle: hasAng } = marksUsable(v.store, m);
+    const angle = this.angleInput(v, true);
+    const distanceName = (id: Id | undefined) => id !== undefined && v.store.get(id) ? this.nameOf(v, id) : undefined;
+    const rectIds = () => m.rectDistances ?? [m.distance, m.distance];
+    const dist = this.fixedOrMarked('tdist', ['固定距离(F)', '标记距离(M)'], '1.0', '厘米', distanceName(m.distance));
+    const ang = this.fixedOrMarked('tang', ['固定角度(F)', '标记角度(M)'], angle.initial, angle.text, hasAng ? this.markedAngleName(v) : undefined);
+    const dx = this.fixedOrMarked('tdx', ['固定距离(F)', '标记距离(M)'], '1.0', '厘米', distanceName(rectIds()[0]), '水平方向：');
+    const dy = this.fixedOrMarked('tdy', ['固定距离(F)', '标记距离(M)'], '1.0', '厘米', distanceName(rectIds()[1]), '垂直方向：');
     const polar = h('div', {}, dist.el, ang.el), rect = h('div', {}, dx.el, dy.el);
-    const mode = this.radios('tmode', [['polar', '极坐标'], ['rect', '直角坐标'], ['vec', '标记', !hasVec]], x => { polar.hidden = x !== 'polar'; rect.hidden = x !== 'rect'; refresh(); });
+    const vector = h('div');
+    const showVector = () => {
+      vector.replaceChildren();
+      if (!m.vector) return;
+      for (const [i, title] of ['从：', '到：'].entries()) {
+        vector.append(h('fieldset', { class: 'group' }, h('legend', {}, title), h('div', { class: 'transform-ref' }, `点 ${this.nameOf(v, m.vector[i])}`)));
+      }
+    };
+    const mode = this.radios('tmode', [['polar', '极坐标'], ['rect', '直角坐标'], ['vec', '标记', !hasVec]], x => {
+      m.translationMode = x === 'vec' ? 'vector' : x;
+      polar.hidden = x !== 'polar'; rect.hidden = x !== 'rect'; vector.hidden = x !== 'vec';
+      refresh();
+    });
     const read = (): TranslateBy => {
       if (mode.value === 'vec') return { mode: 'vector', from: m.vector![0], to: m.vector![1] };
       if (mode.value === 'rect') {
         const mx = dx.pick.value === 'marked', my = dy.pick.value === 'marked';
-        return { mode: 'rect', dx: mx ? 0 : this.parseNum(dx.input.value, '水平距离'), dy: my ? 0 : this.parseNum(dy.input.value, '垂直距离'), ...(mx ? { dxBy: m.distance! } : {}), ...(my ? { dyBy: m.distance! } : {}) };
+        const [x, y] = rectIds();
+        return { mode: 'rect', dx: mx ? 0 : this.parseNum(dx.input.value, '水平距离'), dy: my ? 0 : this.parseNum(dy.input.value, '垂直距离'), ...(mx ? { dxBy: x } : {}), ...(my ? { dyBy: y } : {}) };
       }
+      const markedAngle = m.angle;
+      const byAngle = ang.pick.value === 'fixed' || !markedAngle ? { fixed: angle.degrees(ang.input.value) }
+        : Array.isArray(markedAngle) ? { pts: markedAngle }
+        : v.store.get(markedAngle.m)?.def.k === 'angle-mark' ? { m: markedAngle.m, marker: true as const } : { m: markedAngle.m };
       return {
         mode: 'polar',
         dist: dist.pick.value === 'marked' ? { m: m.distance! } : { fixed: this.parseNum(dist.input.value, '距离') },
-        angle: ang.pick.value === 'marked' ? (Array.isArray(m.angle) ? { pts: m.angle } : { m: m.angle!.m }) : { fixed: this.parseNum(ang.input.value, '角度') },
+        angle: byAngle,
       };
     };
     const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(by)); } catch { v.ghost = undefined; v.invalidate(); } };
-    const body = h('div', {}, h('div', { class: 'group' }, '平移变换：', mode.el), polar, rect);
+    const body = h('div', {}, h('fieldset', { class: 'group' }, h('legend', {}, '平移变换：'), mode.el), polar, rect, vector);
     body.addEventListener('input', refresh); body.addEventListener('change', refresh);
-    mode.set('polar');
-    return this.modal('平移', body, () => this.guard(read), '平移(T)', { onClose: () => { v.ghost = undefined; v.invalidate(); } });
+    const initial = m.translationMode;
+    if (hasVec) showVector();
+    mode.set(initial === 'rect' || initial === 'polar' ? initial : hasVec ? 'vec' : 'polar');
+    let firstPoint: Id | undefined;
+    return this.modal('平移', body, () => this.guard(read), '平移(T)', {
+      onClose: () => { v.ghost = undefined; v.invalidate(); },
+      onBackDown: e => {
+        const hit = this.transformHit(v, e, (o, s) => s.k === 'pt' ||
+          (s.k === 'num' && (s.q.u === 'angle' || s.q.u === 'distance')) || o.def.k === 'angle-mark');
+        if (!hit) return;
+        if (hit.shape.k === 'pt') {
+          if (firstPoint === undefined) { firstPoint = hit.id; return; }
+          if (firstPoint === hit.id) return;
+          m.vector = [firstPoint, hit.id];
+          firstPoint = undefined;
+          showVector();
+          mode.setEnabled('vec', true);
+          mode.set('vec');
+          return;
+        }
+        firstPoint = undefined;
+        if (hit.shape.k === 'num' && hit.shape.q.u === 'distance') {
+          const previous = mode.value === 'rect' ? rectIds()[1] : undefined;
+          m.distance = hit.id;
+          const x = previous !== undefined && v.store.get(previous) ? previous : hit.id;
+          m.rectDistances = [x, hit.id];
+          dist.mark(distanceName(hit.id));
+          dx.mark(distanceName(x));
+          dy.mark(distanceName(hit.id));
+          if (mode.value !== 'rect') mode.set('polar');
+        } else {
+          m.angle = { m: hit.id };
+          ang.mark(this.markedAngleName(v));
+          mode.set('polar');
+        }
+        refresh();
+      },
+    });
   }
 
   /** “中心”一栏：显示变换中心的名字。 */
-  private centerGroup(v: DocView, center: Id) { const o = v.store.get(center); return h('div', { class: 'group' }, '中心：', h('span', { class: 'tgt' }, o?.label ?? (o ? typeName(o) : '?'))); }
-
-  rotate(v: DocView, center: Id, preview?: (by: AngleBy) => Obj[]): Promise<AngleBy | undefined> {
-    const m = v.marks, hasAng = !!m.angle && (Array.isArray(m.angle) ? m.angle.every(i => !!v.store.get(i)) : !!v.store.get(m.angle.m));
-    const a = this.num('90.0', 64);
-    const mode = this.radios('rmode', [['fixed', '固定角度(F)'], ['marked', '标记角度(M)', !hasAng]], x => { a.disabled = x === 'marked'; refresh(); });
-    const read = (): AngleBy => (mode.value === 'marked' ? (Array.isArray(m.angle) ? { mode: 'marked', a: m.angle[0], v: m.angle[1], b: m.angle[2] } : { mode: 'value', m: m.angle!.m }) : { mode: 'fixed', deg: this.parseNum(a.value, '角度') });
-    const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(by)); } catch { v.ghost = undefined; v.invalidate(); } };
-    const body = h('div', {}, h('div', { class: 'group' }, '旋转参数：', mode.el, h('div', { class: 'row' }, a, ' 度')), this.centerGroup(v, center));
-    body.addEventListener('input', refresh);
-    mode.set('fixed');
-    return this.modal('旋转', body, () => this.guard(read), '旋转(R)', { onClose: () => { v.ghost = undefined; v.invalidate(); } });
+  private centerGroup(v: DocView, center: Id) {
+    const label = h('span', { class: 'tgt' });
+    const show = (id: Id) => { label.textContent = v.store.get(id)?.label ?? labelFor(v.store.page.labelCounter); };
+    show(center);
+    return { el: h('div', { class: 'transform-ref transform-center' }, '关于中心 ', label), show };
   }
 
-  dilate(v: DocView, center: Id, preview?: (by: RatioBy) => Obj[]): Promise<RatioBy | undefined> {
-    const m = v.marks, hasRatio = !!m.ratio;
+  rotate(v: DocView, center: Id, preview?: (center: Id, by: AngleBy) => Obj[]): Promise<{ center: Id; by: AngleBy } | undefined> {
+    const m = v.marks, { angle: hasAng } = marksUsable(v.store, m);
+    const angle = this.angleInput(v);
+    const field = this.fixedOrMarked('rmode', ['固定角度(F)', '标记角度(M)'], angle.initial, angle.text,
+      hasAng ? this.markedAngleName(v) : undefined, '旋转参数：');
+    const target = this.centerGroup(v, center);
+    const read = (): AngleBy => {
+      if (field.pick.value === 'fixed') return { mode: 'fixed', deg: angle.degrees(field.input.value) };
+      const marked = m.angle!;
+      if (Array.isArray(marked)) return { mode: 'marked', a: marked[0], v: marked[1], b: marked[2] };
+      return { mode: v.store.get(marked.m)?.def.k === 'angle-mark' ? 'mark' : 'value', m: marked.m };
+    };
+    const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(center, by)); } catch { v.ghost = undefined; v.invalidate(); } };
+    const body = h('div', {}, field.el, target.el);
+    body.addEventListener('input', refresh);
+    body.addEventListener('change', refresh);
+    refresh();
+    return this.modal('旋转', body, () => this.guard(() => ({ center, by: read() })), '旋转(R)', {
+      onClose: () => { v.ghost = undefined; v.invalidate(); },
+      onBackDown: e => {
+        const hit = this.transformHit(v, e, (o, s) => s.k === 'pt' || (s.k === 'num' && s.q.u === 'angle') || o.def.k === 'angle-mark');
+        if (!hit) return;
+        if (hit.shape.k === 'pt') { center = m.center = hit.id; target.show(center); }
+        else { m.angle = { m: hit.id }; field.mark(this.markedAngleName(v)); }
+        refresh();
+      },
+    });
+  }
+
+  dilate(v: DocView, center: Id, preview?: (center: Id, by: RatioBy) => Obj[]): Promise<{ center: Id; by: RatioBy } | undefined> {
+    const m = v.marks;
+    const { ratio: hasRatio } = marksUsable(v.store, m);
     const n = this.num('1.0', 64), d = this.num('2.0', 64);
-    const mode = this.radios('dmode', [['fixed', '固定比(F)'], ['marked', '标记比(M)', !hasRatio]], x => { n.disabled = d.disabled = x === 'marked'; refresh(); });
+    const fixed = h('div', { class: 'transform-fixed' }, h('div', { class: 'fraction' }, n, h('hr'), d));
+    const ratioDisplay = () => {
+      const ratio = m.ratio;
+      const name = (id: Id) => this.nameOf(v, id);
+      const fraction = (above: string, below: string) => h('div', { class: 'fraction' }, h('span', {}, above), h('hr'), h('span', {}, below));
+      if (!ratio) return '';
+      if ('m' in ratio) return name(ratio.m);
+      if ('segs' in ratio) {
+        const [above, below] = ratio.segs.map(id => {
+          const def = v.store.get(id)?.def;
+          return def?.k === 'seg' ? name(def.a) + name(def.b) : name(id);
+        });
+        return fraction(above, below);
+      }
+      const [a, b, c] = ratio.pts.map(name);
+      return fraction(a + c, a + b);
+    };
+    const marked = h('div', { class: 'transform-ref' }, ratioDisplay());
+    const mode = this.radios('dmode', [['fixed', '固定比(F)'], ['marked', '标记比(M)', !hasRatio]], x => {
+      fixed.hidden = n.disabled = d.disabled = x === 'marked';
+      marked.hidden = x !== 'marked';
+      refresh();
+    });
     const read = (): RatioBy => {
       if (mode.value === 'marked') { const r = m.ratio!; return 'm' in r ? { mode: 'value', m: r.m } : 'pts' in r ? { mode: 'marked', a: r.pts[0], b: r.pts[1], c: r.pts[2] } : { mode: 'marked', a: r.segs[0], b: r.segs[1] }; }
       const num = this.parseNum(n.value, '分子'), den = this.parseNum(d.value, '分母');
       if (den === 0) throw new Error('分母不能是 0');
       return { mode: 'fixed', num, den };
     };
-    const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(by)); } catch { v.ghost = undefined; v.invalidate(); } };
-    const body = h('div', {}, h('div', { class: 'group' }, '缩放参数：', mode.el, h('div', { class: 'fraction' }, n, h('hr'), d)), this.centerGroup(v, center));
+    const refresh = () => { if (!preview) return; try { const by = read(); this.ghost(v, () => preview(center, by)); } catch { v.ghost = undefined; v.invalidate(); } };
+    const target = this.centerGroup(v, center);
+    const body = h('div', {}, h('fieldset', { class: 'group' }, h('legend', {}, '缩放参数：'), mode.el, fixed, marked), target.el);
     body.addEventListener('input', refresh);
-    mode.set('fixed');
-    return this.modal('缩放', body, () => this.guard(read), '缩放(D)', { onClose: () => { v.ghost = undefined; v.invalidate(); } });
+    mode.set(hasRatio ? 'marked' : 'fixed');
+    let firstSegment: Id | undefined;
+    return this.modal('缩放', body, () => this.guard(() => ({ center, by: read() })), '缩放(D)', {
+      onClose: () => { v.ghost = undefined; v.invalidate(); },
+      onBackDown: e => {
+        const hit = this.transformHit(v, e, (_o, s) => s.k === 'pt' ||
+          (s.k === 'num' && s.q.u === 'none') || (s.k === 'line' && s.s.ext === 'segment'));
+        if (!hit) return;
+        if (hit.shape.k === 'pt') { center = m.center = hit.id; target.show(center); refresh(); return; }
+        if (hit.shape.k === 'line') {
+          if (firstSegment === undefined) { firstSegment = hit.id; return; }
+          if (firstSegment === hit.id) return;
+          m.ratio = { segs: [firstSegment, hit.id] };
+        } else m.ratio = { m: hit.id };
+        firstSegment = undefined;
+        marked.replaceChildren(ratioDisplay());
+        mode.setEnabled('marked', true);
+        mode.set('marked');
+      },
+    });
   }
 
   // ------------- 数据 -------------
@@ -518,10 +691,34 @@ export class Dialogs {
   }
   async animateButton(v: DocView, s: Sel) {
     const targets = s.geo.length ? s.geo : s.objs;
+    const first = targets[0]?.def;
+    if (first?.k === 'param' && targets.every(o => o.def.k === 'param' && o.def.unit === first.unit)) {
+      await this.animateParameters(v, targets.map(o => o.id), first.unit);
+      return;
+    }
     const speed = this.speedPick();
     const dir = this.radios<'forward' | 'backward' | 'bounce' | 'random'>('dir', [['forward', '向前'], ['backward', '向后'], ['bounce', '往返'], ['random', '随机']]); dir.set('bounce');
     const r = await this.modal('动画按钮', h('div', {}, h('div', { class: 'group' }, '方向：', dir.el), h('div', { class: 'group' }, '速度：', speed.el)), () => ({ ok: { speed: speed.value, direction: dir.value } }), '确定');
     if (r) this.app.makeButton(v, { type: 'animate', targets: targets.map(o => o.id), speed: r.speed, direction: r.direction });
+  }
+  private async animateParameters(v: DocView, targets: Id[], unit: UnitKind) {
+    const defaults = defaultParameterAnimation(unit);
+    const amount = this.num(defaults.amount), interval = this.num(defaults.interval);
+    const min = this.num(defaults.min), max = this.num(defaults.max);
+    const mode = this.radios('paramAnimMode', [['continuous', '连续'], ['discrete', '离散']]);
+    const changes = h('div', { class: 'group' }, '改变数值', mode.el, h('label', { class: 'row' }, '变化量', amount));
+    const dir = this.radios<'forward' | 'backward' | 'bounce' | 'random'>('paramAnimDir',
+      [['forward', '增加'], ['backward', '减少'], ['bounce', '双向'], ['random', '随机']], value => { changes.hidden = value === 'random'; });
+    const once = h('input', { type: 'checkbox' });
+    const body = h('div', {}, h('div', { class: 'group' }, '方向', dir.el, h('label', { class: 'row' }, once, '只播放一次')),
+      changes, h('div', { class: 'group' }, h('label', { class: 'row' }, '间隔（秒）', interval),
+        h('label', { class: 'row' }, '下限', min), h('label', { class: 'row' }, '上限', max)));
+    const action = await this.modal('动画按钮', body, () => this.guard(() => makeParameterAnimation(targets, unit, dir.value, {
+      amount: dir.value === 'random' ? 1 : this.parseNum(amount.value, '变化量'),
+      interval: this.parseNum(interval.value, '间隔'), min: this.parseNum(min.value, '下限'), max: this.parseNum(max.value, '上限'),
+      discrete: dir.value !== 'random' && mode.value === 'discrete', once: once.checked,
+    })));
+    if (action) this.app.makeButton(v, action);
   }
   async moveButton(v: DocView, s: Sel) {
     const where = this.radios<'final' | 'initial'>('mvw', [['final', '移动到目标最终位置'], ['initial', '移动到目标初始位置']]); where.set('final');
@@ -777,7 +974,7 @@ export class Dialogs {
     const addBtn = h('button', { type: 'button' }, '增加页(A) ▾');
     addBtn.onclick = () => this.popup(addBtn, [{ label: '空白页面', run: () => { st.addPage(false); after(); } }, { label: '复制：', disabled: true }, ...doc().pages.map((p, i) => ({ label: `　${i + 1}：${p.name}`, run: () => { st.addPage(true, i); after(); } }))]);
     del.onclick = () => { if (doc().pages.length > 1) { st.removePage(cur()); after(); } };
-    list.onchange = () => { st.switchPage(cur()); name.value = doc().pages[doc().current].name; v.sel = []; this.app.refresh(); };
+    list.onchange = () => { v.switchPage(cur()); name.value = doc().pages[doc().current].name; };
     name.oninput = () => { const i = doc().current; doc().pages[i].name = name.value.trim() || String(i + 1); const op = list.options[i]; if (op) op.text = `${i + 1}：${doc().pages[i].name}`; this.app.refreshPageBar(); };
     tabsChk.onchange = () => { doc().settings.showPageTabs = tabsChk.checked; this.app.refreshPageBar(); this.app.docs.forEach(d => d.resize()); };
     const pagesPane = h('div', { class: 'docopt-pane' }, h('div', { class: 'docopt' }, h('div', {}, h('div', {}, '页名称(P)：'), name, list), h('div', { class: 'side' }, addBtn, del, h('label', {}, tabsChk, '显示页切换(T)'))));

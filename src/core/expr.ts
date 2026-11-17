@@ -16,6 +16,7 @@ export type Expr =
 export const FUNCS = ['sin', 'cos', 'tan', 'sec', 'csc', 'cot', 'arcsin', 'arccos', 'arctan', 'sqrt', 'abs', 'ln', 'log', 'exp', 'sgn', 'round', 'trunc'] as const;
 const FUNC_SET = new Set<string>(FUNCS);
 export const CM = 96 / 2.54; // 一厘米对应的像素数
+export const cmToPx = (cm: number): number => cm * 96 / 2.54;
 
 export function exprRefs(e: Expr, out: number[] = []): number[] {
   switch (e.t) {

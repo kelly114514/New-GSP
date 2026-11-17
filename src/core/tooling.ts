@@ -5,8 +5,8 @@
  * 应用时：前提条件换成用户点选的对象，其余对象按顺序重新构造，引用经 remapDef 换成新对象。
  * 文件格式见 docs/gsp格式.md §3h；哪些规则来自文件、哪些是推断，也写在那里。
  */
-import { ancestors, isMeasureDef, isPointDef, isStraightDef, parentsOf, pageDisplay, TEXT_REF, type Def, type EmbeddedTool, type Id, type Obj, type Page } from './model';
-import { pathPointAt, pathUsesPixelDistance, polygonEdgeAt, type EvalCtx, type Results, type Shape } from './engine';
+import { descendants, isMeasureDef, isPointDef, isStraightDef, parentsOf, pageDisplay, TEXT_REF, type Def, type EmbeddedTool, type Id, type Obj, type Page } from './model';
+import { evaluateExpression, pathPointAt, pathUsesPixelDistance, polygonEdgeAt, type EvalCtx, type Results, type Shape } from './engine';
 import { remapDef } from './remap';
 import { labelFor, type Store } from './store';
 import { dist, TAU, type Pt, type Straight } from './geom';
@@ -39,6 +39,28 @@ export interface Tool {
 
 interface RawKind { m: number; c: number; k: number; withParams?: boolean }
 const rawOf = (o: Obj) => o.src as RawKind | undefined;
+
+/** 新建工具需要写出的前提占位类别。其它类型需先有原版写回依据。 */
+export function toolGivenSlot(def: Def): { cat: 1 | 11; kind: number } | undefined {
+  if (['translate', 'rotate', 'dilate', 'reflect', 'colorize'].includes(def.k)) return undefined;
+  if (isPointDef(def)) return { cat: 1, kind: 4 };
+  if (def.k === 'seg') return { cat: 1, kind: 14 };
+  if (isStraightDef(def)) return { cat: 1, kind: 7 };
+  if (['circle', 'circle-seg', 'arc-circle', 'arc3', 'arc-center'].includes(def.k)) return { cat: 1, kind: 8 };
+  if (def.k === 'sys') return { cat: 1, kind: 39 };
+  if (def.k === 'poly') return { cat: 1, kind: 15 };
+  if (def.k === 'plot' || def.k === 'locus' || def.k === 'pcurve') return { cat: 1, kind: 85 };
+  if (def.k === 'iterimg') return { cat: 1, kind: 65 };
+  if (def.k === 'func' || def.k === 'picfunc') return { cat: 11, kind: 57 };
+  if (def.k === 'param' || def.k === 'calc') {
+    return { cat: 11, kind: def.unit === 'distance' ? 60 : def.unit === 'angle' ? 49 : def.k === 'param' ? 79 : 51 };
+  }
+  if (def.k === 'measure' && def.m !== 'coords' && def.m !== 'equation') {
+    const distance = ['length', 'distance', 'perimeter', 'circumference', 'arclength', 'radius'].includes(def.m);
+    return { cat: 11, kind: distance ? 60 : ['angle', 'markedangle', 'arcangle', 'coordangle'].includes(def.m) ? 49 : 51 };
+  }
+  return undefined;
+}
 
 /** 前提条件对象（方法 0 的占位）要求点选的种类；不认识返回 undefined。 */
 export function inputKindOf(o: Obj): InputKind | undefined {
@@ -394,6 +416,15 @@ export function applyTool(st: Store, tool: Tool, picks: Id[], _nextPos: () => Pt
     made.push(n);
   }
   st.recompute();
+  const distanceInputs = tool.inputs.flatMap((input, i) => input.unit === 'distance' ? [picks[i]] : []);
+  if (distanceInputs.length) {
+    const usesDistance = descendants(st.page, distanceInputs);
+    // 原版另存工具时可把计算归为无单位。应用工具后，距离前提参与的结果按实参恢复单位。
+    for (const o of made) if (o.def.k === 'calc' && o.def.unit === 'none' && usesDistance.has(o.id)) {
+      const value = evaluateExpression(st.page, st.results, o.def.expr, st.ctx.angleUnit);
+      if (value?.u === 'distance') st.update(o.id, { ...o.def, unit: 'distance' });
+    }
+  }
   // 插入公式的点和无名线段端点需要可引用的标签，标签仍可保持隐藏。
   const textRefs = new Set<Id>();
   for (const o of made) {
@@ -414,26 +445,67 @@ export function applyTool(st: Store, tool: Tool, picks: Id[], _nextPos: () => Pt
 }
 
 /**
- * 由画板里选中的对象创建工具：选中的对象是“作品”（保持它们的显示状态），它们依赖的对象是中间步骤（隐藏），
- * 不依赖任何对象的自由点和参数作为前提条件（按创建顺序）。其它独立对象暂不支持。
+ * 所选作品的依赖链完整截止于其他所选对象时，按选择顺序采用这些显式前提。
+ * 只选择作品时，沿用由独立依赖推导前提的入口。
  */
 export function createToolObjects(page: Page, selection: Id[]): { objects: Obj[]; prereq: Id[] } | { error: string } {
   if (!selection.length) return { error: '请先选择要做成工具的对象' };
-  const sel = new Set(selection), want = new Set<Id>([...selection, ...ancestors(page, selection)]);
+  const byId = new Map(page.objects.map(o => [o.id, o])), sel = new Set(selection);
+  const covered = new Map<Id, boolean>();
+  const fromSelection = (id: Id): boolean => {
+    if (sel.has(id)) return true;
+    const known = covered.get(id);
+    if (known !== undefined) return known;
+    const object = byId.get(id), parents = object ? parentsOf(object.def) : [];
+    covered.set(id, false);
+    const result = parents.length > 0 && parents.every(fromSelection);
+    covered.set(id, result);
+    return result;
+  };
+  const products = [...sel].filter(id => {
+    const object = byId.get(id), parents = object ? parentsOf(object.def) : [];
+    return parents.length > 0 && parents.every(fromSelection);
+  });
+  let explicit = products.length > 0;
+  const outputSet = new Set(products);
+  const want = new Set<Id>(), givens = new Set<Id>();
+  const visit = (id: Id) => {
+    if (want.has(id)) return;
+    want.add(id);
+    const object = byId.get(id);
+    if (!object) return;
+    const parents = parentsOf(object.def);
+    if (explicit ? sel.has(id) && !outputSet.has(id) : !parents.length) givens.add(id);
+    else parents.forEach(visit);
+  };
+  (explicit ? products : [...sel]).forEach(visit);
+  if (explicit && [...sel].some(id => !want.has(id))) {
+    explicit = false;
+    want.clear(); givens.clear();
+    sel.forEach(visit);
+  }
   const list = page.objects.filter(o => want.has(o.id));
+  if (list.length !== want.size) return { error: '选中的构造缺少依赖对象' };
   for (const o of list) if (o.def.k === 'unknown') return { error: '选中的对象里有新版暂不支持的内容，不能做成工具' };
   const order = new Map(list.map((o, i) => [o.id, i + 1] as const));
-  const prereq: Id[] = [];
-  for (const o of list) {
-    if (parentsOf(o.def).length) continue;
-    if (o.def.k !== 'free' && o.def.k !== 'param') return { error: '前提条件目前只支持自由点和参数；选中的对象依赖其它独立对象' };
-    prereq.push(order.get(o.id)!);
+  const inputIds = (explicit ? [...sel] : list.map(o => o.id)).filter(id => givens.has(id));
+  const givenDefs = new Map<Id, Def>();
+  for (const id of inputIds) {
+    let def = byId.get(id)?.def;
+    const followed = new Set<Id>();
+    while (def?.k === 'translate' || def?.k === 'rotate' || def?.k === 'dilate' || def?.k === 'reflect' || def?.k === 'colorize') {
+      if (followed.has(def.src)) break;
+      followed.add(def.src);
+      def = byId.get(def.src)?.def;
+    }
+    if (!def || !toolGivenSlot(def)) return { error: '选中的构造依赖暂时不能写入工具的前提条件' };
+    givenDefs.set(id, def);
   }
+  const prereq = inputIds.map(id => order.get(id)!);
   if (!prereq.length) return { error: '选中的对象没有可用的前提条件' };
-  const map = new Map(order);
   const objects = list.map((o): Obj => {
-    const def = remapDef(JSON.parse(JSON.stringify(o.def)), map);
-    return { id: order.get(o.id)!, def: o.def.k === 'free' ? { k: 'free', x: 0, y: 0 } : def, style: { ...o.style }, hidden: sel.has(o.id) ? o.hidden : true, labelShown: !!o.toolLabel && o.labelShown, ...(o.toolLabel ? { toolLabel: true } : {}), ...(o.toolLabel && o.label ? { label: o.label } : {}), ...(o.trace ? { trace: true } : {}), ...(o.at ? { at: { ...o.at } } : {}) };
+    const def = remapDef(JSON.parse(JSON.stringify(givenDefs.get(o.id) ?? o.def)), order);
+    return { id: order.get(o.id)!, def: def.k === 'free' ? { k: 'free', x: 0, y: 0 } : def, style: { ...o.style }, hidden: sel.has(o.id) ? o.hidden : true, labelShown: !!o.toolLabel && o.labelShown, ...(o.toolLabel ? { toolLabel: true } : {}), ...(o.toolLabel && o.label ? { label: o.label } : {}), ...(o.trace ? { trace: true } : {}), ...(o.at ? { at: { ...o.at } } : {}) };
   });
   return { objects, prereq };
 }

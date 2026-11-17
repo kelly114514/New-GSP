@@ -2,24 +2,38 @@
 import { motionPathParameter, pathPointAt, polygonEdgeAt, projectOnPath, type Shape } from './core/engine';
 import { dragSysUnit } from './core/construct';
 import * as G from './core/geom';
-import { ancestors, parentsOf, type Id, type Obj, type Page } from './core/model';
+import { ancestors, parentsOf, type ButtonAction, type Id, type Obj, type Page } from './core/model';
+import { animationScalar, defaultParameterAnimation, parameterAnimation } from './gsp/animation';
 import type { Store } from './core/store';
 import type { App } from './app';
 import type { DocView } from './ui/docview';
 
 type Speed = 'slow' | 'medium' | 'fast' | 'high' | number;
 type Direction = 'forward' | 'backward' | 'bounce' | 'random';
-const PX_PER_SEC = { slow: 50, medium: 120, fast: 260, high: 600 };
 // 原版 PrintWindow 夹具中的线段和圆弧长，三档约为每秒 35、105、175 页面像素。
 const ANIMATION_PX_PER_SEC = { slow: 35, medium: 105, fast: 175, high: 600 };
-
-interface Run { view: DocView; page: Page; id: Id; dir: Direction; speed: Speed; sign: 1 | -1; v?: { x: number; y: number } }
+type AnimateButton = Extract<ButtonAction, { type: 'animate' }>;
+type ParamRun = NonNullable<ReturnType<typeof parameterAnimation>> & { initial: number; elapsed: number; distance: number };
+interface Run { view: DocView; page: Page; id: Id; dir: Direction; rate: number; factor: number; sign: 1 | -1; v?: { x: number; y: number }; param?: ParamRun }
 interface Move { view: DocView; page: Page; id: Id; from: G.Pt; to: G.Pt; elapsed: number; dur: number; follow?: { id: Id; speed: Speed }; t?: [number, number]; value?: [number, number]; sys?: Id }
 export interface AnimatorRuntime { now(): number; random(): number; requestFrame(cb: FrameRequestCallback): number; cancelFrame(id: number): void }
 const DEFAULT_RUNTIME: AnimatorRuntime = {
   now: () => performance.now(), random: () => Math.random(),
   requestFrame: cb => requestAnimationFrame(cb), cancelFrame: id => cancelAnimationFrame(id),
 };
+
+function wrap(value: number, lower: number, span: number): number {
+  return lower + (value - lower - Math.floor((value - lower) / span) * span);
+}
+
+function cycleValue(run: Run, value: number, min: number, max: number): number {
+  if (value >= min && value <= max) return value;
+  const span = max - min;
+  if (run.dir !== 'bounce' && run.dir !== 'random') return wrap(value, min, span);
+  const phase = wrap(value, min, span * 2) - min;
+  if (phase >= span) run.sign = run.sign === 1 ? -1 : 1;
+  return min + Math.min(phase, 2 * span - phase);
+}
 
 /** 能反向移动的构造点，换成原象和对应的目标位置。 */
 function movePointSource(st: Store, id: Id, target: G.Pt): { id: Id; target: G.Pt; along?: Id[] } {
@@ -60,8 +74,13 @@ export class Animator {
   get running() { return this.runs.length > 0 || this.moves.length > 0; }
   private isAnimating(view: DocView, id: Id) { return this.runs.some(r => r.view === view && r.page === view.store.page && r.id === id); }
 
-  private speedPx(s: Speed) { return typeof s === 'number' ? s : PX_PER_SEC[s]; }
-  private animationSpeedPx(s: Speed) { return typeof s === 'number' ? s : ANIMATION_PX_PER_SEC[s]; }
+  private animationRate(o: Obj, speed: Speed) {
+    if (o.def.k === 'param') {
+      const scale = o.def.unit === 'angle' ? 30 : 1;
+      return (typeof speed === 'number' ? speed : { slow: 0.5, medium: 1, fast: 2, high: 4 }[speed]) * scale;
+    }
+    return typeof speed === 'number' ? animationScalar(Math.fround(speed)) * ANIMATION_PX_PER_SEC.slow : ANIMATION_PX_PER_SEC[speed];
+  }
 
   /** 要动画的对象展开成可运动的单元：路径点、参数、自由点（几何对象则取其依赖的自由点）。 */
   private units(view: DocView, objs: Obj[]): Obj[] {
@@ -87,8 +106,11 @@ export class Animator {
   /** 只停所选对象的动画。 */
   stopFor(view: DocView, objs: Obj[]) { const ids = new Set(this.units(view, objs).map(o => o.id)); this.runs = this.runs.filter(r => r.view !== view || !ids.has(r.id)); if (!this.running && this.raf) { this.runtime.cancelFrame(this.raf); this.raf = 0; } this.app.refresh(); }
   /** 只改所选对象的动画速度。 */
-  speedFor(view: DocView, objs: Obj[], f: number) { const ids = new Set(this.units(view, objs).map(o => o.id)); for (const r of this.runs) if (r.view === view && ids.has(r.id)) r.speed = Math.min(2400, Math.max(6, this.animationSpeedPx(r.speed) * f)); }
-  toggle(view: DocView, objs: Obj[], speed?: Speed, dir?: Direction) {
+  speedFor(view: DocView, objs: Obj[], f: number) {
+    const ids = new Set(this.units(view, objs).map(o => o.id));
+    for (const r of this.runs) if (r.view === view && r.page === view.store.page && ids.has(r.id)) r.factor = Math.min(8, Math.max(0.125, r.factor * f));
+  }
+  toggle(view: DocView, objs: Obj[], speed?: Speed, dir?: Direction, button?: AnimateButton) {
     const targets = this.units(view, objs);
     if (!targets.length) return;
     const allOn = targets.every(o => this.isAnimating(view, o.id));
@@ -97,7 +119,15 @@ export class Animator {
       if (this.isAnimating(view, o.id)) continue;
       const d = dir ?? o.anim?.direction ?? 'forward';
       const ang = this.runtime.random() * Math.PI * 2;
-      this.runs.push({ view, page: view.store.page, id: o.id, dir: d, speed: speed ?? o.anim?.speed ?? 'medium', sign: d === 'backward' ? -1 : 1, v: o.def.k === 'free' ? { x: Math.cos(ang), y: Math.sin(ang) } : undefined });
+      const st = view.store;
+      const numeric = o.def.k === 'param' ? button ? parameterAnimation(button, o.def.unit)
+        : speed === undefined && !o.anim ? defaultParameterAnimation(o.def.unit) : undefined : undefined;
+      const initial = o.def.k === 'param' ? st.ctx.valOverride?.get(o.id) ?? o.def.value : 0;
+      if (numeric && (initial > numeric.max || initial < numeric.min) && d !== 'random') continue;
+      const sign = d === 'backward' || d === 'bounce' && numeric && initial === numeric.max ? -1 : 1;
+      const rate = numeric ? numeric.amount / numeric.interval : this.animationRate(o, speed ?? o.anim?.speed ?? 'medium');
+      const param = numeric ? { ...numeric, initial, elapsed: numeric.discrete || d === 'random' ? numeric.interval : 0, distance: 0 } : undefined;
+      this.runs.push({ view, page: st.page, id: o.id, dir: d, rate, factor: 1, sign, param, v: o.def.k === 'free' ? { x: Math.cos(ang), y: Math.sin(ang) } : undefined });
     }
     this.paused = false;
     if (this.runs.length) this.app.motion.show();   // 动画开始时运动控制台自动出现
@@ -160,12 +190,12 @@ export class Animator {
       const st = r.view.store, o = st.get(r.id);
       if (!o || r.page !== st.page) { this.runs = this.runs.filter(x => x !== r); continue; }
       st.ctx.tOverride ??= new Map(); st.ctx.valOverride ??= new Map();
-      const px = this.animationSpeedPx(r.speed);
+      const advance = r.rate * r.factor * dt;
       if (o.def.k === 'free' && r.v) {
         st.ctx.posOverride ??= new Map();
         const cur = st.ctx.posOverride.get(r.id) ?? { x: o.def.x, y: o.def.y };
         const vr = r.view.viewRect();
-        let nx = cur.x + r.v.x * px * dt * r.sign, ny = cur.y + r.v.y * px * dt * r.sign;
+        let nx = cur.x + r.v.x * advance * r.sign, ny = cur.y + r.v.y * advance * r.sign;
         if (nx < vr.x0 + 10 || nx > vr.x1 - 10) { r.v.x = -r.v.x; nx = Math.min(vr.x1 - 10, Math.max(vr.x0 + 10, nx)); }
         if (ny < vr.y0 + 10 || ny > vr.y1 - 10) { r.v.y = -r.v.y; ny = Math.min(vr.y1 - 10, Math.max(vr.y0 + 10, ny)); }
         if (r.dir === 'random' && this.runtime.random() < 0.03) { const a = this.runtime.random() * Math.PI * 2; r.v = { x: Math.cos(a), y: Math.sin(a) }; }
@@ -177,21 +207,41 @@ export class Animator {
         const len = this.pathLength(path);
         if (!path || len < 1e-6) continue;
         const absolute = o.def.abs && path.k === 'line';
-        let step = absolute ? px * dt : (px * dt) / len;
-        if (path.k === 'circle' || path.k === 'disk') step = (px * dt) / Math.max(1, len) * G.TAU;
+        let step = absolute ? advance : advance / len;
+        if (path.k === 'circle' || path.k === 'disk') step = advance / Math.max(1, len) * G.TAU;
         const lo = path.k === 'line' && path.s.ext !== 'segment' ? (absolute ? (path.s.ext === 'ray' ? 0 : -1500) : -2) : 0;
         const hi = absolute ? 1500 : path.k === 'line' && path.s.ext !== 'segment' ? 3 : path.k === 'circle' || path.k === 'disk' ? Infinity : 1;
         const wraps = path.k === 'poly' || path.k === 'circle' || path.k === 'disk';
         if (r.dir === 'random') r.sign = this.runtime.random() < 0.05 ? (r.sign === 1 ? -1 : 1) : r.sign;
         t += step * r.sign;
-        if (!wraps) { if (r.dir === 'bounce' || r.dir === 'random') { if (t > hi) { t = hi - (t - hi); r.sign = -1; } if (t < lo) { t = lo + (lo - t); r.sign = 1; } } else if (t > hi) t = lo; else if (t < lo) t = hi; }
+        if (!wraps) t = cycleValue(r, t, lo, hi);
         st.ctx.tOverride.set(r.id, t);
         mark(r.view, r.id);
       } else if (o.def.k === 'param') {
-        const unitScale = o.def.unit === 'angle' ? 30 : 1;
-        const rate = (typeof r.speed === 'number' ? r.speed : { slow: 0.5, medium: 1, fast: 2, high: 4 }[r.speed]) * unitScale;
         const cur = st.ctx.valOverride.get(r.id) ?? o.def.value;
-        st.ctx.valOverride.set(r.id, cur + rate * dt * r.sign);
+        if (!r.param) st.ctx.valOverride.set(r.id, cur + advance * r.sign);
+        else {
+          const p = r.param, span = p.max - p.min;
+          let delta = advance;
+          if (r.dir === 'random' || p.discrete) {
+            p.elapsed += dt * r.factor;
+            const steps = Math.floor(p.elapsed / p.interval);
+            if (!steps) continue;
+            p.elapsed -= steps * p.interval;
+            if (r.dir === 'random') {
+              st.ctx.valOverride.set(r.id, p.min + this.runtime.random() * span);
+              if (p.once) this.runs = this.runs.filter(run => run !== r);
+              mark(r.view, r.id);
+              continue;
+            }
+            delta = steps * p.amount;
+          }
+          p.distance += delta;
+          if (p.once && r.dir !== 'bounce' && p.distance >= span) {
+            st.ctx.valOverride.set(r.id, p.initial);
+            this.runs = this.runs.filter(run => run !== r);
+          } else st.ctx.valOverride.set(r.id, cycleValue(r, cur + delta * r.sign, p.min, p.max));
+        }
         mark(r.view, r.id);
       }
     }
@@ -200,7 +250,9 @@ export class Animator {
     for (const m of [...this.moves]) {
       const st = m.view.store; m.elapsed += dt;
       st.ctx.posOverride ??= new Map();
-      const u = Math.min(1, m.elapsed / m.dur), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      const u = m.dur === 0 ? 1 : Math.min(1, m.elapsed / m.dur);
+      // 原版点移动的夹具从首个可见步进一直匀速。数值目标的插值仍需定标。
+      const e = m.value ? (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2) : u;
       const pos = { x: m.from.x + (m.to.x - m.from.x) * e, y: m.from.y + (m.to.y - m.from.y) * e };
       if (m.t) { st.ctx.tOverride ??= new Map(); st.ctx.tOverride.set(m.id, m.t[0] + (m.t[1] - m.t[0]) * e); }
       else if (m.value) { st.ctx.valOverride ??= new Map(); st.ctx.valOverride.set(m.id, m.value[0] + (m.value[1] - m.value[0]) * e); }
@@ -229,7 +281,8 @@ export class Animator {
   }
 
   private moveDuration(distance: number, speed: Speed): number {
-    return speed === 'high' ? 0.01 : Math.max(0.2, distance / this.speedPx(speed) / this.factor * 2.5);
+    if (speed === 'high') return 0;
+    return distance / (typeof speed === 'number' ? speed : ANIMATION_PX_PER_SEC[speed]);
   }
 
   /** 同时移动的自由目标按其终点计算，所有动作入队后才解析，避免取决于按钮顺序。 */

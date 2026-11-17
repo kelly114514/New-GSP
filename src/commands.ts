@@ -2,7 +2,7 @@
 import type { Store } from './core/store';
 import { imagePixelSize } from './core/image';
 import {
-  classOf, constructArcOnCircle, constructBisector, constructIntersections, constructLines, constructLocus, constructMidpoints, constructParallelPerp, constructPointOnPath,
+  classOf, constructArcOnCircle, constructBisector, constructIntersections, constructLines, constructLocus, constructMidpoints, constructOnce, constructParallelPerp, constructPointOnPath,
   applyCustomTransform, customChain, constructInterior, createSystem, dilateBy, findSys, intersectionCount, labelMeasured, reflectBy, rotateBy, translateBy,
 } from './core/construct';
 import { derive, q } from './core/expr';
@@ -43,7 +43,18 @@ export interface Sel {
 export function analyse(view: DocView): Sel {
   const st = view.store;
   const objs = view.sel.map(id => st.get(id)).filter((o): o is Obj => !!o);
-  const objectClass = (o: Obj) => { const shape = st.results.get(o.id)?.shape; return shape?.k === 'box' && shape.image ? 'image' : classOf(o); };
+  const objectClass = (o: Obj) => {
+    const shape = st.results.get(o.id)?.shape;
+    if (shape?.k === 'box' && shape.image) return 'image';
+    if (['translate', 'rotate', 'dilate', 'reflect', 'colorize'].includes(o.def.k)) {
+      if (shape?.k === 'pt') return 'point';
+      if (shape?.k === 'line') return 'straight';
+      if (shape?.k === 'circle') return 'circle';
+      if (shape?.k === 'arc') return 'arc';
+      if (shape?.k === 'poly' || shape?.k === 'disk' || shape?.k === 'sector') return 'interior';
+    }
+    return classOf(o);
+  };
   const by = (c: string) => objs.filter(o => objectClass(o) === c);
   const types = new Set(objs.map(typeName));
   const num = objs.filter(o => o.def.k === 'measure' || o.def.k === 'param' || o.def.k === 'calc');
@@ -64,14 +75,22 @@ function redoSelect(c: Ctx, before: Set<Id>) {
   const back = c.view.store.page.objects.filter(o => !before.has(o.id)).map(o => o.id);
   c.view.setSel(back.length ? back : c.view.sel);
 }
-/** 变换的中心：有标记就用标记；否则选择里的第一个点成为中心（只选一个点时可以直接旋转、缩放）。 */
-function transformCenter(c: Ctx, s: Sel): Id | undefined {
-  const st = c.view.store, m = c.view.marks.center;
-  if (m !== undefined && st.get(m)) return m;
-  const p = s.pts[0]; if (!p) return undefined;
-  if (p.label === undefined) p.label = st.defaultLabel(p);
-  c.view.marks.center = p.id;
-  return p.id;
+/** 没有标记时，从可见点中标记离绘图区中心最近的点。 */
+function transformCenter(v: DocView): Id {
+  const st = v.store, marked = v.marks.center;
+  if (marked !== undefined && st.get(marked)) return marked;
+  const view = v.viewRect(), x = (view.x0 + view.x1) / 2, y = (view.y0 + view.y1) / 2;
+  let nearest: Id | undefined, distance = Infinity;
+  for (const obj of st.page.objects) {
+    if (obj.hidden) continue;
+    const shape = st.results.get(obj.id)?.shape;
+    if (shape?.k !== 'pt') continue;
+    const d = Math.hypot(shape.p.x - x, shape.p.y - y);
+    if (d < distance) { nearest = obj.id; distance = d; }
+  }
+  const center = nearest ?? st.run('建立变换中心', () => st.add({ k: 'free', x, y })).id;
+  v.marks.center = center;
+  return center;
 }
 function setStyleCmd(patch: (c: Ctx) => Partial<Obj['style']>, name: string, filter: (s: Sel) => Obj[]): CmdDef {
   return {
@@ -328,7 +347,7 @@ for (const [id, kind, label] of [[36930, 'parallel', '平行线'], [36931, 'perp
   });
 }
 def(36932, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 3, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造角平分线', () => { m = constructBisector(c.view.store, s.pts[0].id, s.pts[1].id, s.pts[2].id); }); if (m) c.view.setSel([m.id]); } });
-def(36933, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 2, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造圆', () => { m = c.view.store.add({ k: 'circle', c: s.pts[0].id, p: s.pts[1].id }); }); if (m) c.view.setSel([m.id]); } });
+def(36933, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 2, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造圆', () => { m = constructOnce(c.view.store, { k: 'circle', c: s.pts[0].id, p: s.pts[1].id }); }); if (m) c.view.setSel([m.id]); } });
 function circleRadii(st: Store, selected: Obj[]): Obj[] {
   return selected.filter(o => {
     if (o.def.k === 'seg') return true;
@@ -349,7 +368,7 @@ def(36934, {
     const made: Id[] = [];
     st.run('构造圆', () => {
       for (const center of s.pts) for (const radius of radii) {
-        made.push(st.add({ k: 'circle-seg', c: center.id, seg: radius.id }, {}, false).id);
+        made.push(constructOnce(st, { k: 'circle-seg', c: center.id, seg: radius.id }, false).id);
       }
       st.recompute(made);
     });
@@ -360,7 +379,7 @@ def(36935, {
   enabled: (_c, s) => s.n === 3 && s.circles.length === 1 && s.pts.length === 2,
   run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造弧', () => { m = constructArcOnCircle(c.view.store, s.circles[0].id, s.pts[0].id, s.pts[1].id); s.circles[0].style.dash = 'dash'; }); if (m) c.view.setSel([m.id]); },
 });
-def(36936, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 3, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造弧', () => { m = c.view.store.add({ k: 'arc3', a: s.pts[0].id, b: s.pts[1].id, c: s.pts[2].id }); }); if (m) c.view.setSel([m.id]); } });
+def(36936, { enabled: (_c, s) => allOf(s, s.pts) && s.n === 3, run: (c, s) => { let m: Obj | undefined; c.view.store.run('构造弧', () => { m = constructOnce(c.view.store, { k: 'arc3', a: s.pts[0].id, b: s.pts[1].id, c: s.pts[2].id }); }); if (m) c.view.setSel([m.id]); } });
 def(36937, {
   name: (_c, s) => (s.pts.length >= 3 && s.pts.length === s.n ? (s.n === 3 ? '三角形的内部' : s.n === 4 ? '四边形的内部' : '多边形的内部') : s.circles.length ? '圆内部' : s.arcs.length ? '扇形内部' : '内部'),
   enabled: (_c, s) => (allOf(s, s.pts) && s.n >= 3) || (s.n > 0 && s.objs.every(o => ['circle', 'arc'].includes(classOf(o)))),
@@ -380,14 +399,38 @@ function locusPair(c: Ctx, s: Sel): [Id, Id] | undefined {
 }
 
 // ---------------- 变换 ----------------
-def(36939, { enabled: (_c, s) => s.pts.length > 0, run: (c, s) => { c.view.marks.center = s.pts[0].id; c.app.flashStatus('已标记中心'); } });
+function deselectMarked(v: DocView, ids: Id[]) { v.setSel(v.sel.filter(id => !ids.includes(id))); }
+
+def(36939, {
+  enabled: (_c, s) => s.pts.length > 0,
+  run: (c, s) => {
+    const point = s.pts.at(-1)!.id;
+    c.view.marks.center = point;
+    deselectMarked(c.view, [point]);
+    c.app.flashStatus('已标记中心');
+  },
+});
 def(36940, { enabled: (_c, s) => s.straights.length > 0, run: (c, s) => { c.view.marks.mirror = s.straights[0].id; c.app.flashStatus('已标记镜面'); } });
 const angleMeasure = (s: Sel) => s.objs.find(o => o.def.k === 'measure' && ['angle', 'arcangle', 'coordangle'].includes(o.def.m));
-def(36941, { enabled: (_c, s) => (allOf(s, s.pts) && s.n === 3) || !!angleMeasure(s), run: (c, s) => { const m = angleMeasure(s); c.view.marks.angle = m ? { m: m.id } : [s.pts[0].id, s.pts[1].id, s.pts[2].id]; c.app.flashStatus('已标记角度'); } });
+def(36941, {
+  enabled: (_c, s) => (allOf(s, s.pts) && s.n === 3) || !!angleMeasure(s),
+  run: (c, s) => {
+    const m = angleMeasure(s);
+    const angle: NonNullable<DocView['marks']['angle']> = m ? { m: m.id } : [s.pts[0].id, s.pts[1].id, s.pts[2].id];
+    c.view.marks.angle = angle;
+    deselectMarked(c.view, Array.isArray(angle) ? angle : [angle.m]);
+    c.app.flashStatus('已标记角度');
+  },
+});
 def(36942, {
   name: (_c, s) => (s.segs.length === 2 ? '标记线段比' : unitlessLast(s) ? '标记比值' : '标记比'),
   enabled: (c, s) => (s.n === 2 && s.segs.length === 2) || (s.n === 3 && s.pts.length === 3 && collinear3(c.view.store, s.pts)) || unitlessLast(s),
-  run: (c, s) => { c.view.marks.ratio = s.segs.length === 2 ? { segs: [s.segs[0].id, s.segs[1].id] } : s.n === 3 && s.pts.length === 3 && collinear3(c.view.store, s.pts) ? { pts: [s.pts[0].id, s.pts[1].id, s.pts[2].id] } : { m: s.objs[s.n - 1].id }; c.app.flashStatus('已标记比'); },
+  run: (c, s) => {
+    const ratio: NonNullable<DocView['marks']['ratio']> = s.segs.length === 2 ? { segs: [s.segs[0].id, s.segs[1].id] } : s.n === 3 && s.pts.length === 3 && collinear3(c.view.store, s.pts) ? { pts: [s.pts[0].id, s.pts[1].id, s.pts[2].id] } : { m: s.objs[s.n - 1].id };
+    c.view.marks.ratio = ratio;
+    deselectMarked(c.view, 'm' in ratio ? [ratio.m] : 'pts' in ratio ? ratio.pts : ratio.segs);
+    c.app.flashStatus('已标记比');
+  },
 });
 /** 最后选中的是无单位的数值（参数、计算、比）。 */
 function unitlessLast(s: Sel): boolean {
@@ -397,9 +440,27 @@ function unitlessLast(s: Sel): boolean {
   if (o.def.k === 'calc') return true;
   return o.def.k === 'measure' && o.def.m === 'ratio';
 }
-def(36943, { enabled: (_c, s) => s.pts.length >= 2, run: (c, s) => { c.view.marks.vector = [s.pts[0].id, s.pts[1].id]; c.app.flashStatus('已标记向量'); } });
+def(36943, {
+  enabled: (_c, s) => s.pts.length >= 2,
+  run: (c, s) => {
+    const from = s.pts[s.pts.length - 2].id, to = s.pts[s.pts.length - 1].id;
+    c.view.marks.vector = [from, to];
+    c.view.marks.translationMode = 'vector';
+    deselectMarked(c.view, [from, to]);
+    c.app.flashStatus('已标记向量');
+  },
+});
 const distanceMeasure = (s: Sel) => s.objs.find(o => o.def.k === 'measure' && ['distance', 'length', 'radius', 'circumference'].includes(o.def.m));
-def(36944, { enabled: (_c, s) => !!distanceMeasure(s), run: (c, s) => { c.view.marks.distance = distanceMeasure(s)!.id; c.app.flashStatus('已标记距离'); } });
+def(36944, {
+  enabled: (_c, s) => !!distanceMeasure(s),
+  run: (c, s) => {
+    const id = distanceMeasure(s)!.id;
+    c.view.marks.distance = id;
+    delete c.view.marks.rectDistances;
+    deselectMarked(c.view, [id]);
+    c.app.flashStatus('已标记距离');
+  },
+});
 /** 可以被平移/旋转/缩放/反射的几何对象：函数图像不行（它由函数定义）。 */
 const transformable = (s: Sel) => [...s.geo.filter(o => o.def.k !== 'plot' && o.def.k !== 'pcurve'), ...s.images];
 def(36945, {
@@ -414,21 +475,19 @@ def(36945, {
 def(36946, {
   enabled: (_c, s) => transformable(s).length > 0,
   run: async (c, s) => {
-    const center = transformCenter(c, s);
-    if (center === undefined) { c.app.dlg.message('请先选中一个点并执行“标记中心”，再旋转。'); return; }
+    const center = transformCenter(c.view);
     const ids = transformable(s).map(o => o.id);
-    const by = await c.app.dlg.rotate(c.view, center, b => rotateBy(c.view.store, ids, center, b));
-    if (by) { let m: Obj[] = []; c.view.store.run('旋转', () => { m = rotateBy(c.view.store, ids, center, by); }); c.view.setSel(m.map(o => o.id)); }
+    const picked = await c.app.dlg.rotate(c.view, center, (pivot, by) => rotateBy(c.view.store, ids, pivot, by));
+    if (picked) { let m: Obj[] = []; c.view.store.run('旋转', () => { m = rotateBy(c.view.store, ids, picked.center, picked.by); }); c.view.setSel(m.map(o => o.id)); }
   },
 });
 def(36947, {
   enabled: (_c, s) => transformable(s).length > 0,
   run: async (c, s) => {
-    const center = transformCenter(c, s);
-    if (center === undefined) { c.app.dlg.message('请先选中一个点并执行“标记中心”，再缩放。'); return; }
+    const center = transformCenter(c.view);
     const ids = transformable(s).map(o => o.id);
-    const by = await c.app.dlg.dilate(c.view, center, b => dilateBy(c.view.store, ids, center, b));
-    if (by) { let m: Obj[] = []; c.view.store.run('缩放', () => { m = dilateBy(c.view.store, ids, center, by); }); c.view.setSel(m.map(o => o.id)); }
+    const picked = await c.app.dlg.dilate(c.view, center, (pivot, by) => dilateBy(c.view.store, ids, pivot, by));
+    if (picked) { let m: Obj[] = []; c.view.store.run('缩放', () => { m = dilateBy(c.view.store, ids, picked.center, picked.by); }); c.view.setSel(m.map(o => o.id)); }
   },
 });
 def(36948, {
@@ -579,7 +638,7 @@ def(36976, {
   },
 });
 def(36977, {
-  name: (_c, s) => (s.images.length ? '定义图片函数' : '定义绘图函数'),
+  name: (_c, s) => (s.images.length && !s.objs.some(o => o.def.k === 'image' && o.def.drawing) ? '定义图片函数' : '定义绘图函数'),
   enabled: (_c, s) => s.n === 1 && (s.objs[0].def.k === 'stroke' || s.images.length === 1),
   run: async (c, s) => {
     const st = c.view.store, stroke = s.objs[0]; let made: Obj | undefined;

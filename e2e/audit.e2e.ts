@@ -1,5 +1,6 @@
 /** 对应 docs/原版差异审计.md 的回归测试：每个用例对应一条已修复的差异。 */
 import { expect, test, type Page } from '@playwright/test';
+import { decodeGsp, encodeFile } from '../src/gsp/codec';
 
 declare global { interface Window { __app: any } }
 
@@ -276,6 +277,184 @@ test('变换：只选一个点时不必先标记中心；旋转、缩放显示�
   await page.locator('.dlg-cancel').click(); await p;
   expect(await page.evaluate(() => window.__app.active.ghost)).toBeUndefined();
   expect(await page.evaluate(() => window.__app.active.store.canRedo)).toBe(false);
+});
+
+test('变换：旋转线段以离视图中心最近的可见点为中心，弧度输入可预览并提交', async ({ page }) => {
+  const scene = await page.evaluate(() => {
+    const v = window.__app.active, st = v.store, frame = v.viewRect();
+    const x = Math.round((frame.x0 + frame.x1) / 2), y = Math.round((frame.y0 + frame.y1) / 2);
+    const a = st.add({ k: 'free', x: x - 140, y }, { label: 'A' }).id;
+    const b = st.add({ k: 'free', x: x - 15, y }, { label: 'B' }).id;
+    st.add({ k: 'free', x, y }, { hidden: true, label: 'C' });
+    const seg = st.add({ k: 'seg', a, b }).id;
+    v.setSel([seg]);
+    st.doc.settings.display = { ...window.__app.settings.display, angleUnit: 'rad' };
+    return { b, seg };
+  });
+  let p = exec(page, 36946);
+  await expect(page.locator('.dlg-title')).toHaveText('旋转');
+  await expect(page.locator('.dlg .tgt')).toHaveText('B');
+  await expect(page.locator('.dlg input[type=text]')).toHaveValue('π/2');
+  expect(await page.evaluate(() => window.__app.active.ghost?.page.objects.find((o: any) => o.def.k === 'rotate')?.def.angle)).toEqual({ mode: 'fixed', deg: 90 });
+  await page.locator('.dlg-cancel').click(); await p;
+  expect(await sel(page)).toEqual([scene.seg]);
+  expect(await page.evaluate(() => window.__app.active.ghost)).toBeUndefined();
+  expect(await objs(page)).toHaveLength(4);
+
+  p = exec(page, 36946);
+  await page.locator('.dlg input[type=text]').fill('π/4');
+  await ok(page); await p;
+  const images = (await objs(page)).slice(4);
+  expect(images.map((o: any) => o.k)).toEqual(['rotate', 'rotate', 'seg']);
+  expect(images[0].def).toMatchObject({ center: scene.b, angle: { mode: 'fixed', deg: 45 } });
+});
+
+test('变换：从平移对话框构造扇形的象并存入原版格式', async ({ page }) => {
+  const sector = await page.evaluate(() => {
+    const v = window.__app.active, st = v.store;
+    const c = st.add({ k: 'free', x: 150, y: 220 }).id;
+    const a = st.add({ k: 'free', x: 250, y: 220 }).id;
+    const b = st.add({ k: 'free', x: 150, y: 120 }).id;
+    const arc = st.add({ k: 'arc-center', c, a, b }).id;
+    const sector = st.add({ k: 'arc-int', mode: 'sector', arc }).id;
+    v.setSel([sector]);
+    return sector;
+  });
+  const p = exec(page, 36945);
+  await expect(page.locator('.dlg-title')).toHaveText('平移');
+  await ok(page); await p;
+  const doc = await page.evaluate(() => window.__app.active.store.doc);
+  const encoded = encodeFile(doc, undefined);
+  if (!encoded.ok) throw Error(encoded.reason);
+  expect(decodeGsp(encoded.bytes).doc.pages[0].objects.at(-1)?.def).toMatchObject({ k: 'translate', src: sector });
+});
+
+test('变换：只有图片时创建视图中心，标记向量默认作为平移方式', async ({ page }) => {
+  await page.evaluate(() => {
+    const v = window.__app.active, st = v.store;
+    const p = st.add({ k: 'image', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aSxkAAAAASUVORK5CYII=',
+      mime: 'image/png', at: { x: 200, y: 120 }, w: 120, h: 70 });
+    v.setSel([p.id]);
+  });
+  let p = exec(page, 36947);
+  await expect(page.locator('.dlg-title')).toHaveText('缩放');
+  await page.locator('.dlg-cancel').click(); await p;
+  const geometry = await objs(page);
+  expect(geometry.map((o: any) => o.k)).toEqual(['image', 'free']);
+  expect(await sel(page)).toEqual([1]);
+  const ids = await page.evaluate(() => {
+    const v = window.__app.active, st = v.store;
+    const b = st.add({ k: 'free', x: 250, y: 100 }, { label: 'B' }).id;
+    const c = st.add({ k: 'free', x: 290, y: 100 }, { label: 'C' }).id;
+    v.setSel([1, 2, b, c]);
+    return { b, c };
+  });
+  await exec(page, 36943);
+  expect(await sel(page)).toEqual([1, 2]);
+  p = exec(page, 36945);
+  await expect(page.locator('input[name=tmode][value=vec]')).toBeChecked();
+  await expect(page.locator('.transform-ref:visible')).toHaveText(['点 B', '点 C']);
+  expect(await page.evaluate(() => window.__app.active.ghost?.page.objects[0].def.by)).toEqual({ mode: 'vector', from: ids.b, to: ids.c });
+  await page.locator('.dlg-cancel').click(); await p;
+});
+
+async function transformPickScene(page: Page) {
+  await page.setViewportSize({ width: 1200, height: 800 });
+  return page.evaluate(() => {
+    const view = window.__app.active, st = view.store;
+    const addPoint = (label: string, x: number, y: number) => st.add({ k: 'free', x, y }, { label }).id;
+    const a = addPoint('A', 145, 155), b = addPoint('B', 315, 155);
+    const c = addPoint('C', 175, 255), d = addPoint('D', 295, 255);
+    const src = addPoint('P', 105, 310);
+    const ab = st.add({ k: 'seg', a, b }, { label: 'AB' }).id;
+    const cd = st.add({ k: 'seg', a: c, b: d }, { label: 'CD' }).id;
+    const len = (ref: number, y: number) => st.add({ k: 'measure', m: 'length', refs: [ref] }, { at: { x: 40, y } }).id;
+    const horizontal = len(ab, 35), vertical = len(cd, 68);
+    const param = (name: string, value: number, unit: string, y: number) =>
+      st.add({ k: 'param', name, value, unit, showEdit: true }, { at: { x: 38, y } }).id;
+    const theta = param('alpha', 40, 'angle', 103), scale = param('scale', 2, 'none', 200);
+    const mark = st.add({ k: 'angle-mark', a, v: b, b: c, count: 1, mode: 'minor',
+      appearance: { size: 2, flags: 0, reserved: 0, fill: 0xfefefe } }).id;
+    view.setSel([src]);
+    return { a, b, c, ab, cd, src, horizontal, vertical, theta, scale, mark };
+  });
+}
+
+const transformPreview = (page: Page) => page.evaluate(() => window.__app.active.ghost?.page.objects[0]?.def);
+
+test('变换：对话框内点选旋转中心、角度值及角标，取消和提交都使用新标记', async ({ page }) => {
+  const ids = await transformPickScene(page);
+  let p = exec(page, 36946);
+  await expect(page.locator('.dlg-title')).toHaveText('旋转');
+  await click(page, 145, 155);
+  await expect(page.locator('.dlg .tgt')).toHaveText('A');
+  await click(page, 52, 111);
+  await expect(page.locator('input[name=rmode][value=marked]')).toBeChecked();
+  expect(await transformPreview(page)).toMatchObject({ center: ids.a, angle: { mode: 'value', m: ids.theta } });
+  await click(page, 292, 165);
+  expect(await transformPreview(page)).toMatchObject({ center: ids.a, angle: { mode: 'mark', m: ids.mark } });
+  await page.locator('.dlg-cancel').click(); await p;
+  expect(await sel(page)).toEqual([ids.src]);
+  expect(await objs(page)).toHaveLength(12);
+
+  p = exec(page, 36946);
+  await expect(page.locator('input[name=rmode][value=marked]')).toBeChecked();
+  await ok(page); await p;
+  const doc = await page.evaluate(() => window.__app.active.store.doc);
+  const saved = encodeFile(doc, undefined);
+  if (!saved.ok) throw Error(saved.reason);
+  expect(decodeGsp(saved.bytes).doc.pages[0].objects.at(-1)?.def).toMatchObject({
+    k: 'rotate', src: ids.src, center: ids.a, angle: { mode: 'mark', m: ids.mark },
+  });
+});
+
+test('变换：对话框内选向量、极坐标和两个直角坐标距离，预览引用按点选顺序更新', async ({ page }) => {
+  const ids = await transformPickScene(page);
+  let p = exec(page, 36945);
+  await expect(page.locator('.dlg-title')).toHaveText('平移');
+  await click(page, 145, 155);
+  await expect(page.locator('input[name=tmode][value=polar]')).toBeChecked();
+  await click(page, 315, 155);
+  expect(await transformPreview(page)).toMatchObject({ by: { mode: 'vector', from: ids.a, to: ids.b } });
+  await click(page, 52, 44);
+  await expect(page.locator('input[name=tmode][value=polar]')).toBeChecked();
+  await click(page, 52, 112);
+  expect(await transformPreview(page)).toMatchObject({ by: { mode: 'polar', dist: { m: ids.horizontal }, angle: { m: ids.theta } } });
+  await click(page, 292, 165);
+  expect(await transformPreview(page)).toMatchObject({ by: { mode: 'polar', dist: { m: ids.horizontal }, angle: { m: ids.mark, marker: true } } });
+
+  await page.locator('input[name=tmode][value=rect]').check();
+  await click(page, 52, 77);
+  expect(await transformPreview(page)).toMatchObject({ by: { mode: 'rect', dxBy: ids.horizontal, dyBy: ids.vertical } });
+  await page.locator('.dlg-cancel').click(); await p;
+  expect(await sel(page)).toEqual([ids.src]);
+  p = exec(page, 36945);
+  await expect(page.locator('input[name=tmode][value=rect]')).toBeChecked();
+  await ok(page); await p;
+  const doc = await page.evaluate(() => window.__app.active.store.doc);
+  const saved = encodeFile(doc, undefined);
+  if (!saved.ok) throw Error(saved.reason);
+  expect(decodeGsp(saved.bytes).doc.pages[0].objects.at(-1)?.def).toMatchObject({
+    k: 'translate', src: ids.src, by: { mode: 'rect', dxBy: ids.horizontal, dyBy: ids.vertical },
+  });
+});
+
+test('变换：缩放对话框可点中心、无单位数和两条线段的比', async ({ page }) => {
+  const ids = await transformPickScene(page);
+  const p = exec(page, 36947);
+  await expect(page.locator('.dlg-title')).toHaveText('缩放');
+  await click(page, 175, 255);
+  await click(page, 52, 208);
+  expect(await transformPreview(page)).toMatchObject({ center: ids.c, ratio: { mode: 'value', m: ids.scale } });
+  await click(page, 230, 155);
+  expect(await transformPreview(page)).toMatchObject({ ratio: { mode: 'value', m: ids.scale } });
+  await click(page, 230, 255);
+  await expect(page.locator('input[name=dmode][value=marked]')).toBeChecked();
+  expect(await transformPreview(page)).toMatchObject({ center: ids.c, ratio: { mode: 'marked', a: ids.ab, b: ids.cd } });
+  await ok(page); await p;
+  expect((await objs(page)).at(-1)?.def).toMatchObject({
+    k: 'dilate', src: ids.src, center: ids.c, ratio: { mode: 'marked', a: ids.ab, b: ids.cd },
+  });
 });
 
 test('打印预览：空白页只提示；有内容时有翻页、缩放、比例控件', async ({ page }) => {

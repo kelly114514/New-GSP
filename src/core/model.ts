@@ -51,7 +51,7 @@ export type Def =
   | { k: 'arc-int'; arc: Id; mode: 'sector' | 'segment' }
   // 轨迹与函数图像
   | { k: 'locus'; driver: Id; out: Id; samples: number; path?: Id; pathRange?: [number, number]; colored?: true; parameter?: { range: [number, number]; shapes?: true } }
-  | { k: 'plot'; func: Id; sys: Id; lo?: number; hi?: number; samples: number }
+  | { k: 'plot'; func: Id; sys: Id; lo?: number; hi?: number; samples: number; flags?: number; endpointMark?: number }
   // 参数曲线：点 (f(t), g(t))（polar 时是 (r, α)，α 无单位时按弧度），t 在 lo..hi 取样
   | { k: 'pcurve'; fx: Id; fy: Id; sys: Id; lo: number; hi: number; polar: boolean; samples: number }
   // 度量
@@ -67,7 +67,7 @@ export type Def =
   // 杂项
   | { k: 'text'; text: string; at: Pt; w: number; h: number; anchor?: Id; off?: Pt; font: FontSpec; runs?: TextRun[]; refs?: Id[]; math?: import('../gsp/richtext').RichNode; mathText?: string }   // math：含分数、上下标、根号的原版标记结构，text 未改动（等于 mathText）时按它排版   // 附着在点上时位置 = 点 + off；文字里的 k 显示 refs[k] 的数值
   | { k: 'button'; action: ButtonAction; text: string; at: Pt; w: number; h: number }
-  | { k: 'image'; data: string; mime: string; at: Pt; w: number; h: number; affine?: import('./image').Affine; clip?: Id; placement?: ImagePlacement }
+  | { k: 'image'; data: string; mime: string; at: Pt; w: number; h: number; drawing?: true; affine?: import('./image').Affine; clip?: Id; placement?: ImagePlacement }
   | { k: 'image-clip'; src: Id; clip: Id; size: [number, number, number, number] }
   // 自定义变换作用于图片（原版方法 96）：在源图片上取样，把驱动点 pre 放到各取样位置，象点 img 的位置就是该处像素的去处。
   // samples 是采样数，distortion 是允许失真度（0 无 … 1 全部）。
@@ -87,8 +87,8 @@ export type Def =
 export type Num = { fixed: number } | { m: Id } | { pts: [Id, Id, Id] };
 export type TranslateBy =
   | { mode: 'vector'; from: Id; to: Id }
-  | { mode: 'polar'; dist: Num; angle: Num }                         // 固定值（cm / 度）或度量 ID
-  | { mode: 'rect'; dx: number; dy: number; dxBy?: Id; dyBy?: Id };   // dxBy/dyBy：水平/垂直距离取自标记距离
+  | { mode: 'polar'; dist: Num; angle: Num | { m: Id; marker: true }; distPx?: number } // 固定值（cm / 度）、度量或角标
+  | { mode: 'rect'; dx: number; dy: number; dxPx?: number; dyPx?: number; dxBy?: Id; dyBy?: Id };   // 固定位移保留文件里的像素值
 export type AngleBy = { mode: 'fixed'; deg: number } | { mode: 'marked'; a: Id; v: Id; b: Id } | { mode: 'value'; m: Id } | { mode: 'mark'; m: Id };
 export type AngleMarkMode = 'minor' | 'reflex' | 'ccw' | 'cw';
 export type ImagePlacement =
@@ -102,9 +102,10 @@ export type MeasureKind =
   | 'length' | 'distance' | 'perimeter' | 'circumference' | 'angle' | 'markedangle' | 'area' | 'arcangle' | 'arclength' | 'radius' | 'ratio' | 'pointvalue'
   | 'coords' | 'abscissa' | 'ordinate' | 'coorddist' | 'coordradius' | 'coordangle' | 'slope' | 'equation';
 
+/** 动画按钮的 gspOptions 保留原版 2003 中尚未识别的字段。 */
 export type ButtonAction =
   | { type: 'hideshow'; targets: Id[]; mode: 'toggle' | 'show' | 'hide'; first?: 'hide' | 'show'; fade?: boolean; select?: boolean }   // toggle 时 first 是当前将执行的动作；fade/select 缺省为 true（原版默认）
-  | { type: 'animate'; targets: Id[]; speed: 'slow' | 'medium' | 'fast' | number; direction: 'forward' | 'backward' | 'bounce' | 'random'; once?: boolean; stopMode?: 'toggle' }
+  | { type: 'animate'; targets: Id[]; speed: 'slow' | 'medium' | 'fast' | number; direction: 'forward' | 'backward' | 'bounce' | 'random'; once?: boolean; stopMode?: 'toggle'; gspOptions?: string }
   | { type: 'move'; from: Id; to: Id; pairs?: [Id, Id][]; speed: 'slow' | 'medium' | 'fast' | 'high'; toInitial?: boolean; legacyFinal?: true }
   | { type: 'link'; page: number; url?: string }      // url 存在时是超链接按钮（page 无意义）
   | { type: 'scroll'; point: Id; where: 'topleft' | 'center' }
@@ -167,8 +168,8 @@ export interface Page {
   display?: Partial<DisplayPrefs>;
   /** 自定义变换：由原象点 src 到象点 img 的一串构造，可以重放到别的对象上（原版采集：文件里记 9009）。 */
   transforms?: CustomTransform[];
-  /** 原版文件打开时触发的操作按钮，按文件记录顺序。 */
-  startupButtons?: Id[];
+  /** 保存时选中的对象，按文件记录顺序（9000）。 */
+  savedSelection?: Id[];
   scroll: Pt;
   /** 本页绘图区背景色（原版每页有自己的颜色表 10020，第 7 项）；缺省用文档显示设置。 */
   background?: string;

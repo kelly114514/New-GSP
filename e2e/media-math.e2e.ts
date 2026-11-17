@@ -13,7 +13,7 @@ test('打开原版课件后执行已记录的按钮并保留轨迹追踪', async
     const image = st.add({ k: 'translate', src: driver, by: { mode: 'vector', from: a, to: moving } }).id;
     st.add({ k: 'locus', driver, out: image, samples: 40 }, { trace: true });
     const button = (action: object, y: number) => st.add({ k: 'button', action, text: '测试', at: { x: 45, y }, w: 60, h: 25 }).id;
-    st.page.startupButtons = [button({ type: 'animate', targets: [moving], speed: 'medium', direction: 'bounce' }, 20),
+    st.page.savedSelection = [a, button({ type: 'animate', targets: [moving], speed: 'medium', direction: 'bounce' }, 20),
       button({ type: 'hideshow', targets: [b], mode: 'hide', fade: false, select: false }, 60)];
     const bytes = encodeGsp(st.doc);
     return { data: btoa(String.fromCharCode(...bytes)), moving, hidden: b };
@@ -24,6 +24,7 @@ test('打开原版课件后执行已记录的按钮并保留轨迹追踪', async
   await expect.poll(() => page.evaluate(({ moving, hidden }) => {
     const v = (window as any).__app.active;
     if (v.store.doc.name !== '打开时执行' || !v.store.get(hidden)?.hidden || !v.store.ctx.tOverride?.has(moving)) return 0;
+    if (v.sel.length) return 0;
     const { width, height } = v.trace;
     const pixels: Uint8ClampedArray = v.trace.getContext('2d').getImageData(0, 0, width, height).data;
     let rows = 0;
@@ -32,6 +33,21 @@ test('打开原版课件后执行已记录的按钮并保留轨迹追踪', async
     }
     return rows;
   }, fixture)).toBeGreaterThan(4);
+});
+
+test('打开只含普通对象选中记录的课件后恢复选择', async ({ page }) => {
+  const bytes = await page.evaluate(async () => {
+    const url = '/src/gsp/codec.ts', { encodeGsp } = await import(/* @vite-ignore */ url);
+    const st = (window as any).__app.active.store;
+    const a = st.add({ k: 'free', x: 200, y: 130 }), b = st.add({ k: 'free', x: 360, y: 130 });
+    const line = st.add({ k: 'seg', a: a.id, b: b.id });
+    st.page.savedSelection = [line.id, a.id];
+    return Array.from(encodeGsp(st.doc) as Uint8Array);
+  });
+  const chooser = page.waitForEvent('filechooser');
+  await page.evaluate(() => { void (window as any).__app.openFile(); });
+  await (await chooser).setFiles({ name: '保存的选择.gsp', mimeType: 'application/octet-stream', buffer: Buffer.from(bytes) });
+  await expect.poll(() => page.evaluate(() => (window as any).__app.active.sel)).toEqual([3, 1]);
 });
 
 test('导函数保留来源，修改原式后高阶导函数同步', async ({ page }) => {

@@ -62,14 +62,32 @@ test('选中函数时“绘制函数”直接画图像；定义绘图函数对�
   expect((await page.evaluate(() => window.__app.queryMenu(36990))).name).toBe('绘制函数');
   await exec(page, 36990);
   expect((await objs(page)).filter((o: any) => o.k === 'plot').length).toBe(1);
-  await setTool(page, 'marker'); await dragTo(page, [100, 300], [300, 250]); await setTool(page, 'move');
-  const stroke = (await objs(page)).find((o: any) => o.k === 'stroke'); await select(page, [stroke.id]);
+  await page.evaluate(() => { window.__app.settings.marker.thick = false; });
+  await setTool(page, 'marker'); await dragTo(page, [100, 300], [300, 300]); await setTool(page, 'move');
+  const stroke = (await objs(page)).find((o: any) => o.k === 'image' && o.def.drawing); await select(page, [stroke.id]);
   expect(await page.evaluate(() => window.__app.queryMenu(36977))).toMatchObject({ enabled: true, name: '定义绘图函数' });
   await exec(page, 36977);
   const pf = (await objs(page)).find((o: any) => o.k === 'picfunc');
   expect(pf.def.stroke).toBe(stroke.id);
   expect(await page.evaluate(id => window.__app.active.store.results.get(id)?.status, pf.id)).toBe('ok');
   expect(await sel(page)).toEqual([pf.id]);
+  await exec(page, 36990);
+  const plotHasInk = await page.evaluate(() => {
+    const v = window.__app.active, shape = v.store.results.get(v.sel[0])?.shape;
+    return shape?.k === 'paths' && shape.paths.some((p: { x: number; y: number }[]) => p.length > 1);
+  });
+  expect(plotHasInk).toBe(true);
+  const saved = await page.evaluate(async () => {
+    const url = '/src/gsp/codec.ts', { encodeFile, decodeGsp } = await import(/* @vite-ignore */ url);
+    const result = encodeFile(window.__app.active.store.doc, undefined);
+    if (!result.ok) throw new Error(`${result.reason} (${result.unsupported.join(', ')})`);
+    return decodeGsp(result.bytes).doc.pages[0].objects.map(o => o.def);
+  });
+  expect(saved).toEqual(expect.arrayContaining([
+    expect.objectContaining({ k: 'image', drawing: true, mime: 'image/png' }),
+    expect.objectContaining({ k: 'picfunc', stroke: stroke.id, height: true }),
+    expect.objectContaining({ k: 'plot', func: pf.id }),
+  ]));
 });
 
 test('声音按钮：不振荡的函数先问；按钮文字“听到函数 f”；按下不报错', async ({ page }) => {

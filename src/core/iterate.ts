@@ -16,6 +16,8 @@ export interface IterSetup {
   /** 次数：固定值，或取自参数。 */
   depth: { fixed: number } | { param: Id };
   finalOnly?: boolean;
+  /** 将初象中的路径点放到路径上的随机位置。 */
+  random?: boolean;
   /** 只给非点对象建迭代象（原版“仅保留非点类象”）。 */
   nonPointOnly?: boolean;
   /** 生成迭代数据表（原版：有数值原象时默认勾选）。 */
@@ -49,7 +51,7 @@ export function constructIteration(st: Store, setup: IterSetup): { iter: Obj; im
   const images = setup.maps.flat();
   const targets = iterationTargets(st, setup.pre, !!setup.nonPointOnly);
   const body = iterationBody(st, setup.pre, images, targets.map(t => t.id));
-  const def: Def = { k: 'iterate', pre: [...setup.pre], maps: setup.maps.map(m => [...m]), body, depth: setup.depth, ...(setup.finalOnly ? { finalOnly: true } : {}) };
+  const def: Def = { k: 'iterate', pre: [...setup.pre], maps: setup.maps.map(m => [...m]), body, depth: setup.depth, ...(setup.finalOnly ? { finalOnly: true } : {}), ...(setup.random ? { random: true } : {}) };
   const iter = st.add(def);
   const made = targets.map(t => st.add({ k: 'iterimg', src: t.id, iter: iter.id }, { style: { ...t.style } }));
   const tableCols = tableColumns(st, setup);

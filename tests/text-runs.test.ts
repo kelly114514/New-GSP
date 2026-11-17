@@ -3,6 +3,7 @@ import { fontAt, replaceText, styleRange } from '../src/core/text-runs';
 import { newDoc, type FontSpec } from '../src/core/model';
 import { Store } from '../src/core/store';
 import { decodeFile, encodeFile, encodeNgsp } from '../src/gsp/codec';
+import { readRecords } from '../src/gsp/records';
 import { drawPage, drawRichText, embeddedButtonAt, embeddedText } from '../src/ui/render';
 import type { RichNode } from '../src/gsp/richtext';
 
@@ -54,9 +55,30 @@ describe('局部文本样式', () => {
     st.add({ k: 'text', text: '甲乙', at: { x: 10, y: 10 }, w: 100, h: 30, font: f, runs: [{ text: '甲', font: f }] });
     expect(encodeFile(st.doc, undefined).ok).toBe(false);
   });
-  it('原版会替换的字体不能被当作无损原版格式保存', () => {
+  it('原版格式按 UTF-8 字节对齐字体名称，并保留样式对中文名的引用', () => {
     const st = new Store(newDoc('字体'));
-    st.add({ k: 'text', text: '你好', at: { x: 10, y: 10 }, w: 100, h: 30, font: { ...f, name: 'Microsoft YaHei' } });
+    const font = { ...f, name: 'Microsoft YaHei' };
+    const text = st.add({ k: 'text', text: '甲乙x', at: { x: 10, y: 10 }, w: 100, h: 30, font,
+      runs: [{ text: '甲', font }, { text: '乙', font: { ...f, name: 'SimSun' } }, { text: 'x', font: { ...f, name: 'Symbol' } }] });
+    const saved = encodeFile(st.doc, undefined);
+    if (!saved.ok) throw new Error(saved.reason);
+    const records = readRecords(saved.bytes).records.filter(r => r.tag === 1201);
+    for (const { data } of records) {
+      const end = data.indexOf(0, 2);
+      expect(end).toBeGreaterThan(2);
+      expect(data.length).toBe(((end + 2) & ~1) + 2);
+      expect(data.slice(end).every(byte => byte === 0)).toBe(true);
+    }
+    expect(records.find(r => new TextDecoder().decode(r.data.slice(2, 8)) === 'Symbol')?.data[0]).toBe(9);
+    const def = decodeFile(saved.bytes, '文字.gsp').doc.pages[0].objects[0].def;
+    expect(def).toMatchObject({ font: { name: '微软雅黑' }, runs: [
+      { text: '甲', font: { name: '微软雅黑' } }, { text: '乙', font: { name: '宋体' } }, { text: 'x', font: { name: 'Symbol' } },
+    ] });
+    expect(text.def).toMatchObject({ font });
+  });
+  it('会被原版替换的字体可完整存入新版课件', () => {
+    const st = new Store(newDoc('字体'));
+    st.add({ k: 'text', text: '你好', at: { x: 10, y: 10 }, w: 100, h: 30, font: { ...f, name: 'Arial Narrow' } });
     const saved = encodeFile(st.doc, undefined);
     expect(saved.ok).toBe(false);
     if (!saved.ok) expect(saved.reason).toContain('原版不能保留字体');

@@ -167,6 +167,29 @@ describe('全库截图对照修复', () => {
     expect(decodeGsp(encodeGsp(st.doc)).doc.pages[0].objects.find((o: Obj) => o.def.k === 'iterate')?.def).toMatchObject({ random: true, salt: 7 });
   });
 
+  it('随机迭代的多条映射各自使用初象的路径，自由初象保持原值', () => {
+    const st = new Store();
+    const point = (x: number, y: number) => st.add({ k: 'free', x, y }).id;
+    const pathPt = (x: number, y: number) => {
+      const path = st.add({ k: 'seg', a: point(x, y), b: point(x + 100, y) }).id;
+      return st.add({ k: 'onpath', path, t: 0.25 }).id;
+    };
+    const pre = pathPt(0, 0), a = pathPt(200, 100), b = pathPt(400, 200), c = point(500, 300);
+    const iter = st.add({ k: 'iterate', pre: [pre], maps: [[a], [b], [c]], body: [], depth: { fixed: 2 }, random: true });
+    const shape = st.results.get(iter.id)?.shape;
+    if (shape?.k !== 'iter') throw new Error('迭代无求值结果');
+    const points = shape.states.map(s => s[0].shape).flatMap(s => s?.k === 'pt' ? [s.p] : []);
+    expect(points.slice(0, 3)).toEqual([{ x: 225, y: 100 }, { x: 425, y: 200 }, { x: 500, y: 300 }]);
+    for (const p of points.slice(3)) {
+      if (p.y === 300) expect(p.x).toBe(500);
+      else {
+        expect([100, 200]).toContain(p.y);
+        expect(p.x).toBeGreaterThan(p.y * 2);
+        expect(p.x).toBeLessThan(p.y * 2 + 100);
+      }
+    }
+  });
+
   it('参数数值框、页背景和样式表在新版写出后读回不变', () => {
     const st = new Store();
     const boxed = st.add({ k: 'param', name: 'a', value: 1, unit: 'none', showEdit: true }, { at: { x: 10, y: 10 } });

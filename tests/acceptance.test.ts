@@ -6,8 +6,8 @@ import { digestDoc, type ManifestEntry } from '../tools/freeze-acceptance';
 
 const DIR = join(__dirname, '../acceptance');
 const manifest = JSON.parse(readFileSync(join(DIR, 'manifest.json'), 'utf-8')) as { entries: ManifestEntry[] };
-// 这两份旧冻结夹具含原版会替换的字体；仍要求原样另存及新版格式无损。
-const substitutedFonts = new Set(['00-全部对象.gsp', '12-n-text.gsp']);
+const legacyFontFixtures = new Set(['00-全部对象.gsp', '12-n-text.gsp']);
+const staleTableFixtures = new Set(['00-全部对象.gsp', '14-n-table.gsp']);
 
 describe('冻结的验收文档（新版自己构造，acceptance/manifest.json）', () => {
   it('不少于 30 个文档', () => { expect(manifest.entries.length).toBeGreaterThanOrEqual(30); });
@@ -24,14 +24,15 @@ describe('冻结的验收文档（新版自己构造，acceptance/manifest.json�
       expect(digestDoc(doc)).toEqual(e.digest);
     });
     if (e.format === 'gsp') {
-      it(`${e.file}：${substitutedFonts.has(e.file) ? '保护原版会替换的字体' : '再写出再读回，摘要不变'}`, () => {
+      it(`${e.file}：再写出再读回，摘要不变`, () => {
         const bytes = new Uint8Array(readFileSync(join(DIR, e.file))), decoded = decodeFile(bytes, e.file), doc = decoded.doc;
         const enc = encodeFile(doc, undefined);
-        if (substitutedFonts.has(e.file)) {
-          expect(enc.ok).toBe(false);
-          if (!enc.ok) expect(enc.reason).toContain('原版不能保留字体');
+        if (legacyFontFixtures.has(e.file) || staleTableFixtures.has(e.file)) {
           expect(encodeFile(doc, decoded.source)).toMatchObject({ ok: true, bytes });
           expect(decodeFile(encodeNgsp(doc), 'x.ngsp').doc).toEqual(doc);
+        }
+        if (staleTableFixtures.has(e.file)) {
+          expect(enc).toMatchObject({ ok: false, unsupported: ['原版会重算与当前列值不同的表格最后一行'] });
           return;
         }
         expect(enc.ok).toBe(true);

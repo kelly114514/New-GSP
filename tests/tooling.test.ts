@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Store } from '../src/core/store';
+import { createSystem } from '../src/core/construct';
 import { newDoc, parentsOf } from '../src/core/model';
 import { acceptsInput, applyTool, buildTool, createToolObjects, initialToolPathParameter } from '../src/core/tooling';
 import { decodeFile, decodeToolBody, encodeFile, encodeNgsp, encodeToolBody } from '../src/gsp/codec';
@@ -198,6 +199,58 @@ describe('创建工具 → 编码 → 解析 → 应用', () => {
     target.run('修改', () => target.update(input, { k: 'param', name: 'n', value: 7, unit: 'none', showEdit: true }));
     expect(target.results.get(output)?.shape).toMatchObject({ k: 'num', q: { v: 8 } });
     expect(createToolObjects(st.page, [])).toHaveProperty('error');
+  });
+  it('显式前提按选择顺序保存，线段、距离和函数分别用新对象重放', () => {
+    const st = new Store();
+    const a = st.add({ k: 'free', x: 0, y: 10 }), b = st.add({ k: 'free', x: 80, y: 10 });
+    const side = st.add({ k: 'seg', a: a.id, b: b.id });
+    const midpoint = st.add({ k: 'mid', seg: side.id });
+    const length = st.add({ k: 'measure', m: 'length', refs: [side.id] });
+    const func = st.add({ k: 'func', name: 'f', param: 'x', expr: { t: 'x' } });
+    const calc = st.add({ k: 'calc', expr: { t: 'call', func: func.id, a: { t: 'num', v: 2 } }, unit: 'none' });
+    const fromSegment = createToolObjects(st.page, [side.id, midpoint.id]);
+    if ('error' in fromSegment) throw new Error(fromSegment.error);
+    expect(fromSegment.objects).toHaveLength(2);
+    const segment = encodeToolBody(fromSegment.objects, '线段中点', fromSegment.prereq);
+    const segmentTool = buildTool(segment, decodeToolBody(segment).page);
+    expect(segmentTool.inputs.map(i => i.kind)).toEqual(['segment']);
+    const [made] = applyTool(st, segmentTool, [side.id], () => ({ x: 10, y: 5 }));
+    expect(st.results.get(made.id)?.shape).toMatchObject({ k: 'pt', p: { x: 40, y: 10 } });
+
+    const test = st.add({ k: 'calc', expr: { t: 'bin', op: '*', a: { t: 'ref', id: length.id }, b: { t: 'ref', id: calc.id } }, unit: 'distance' });
+    const compiled = createToolObjects(st.page, [func.id, length.id, test.id]);
+    if ('error' in compiled) throw new Error(compiled.error);
+    const both = encodeToolBody(compiled.objects, '距离与函数', compiled.prereq);
+    const tool = buildTool(both, decodeToolBody(both).page);
+    expect(tool.blocked).toBeUndefined();
+    expect(tool.inputs).toMatchObject([{ kind: 'function' }, { kind: 'number', unit: 'distance' }]);
+    const other = st.add({ k: 'func', name: 'g', param: 'x', expr: { t: 'bin', op: '*', a: { t: 'x' }, b: { t: 'num', v: 3 } } });
+    const dist = st.add({ k: 'param', name: 'd', unit: 'distance', showEdit: true, value: 5 });
+    const result = tool.objects.find(o => o.def.k === 'calc');
+    if (result?.def.k !== 'calc') throw new Error('缺少计算作品');
+    result.def.unit = 'none'; // 原版另存内嵌工具会把这项暂时写为无单位。
+    const output = applyTool(st, tool, [other.id, dist.id], () => ({ x: 10, y: 5 }));
+    expect(output).toHaveLength(1);
+    expect(st.results.get(output[0].id)?.shape).toMatchObject({ k: 'num', q: { v: 30, u: 'distance' } });
+  });
+  it('坐标系和函数都可作为显式前提，结果图像使用目标页的对象', () => {
+    const st = new Store();
+    const sys = createSystem(st, { x: 100, y: 100 });
+    const func = st.add({ k: 'func', name: 'f', param: 'x', expr: { t: 'x' } });
+    const plot = st.add({ k: 'plot', sys: sys.id, func: func.id, lo: -2, hi: 2, samples: 40 });
+    const compiled = createToolObjects(st.page, [func.id, sys.id, plot.id]);
+    if ('error' in compiled) throw new Error(compiled.error);
+    expect(compiled.objects).toHaveLength(3);
+    const embedded = encodeToolBody(compiled.objects, '绘制在给定坐标系', compiled.prereq);
+    const tool = buildTool(embedded, decodeToolBody(embedded).page);
+    expect(tool.blocked).toBeUndefined();
+    expect(tool.inputs.map(i => i.kind)).toEqual(['function', 'system']);
+    const target = new Store();
+    const targetSys = createSystem(target, { x: 200, y: 200 });
+    const targetFunc = target.add({ k: 'func', name: 'g', param: 'x', expr: { t: 'num', v: 1 } });
+    const [made] = applyTool(target, tool, [targetFunc.id, targetSys.id], () => ({ x: 10, y: 5 }));
+    expect(made.def).toMatchObject({ k: 'plot', sys: targetSys.id, func: targetFunc.id });
+    expect(target.results.get(made.id)?.shape).toMatchObject({ k: 'paths' });
   });
   it('工具标签选项控制创建工具时是否保留标签', () => {
     const st = new Store(newDoc('标签'));

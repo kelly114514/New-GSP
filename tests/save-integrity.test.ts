@@ -5,6 +5,7 @@ import { decodeGsp, decodeFile, encodeGsp, encodeFile, encodeNgsp } from '../src
 import { compareContent, sourceSnapshot } from '../src/gsp/semantic';
 import { DEFAULT_DISPLAY, defaultStyle, newDoc, pageDisplay, type Doc, type Def } from '../src/core/model';
 import { readRecords } from '../src/gsp/records';
+import { Store } from '../src/core/store';
 import { evaluatePage } from '../src/core/engine';
 import { applyDisplay, valueText } from '../src/ui/render';
 
@@ -23,6 +24,46 @@ function rejectWithoutLoss(doc: Doc, path: string) {
 }
 
 describe('保存完整性与失败保护', () => {
+  it('圆心弧和弧内区域的变换保留几何类型与填充透明度', () => {
+    const st = new Store();
+    const c = st.add({ k: 'free', x: 160, y: 160 }).id;
+    const a = st.add({ k: 'free', x: 230, y: 160 }).id;
+    const b = st.add({ k: 'free', x: 160, y: 90 }).id;
+    const arc = st.add({ k: 'arc-center', c, a, b }).id;
+    const sector = st.add({ k: 'arc-int', arc, mode: 'sector' }).id;
+    const segment = st.add({ k: 'arc-int', arc, mode: 'segment' }).id;
+    const bisector = st.add({ k: 'bisect', a, v: c, b }).id;
+    const alpha = 191 / 255;
+    const images = [arc, sector, segment, bisector].map(src => st.add({
+      k: 'rotate', src, center: c, angle: { mode: 'fixed', deg: 90 },
+    }, { style: { color: '#447722', width: 3, dash: 'dash', pointSize: 1, fillAlpha: alpha } }).id);
+
+    const saved = encodeFile(st.doc, undefined);
+    if (!saved.ok) throw Error(saved.reason);
+    const headers = readRecords(saved.bytes).records.filter(r => r.tag === 2000).slice(-images.length);
+    expect(headers.map(r => [r.data[6], r.data[8]])).toEqual([[12, 67], [13, 68], [13, 69], [2, 13]]);
+    const reopened = new Store(decodeGsp(saved.bytes).doc);
+    expect(reopened.get(images[1])?.style.fillAlpha).toBe(alpha);
+    expect(reopened.get(images[2])?.style.fillAlpha).toBe(alpha);
+    reopened.moveFree(a, 250, 160);
+    expect(reopened.results.get(images[1])?.shape).toMatchObject({ k: 'sector', segment: false, r: 90 });
+    expect(reopened.results.get(images[2])?.shape).toMatchObject({ k: 'sector', segment: true, r: 90 });
+  });
+
+  it('9000 记录保存普通对象的选中顺序，清空选择时删除记录', () => {
+    const doc = pointDoc();
+    doc.pages[0].savedSelection = [10];
+    const bytes = encodeGsp(doc);
+    const opened = decodeGsp(bytes);
+    expect(encodeFile(opened.doc, opened.source)).toMatchObject({ ok: true, bytes });
+    expect(opened.doc.pages[0].savedSelection).toEqual([1]);
+    delete opened.doc.pages[0].savedSelection;
+    const saved = encodeFile(opened.doc, opened.source);
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) return;
+    expect(readRecords(saved.bytes).records.some(r => r.tag === 9000)).toBe(false);
+    expect(decodeGsp(saved.bytes).doc.pages[0].savedSelection).toBeUndefined();
+  });
   it('旋转图片的完整仿射矩阵往返，导函数来源不能静默降级', () => {
     const doc = newDoc('图片');
     const image: Def = { k: 'image', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aSxkAAAAASUVORK5CYII=', mime: 'image/png', at: { x: 70, y: 30 }, w: 30, h: 40, affine: [0, -30, 100, 40, 0, 30] };
@@ -158,7 +199,9 @@ describe('保存完整性与失败保护', () => {
     rejectWithoutLoss(doc, 'settings.display');
     doc.settings.display.textStyles!.title!.color = '#000000';
     doc.settings.display.textStyles!.title!.name = '宋体';
-    expect(encodeFile(doc, undefined)).toMatchObject({ ok: false });
+    const chinese = encodeFile(doc, undefined);
+    if (!chinese.ok) throw new Error(chinese.reason);
+    expect(decodeGsp(chinese.bytes).doc.settings.display?.textStyles?.title?.name).toBe('宋体');
   });
   it('标签字体斜体与数学标签选项分别比较并保存', () => {
     const doc = pointDoc();
@@ -250,24 +293,15 @@ it.skipIf(!existsSync(precisionFixture) || !existsSync(precisionOriginal))('原�
   expect(valueText(page, values, page.objects[5])).toContain('90.0000°');
   expect(valueText(page, values, page.objects[6])).toContain('0.3');
 });
-const reportPath = resolve(root, 'new-GSP/docs/sample-report.json');
-const haveSamples = existsSync(resolve(root, 'sketchpad5')) && existsSync(reportPath);
-describe.skipIf(!haveSamples)('审查文档的原课件最小复现（只读样例）', () => {
-  const suffixes = ['运动方向(inRm).gsp', '(inRm)太极图.gsp', '七星彩选号.gsp', '平移正弦线作正弦函数图像.gsp'];
-  for (const suffix of suffixes) it(suffix, () => {
-    const report = JSON.parse(readFileSync(reportPath, 'utf8')) as { rows: { file: string }[] };
-    const row = report.rows.find(r => r.file.endsWith(suffix));
-    if (!row) throw new Error(`没有样例：${suffix}`);
-    const bytes = new Uint8Array(readFileSync(resolve(root, 'sketchpad5', row.file)));
+const sampleRoot = resolve(root, 'sketchpad5', 'Samples', '5.x实例');
+describe.skipIf(!existsSync(sampleRoot))('审查文档的原课件最小复现（只读样例）', () => {
+  const samples = ['方小庆作品/运动方向(inRm).gsp', '方小庆作品/(inRm)太极图.gsp', '群师作品/技巧型案例/七星彩选号.gsp', '群师作品/技巧型案例/平移正弦线作正弦函数图像.gsp'];
+  for (const file of samples) it(file, () => {
+    const bytes = new Uint8Array(readFileSync(resolve(sampleRoot, file)));
     const imported = decodeGsp(bytes);
     expect(encodeFile(imported.doc, imported.source)).toMatchObject({ ok: true, bytes });
     // 强制重编码，避免原样输出掩盖定义错误。
     const model = structuredClone(imported.doc);
-    if (suffix === '七星彩选号.gsp') {
-      // 文档默认样式含原版另存会替换的宋体；完整保存必须拒绝，构造单独核验。
-      expect(encodeFile(imported.doc, undefined)).toMatchObject({ ok: false });
-      if (model.settings.display) delete model.settings.display.textStyles;
-    }
     const back = decodeGsp(encodeGsp(model)).doc;
     expect(compareContent(model, back).filter(d => d.path.includes('.def.'))).toEqual([]);
     const guarded = encodeFile(model, undefined);

@@ -5,7 +5,7 @@ import type { Expr } from '../core/expr';
 import { fmtNum } from '../core/expr';
 
 export interface MathBox { w: number; asc: number; desc: number; draw(ctx: CanvasRenderingContext2D, x: number, base: number): void }
-export interface MathOpts { font: string; size: number; nameOf(id: number): string; varName: string; italicVars: boolean }
+export interface MathOpts { font: string; size: number; nameOf(id: number): string; varName: string; italicVars: boolean; italicNameOf?(id: number): boolean; ratioOf?(id: number): [string, string] | undefined }
 
 const withSize = (font: string, size: number) => font.replace(/[\d.]+px/, `${size}px`);
 const unitless = (font: string) => font.replace(/\bitalic\s+/g, '');
@@ -16,7 +16,7 @@ function text(ctx: CanvasRenderingContext2D, s: string, font: string, size: numb
   return { w, asc: size * 0.78, desc: size * 0.22, draw(c, x, base) { c.save(); c.font = withSize(f, size); c.textBaseline = 'alphabetic'; c.fillText(s, x, base); c.restore(); } };
 }
 
-const LATIN_NAME = /([A-Za-zΑ-Ωα-ω′'″]+)/;
+const LATIN_NAME = /([A-Za-zΑ-Ωα-ω′'″̅]+)/;
 /** 名字：italic 时只有拉丁、希腊字母和撇号斜体，数字、汉字、符号保持正体（原版“数学标签用斜体”，0669、0454 对照）。 */
 function nameText(ctx: CanvasRenderingContext2D, s: string, font: string, size: number, italic: boolean): MathBox {
   if (!italic || /\bitalic\b/.test(font)) return text(ctx, s, font, size);
@@ -76,7 +76,7 @@ function fence(inner: MathBox, open: string, close: string, size: number, font: 
   if (!tall) return row([textFence(open, size, font), inner, textFence(close, size, font)]);
   const fw = size * 0.35;
   const stroke = (c: CanvasRenderingContext2D, x: number, top: number, bottom: number, ch: string, left: boolean) => {
-    c.save(); c.lineWidth = Math.max(1, size / 16); c.strokeStyle = c.fillStyle as string; c.beginPath();
+    c.save(); c.lineWidth = Math.max(1.5, size / 9); c.strokeStyle = c.fillStyle as string; c.beginPath();   // 原版的大括号笔画粗（0669 对照）
     if (ch === '|') { c.moveTo(x + fw / 2, top); c.lineTo(x + fw / 2, bottom); }
     else { const mid = (top + bottom) / 2, x0 = left ? x + fw * 0.8 : x + fw * 0.2, x1 = left ? x + fw * 0.25 : x + fw * 0.75; c.moveTo(x0, top); c.quadraticCurveTo(x1, mid, x0, bottom); }
     c.stroke(); c.restore();
@@ -101,7 +101,13 @@ export function layoutExpr(ctx: CanvasRenderingContext2D, e: Expr, o: MathOpts, 
       const s = (e.v < 0 ? '−' : '') + fmtNum(Math.abs(e.v)) + (e.u === 'angle' ? '°' : e.u === 'distance' ? '厘米' : '');
       return text(ctx, s, plain, size);
     }
-    case 'ref': return name(ctx, o.nameOf(e.id), o.font, size, o.italicVars);
+    case 'ref': {
+      const ratio = o.ratioOf?.(e.id);
+      if (ratio) return frac(name(ctx, ratio[0], o.font, size, o.italicVars), name(ctx, ratio[1], o.font, size, o.italicVars), size);
+      return o.italicVars && o.italicNameOf?.(e.id)
+        ? name(ctx, o.nameOf(e.id), /\bitalic\b/.test(o.font) ? o.font : `italic ${o.font}`, size)
+        : name(ctx, o.nameOf(e.id), o.font, size, o.italicVars);
+    }
     case 'x': return text(ctx, o.varName, o.font, size, o.italicVars);
     case 'neg': {
       const inner = L(e.a, 3);
@@ -169,8 +175,16 @@ export function layoutRich(ctx: CanvasRenderingContext2D, n: RichNode, refText: 
       };
     }
     case 'frac': return colored(frac(L(n.num), L(n.den), size), f.color);
-    case 'sup': return sup(L(n.base), L(n.exp, scale * 0.72), size);
-    case 'sub': return row([L(n.base), shift(L(n.sub, scale * 0.72), size * 0.28)]);
+    case 'sup': {
+      if (n.base.t === 'sub') {
+        const base = L(n.base.base), exp = shift(L(n.exp, scale * 0.65), -size * 0.27);
+        const sub = shift(L(n.base.sub, scale * 0.65), size * 0.17);
+        return row([base, { w: Math.max(exp.w, sub.w), asc: Math.max(exp.asc, sub.asc), desc: Math.max(exp.desc, sub.desc),
+          draw(c, x, y) { exp.draw(c, x, y); sub.draw(c, x, y); } }]);
+      }
+      return row([L(n.base), shift(L(n.exp, scale * 0.65), -size * 0.27)]);
+    }
+    case 'sub': return row([L(n.base), shift(L(n.sub, scale * 0.65), size * 0.17)]);
     case 'root': return colored(radical(L(n.body), size), f.color);
     case 'paren': return colored(fence(L(n.body), '(', ')', size, css(n.font, size)), n.font.color);
   }

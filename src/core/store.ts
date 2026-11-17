@@ -175,9 +175,9 @@ export class Store {
     const p = this.page, start = new Set(ids), gone = new Set<Id>([...start, ...descendants(p, start)]);
     // 删除多边形顶点时，多边形内部一并删除（已由 parentsOf 覆盖）
     p.objects = p.objects.filter(o => !gone.has(o.id));
-    if (p.startupButtons) {
-      p.startupButtons = p.startupButtons.filter(id => !gone.has(id));
-      if (!p.startupButtons.length) delete p.startupButtons;
+    if (p.savedSelection) {
+      p.savedSelection = p.savedSelection.filter(id => !gone.has(id));
+      if (!p.savedSelection.length) delete p.savedSelection;
     }
     this.recompute();
     return gone;

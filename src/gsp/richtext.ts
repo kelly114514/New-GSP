@@ -32,6 +32,9 @@ export function readRichText(bytes: Uint8Array, refCount: number, firstRef: numb
   return readRichTextRuns(bytes, refCount, firstRef, { name: 'Arial', size: 16, bold: false, italic: false, underline: false, color: '#000000' }, undefined, legacy, legacyDecimalRefs)?.map(r => r.text).join('');
 }
 /** 同一个字节解析器同时保留各层S样式，不通过正则切割文字载荷。 */
+/** 文字标记里 <!码> 的符号（Symbol 字体字符码；原版 0502 的 ∠A=90°、△ABC）。 */
+const GLYPHS: Record<string, string> = { '!103': '−', '!62': 'β', '!70': 'π', '!AE': '→', '!D7': '×', '!DE': '⇒', '!D0': '∠', '!B0': '°', '!102': '△' };
+const REF_PREFIX_GLYPHS = new Set(['∠', '△']);
 export function readRichTextRuns(bytes: Uint8Array, refCount: number, firstRef: number, base: FontSpec, style?: (head: string, parent: FontSpec) => FontSpec, legacy = false, legacyDecimalRefs = false): TextRun[] | undefined {
   let at = 0, valid = true;
   const ascii = (a: number, b: number) => String.fromCharCode(...bytes.subarray(a, b));
@@ -68,9 +71,11 @@ export function readRichTextRuns(bytes: Uint8Array, refCount: number, firstRef: 
       const decimal = legacyDecimalRefs && digits.length < 4 && /^\d+$/.test(digits);
       const index = parseInt(digits, decimal ? 10 : 16) - firstRef;
       if (index < 0 || index >= refCount) { valid = false; return []; }
-      return [{ text: `${index}${mode ? ':' + mode.toUpperCase() : ''}`, font: { ...current } }];
+      // 插入对象的显示内容里的 ∠、△（0502 的 △ABC）留在对象值前面，其余显示内容（对象名文字）由对象值代替
+      const prefix = children.flat().filter(r => REF_PREFIX_GLYPHS.has(r.text));
+      return [...prefix, { text: `${index}${mode ? ':' + mode.toUpperCase() : ''}`, font: { ...current } }];
     }
-    const glyph = ({ '!103': '−', '!62': 'β', '!70': 'π', '!AE': '→', '!D7': '×', '!DE': '⇒' } as Record<string, string>)[head];
+    const glyph = GLYPHS[head];
     if (glyph) return [{ text: glyph, font: { ...current } }];
     if (head === '{') return [{ text: '(', font: { ...current } }, ...children.flat(), { text: ')', font: { ...current } }];
     if ((head === '+' || head === '-') && children.length === 2) {
@@ -154,7 +159,7 @@ export function readRichTextTree(bytes: Uint8Array, refCount: number, firstRef: 
       if (index < 0 || index >= refCount) { valid = false; return { t: 'row', items: [] }; }
       return { t: 'ref', index, ...(mode ? { mode: mode.toUpperCase() as 'A' | 'D' } : {}), font: { ...current } };
     }
-    const glyph = ({ '!103': '−', '!62': 'β', '!70': 'π', '!AE': '→', '!D7': '×', '!DE': '⇒' } as Record<string, string>)[head];
+    const glyph = GLYPHS[head];
     if (glyph) return { t: 'run', text: glyph, font: { ...current } };
     if (head === '{') return { t: 'paren', body: row(children), font: { ...current } };
     if (head === '(') return { t: 'paren', body: row(children), font: { ...current } };

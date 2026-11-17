@@ -48,6 +48,25 @@ describe('射线与多边形边界交点保存', () => {
 });
 
 describe('直线或圆与采样曲线交点保存', () => {
+  it('独立坐标轴与着色圆相交时保留第二分支和父对象', () => {
+    const st = new Store();
+    const c = st.add({ k: 'free', x: 250, y: 200 }).id;
+    const edge = st.add({ k: 'free', x: 310, y: 200 }).id;
+    const circle = st.add({ k: 'circle', c, p: edge }).id;
+    const axis = st.add({ k: 'axis-line', axis: 'x', mode: 'circle', unit: circle }).id;
+    const value = st.add({ k: 'param', unit: 'none', value: 0.25, name: 'p', showEdit: true }, { at: { x: 24, y: 34 } }).id;
+    const ring = st.add({ k: 'colorize', src: circle, params: [value], mode: 'color', cycle: 'one', from: 0, to: 1 }).id;
+    const hit = st.add({ k: 'inter', a: axis, b: ring, branch: 1, alternate: true }).id;
+
+    const encoded = encodeFile(st.doc, undefined);
+    if (!encoded.ok) throw Error(encoded.reason);
+    const reopened = new Store(decodeGsp(encoded.bytes).doc);
+    expect(reopened.get(hit)?.def).toEqual(st.get(hit)?.def);
+    expect(reopened.results.get(hit)?.shape).toEqual({ k: 'pt', p: { x: 310, y: 200 } });
+    reopened.moveFree(edge, 340, 200);
+    expect(reopened.results.get(hit)?.shape).toEqual({ k: 'pt', p: { x: 340, y: 200 } });
+  });
+
   it('直线反向时函数图像交点反向编号，超出的分支落在最后一点', () => {
     const st = new Store(), sys = createSystem(st, { x: 350, y: 290 }).id;
     const f = st.add({ k: 'func', name: 'f', param: 'x', expr: { t: 'bin', op: '^', a: { t: 'x' }, b: { t: 'num', v: 2 } } }).id;

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { Store } from '../src/core/store';
-import { encodeGsp } from '../src/gsp/codec';
+import { decodeGsp, encodeFile, encodeGsp } from '../src/gsp/codec';
+import { parameterAnimation } from '../src/gsp/animation';
 
 declare global { interface Window { __app: any } }
 const errors: string[] = [];
@@ -28,6 +29,91 @@ const select = (page: Page, ids: number[]) => page.evaluate(ids2 => window.__app
 const dlgTitle = (page: Page) => page.locator('.dlg-title');
 const ok = (page: Page) => page.locator('.dlg button.primary').click();
 const kinds = (page: Page) => page.evaluate(() => window.__app.active.store.page.objects.map((o: any) => o.def.k));
+
+test('构造命令复用同一构造与交点共用端点，保留射线的方向', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const app = window.__app, view = app.active, store = view.store;
+    const a = store.add({ k: 'free', x: 200, y: 150 }).id;
+    const b = store.add({ k: 'free', x: 350, y: 150 }).id;
+    const c = store.add({ k: 'free', x: 280, y: 240 }).id;
+    const seg = store.add({ k: 'seg', a, b }).id;
+    const ray = store.add({ k: 'ray', a, b }).id;
+    const line = store.add({ k: 'line', a, b: c }).id;
+    const other = store.add({ k: 'line', a: b, b: c }).id;
+    const mid = store.add({ k: 'mid', seg }).id;
+    const circle = store.add({ k: 'circle', c: a, p: b }).id;
+    const arc = store.add({ k: 'arc3', a, b, c }).id;
+    const run = async (id: number, chosen: number[]) => {
+      const count = store.page.objects.length;
+      view.setSel(chosen);
+      await app.exec(id);
+      return { selected: [...view.sel], added: store.page.objects.length - count };
+    };
+    const reused = [
+      await run(36927, [b, a]), await run(36929, [c, a]), await run(36926, [line, other]),
+      await run(36925, [seg]), await run(36933, [a, b]), await run(36936, [a, b, c]),
+    ];
+    const directed = await run(36928, [b, a]);
+    const lineCircle = await run(36926, [circle, other]);
+    return { reused, expected: [seg, line, c, mid, circle, arc], directed, ray, lineCircle, b };
+  });
+  expect(result.reused).toEqual(result.expected.map((id: number) => ({ selected: [id], added: 0 })));
+  expect(result.directed.added).toBe(1);
+  expect(result.directed.selected).not.toContain(result.ray);
+  expect(result.lineCircle.added).toBe(1);
+  expect(result.lineCircle.selected).toContain(result.b);
+  expect(result.lineCircle.selected).toHaveLength(2);
+});
+
+test('菜单在所选路径上随机取点，并保留各点的路径依附', async ({ page }) => {
+  const points = await page.evaluate(async () => {
+    const app = window.__app, view = app.active, store = view.store;
+    const a = store.add({ k: 'free', x: 120, y: 200 }).id;
+    const b = store.add({ k: 'free', x: 320, y: 200 }).id;
+    const path = store.add({ k: 'seg', a, b }).id;
+    const savedRandom = Math.random;
+    const result = [];
+    try {
+      for (const sample of [0.25, 0.75]) {
+        Math.random = () => sample;
+        view.setSel([path]);
+        await app.exec(36924);
+        const id = view.sel[0];
+        result.push({ parent: store.get(id).def.path === path, position: store.results.get(id).shape.p });
+      }
+    } finally {
+      Math.random = savedRandom;
+    }
+    return result;
+  });
+  expect(points).toEqual([{ parent: true, position: { x: 170, y: 200 } }, { parent: true, position: { x: 270, y: 200 } }]);
+});
+
+test('参数动画按钮：在界面填写离散变化和范围，点击执行并保存为原版格式', async ({ page }) => {
+  await page.evaluate(() => {
+    const v = window.__app.active;
+    v.store.run('参数', () => {
+      const param = v.store.add({ k: 'param', name: 'p', value: 1, unit: 'none', showEdit: true }, { at: { x: 30, y: 160 } });
+      v.setSel([param.id]);
+    });
+  });
+  void exec(page, 36883);
+  await expect(dlgTitle(page)).toHaveText('动画按钮');
+  await page.getByLabel('离散', { exact: true }).check();
+  await page.getByLabel('上限', { exact: true }).fill('2');
+  await ok(page);
+  await page.evaluate(() => {
+    const app = window.__app, v = app.active;
+    app.pressButton(v, v.store.get(v.sel[0]));
+  });
+  await expect.poll(() => page.evaluate(() => window.__app.active.store.ctx.valOverride?.get(1))).toBe(2);
+  const doc = await page.evaluate(() => window.__app.active.store.doc);
+  const saved = encodeFile(doc, undefined);
+  if (!saved.ok) throw new Error(saved.reason);
+  const ob = decodeGsp(saved.bytes).doc.pages[0].objects.find(o => o.def.k === 'button');
+  if (ob?.def.k !== 'button' || ob.def.action.type !== 'animate') throw new Error('缺动画按钮');
+  expect(parameterAnimation(ob.def.action, 'none')).toMatchObject({ amount: 1, interval: 1, min: -100, max: 2, discrete: true });
+});
 
 test('变换：标记中心后旋转、缩放；标记镜面后反射；平移对话框', async ({ page }) => {
   await scene(page);
@@ -472,6 +558,50 @@ test('迭代：选两个点，面板里点画板指定初象，迭代出线段�
   void exec(page, 36949);
   await expect(page.locator('.dlg .dlg-text')).toContainText('没有依赖于所选原象');
   await ok(page);
+});
+
+test('迭代：路径初象启用位置选项，第一层使用给定位置，其余层在路径上取随机点', async ({ page }) => {
+  await page.evaluate(() => {
+    const v = window.__app.active, st = v.store;
+    st.run('场景', () => {
+      const point = (x: number, y: number) => st.add({ k: 'free', x, y }).id;
+      const src = point(100, 150);
+      st.add({ k: 'seg', a: src, b: point(100, 300) });
+      const path = st.add({ k: 'seg', a: point(200, 250), b: point(400, 250) }).id;
+      st.add({ k: 'onpath', path, t: 0.25 });
+      v.setSel([src]);
+    });
+  });
+  const box = (await page.locator('.docwin canvas').last().boundingBox())!;
+  void exec(page, 36949);
+  const structure = page.locator('.iterpanel button.iter-pop', { hasText: '结构' });
+  const relative = page.locator('.ipop .iitem', { hasText: '相对类似的位置' });
+  const random = page.locator('.ipop .iitem', { hasText: '所在对象的随机位置' });
+  await structure.click();
+  await expect(random).toHaveClass(/disabled/);
+  await page.mouse.click(box.x + 250, box.y + 250);
+  await structure.click();
+  await expect(relative.locator('.ick')).toHaveText('✓');
+  await random.click();
+  await structure.click();
+  await expect(random.locator('.ick')).toHaveText('✓');
+  await page.keyboard.press('Escape');
+  await page.locator('.iterpanel button.primary').click();
+  const result = await page.evaluate(() => {
+    const st = window.__app.active.store;
+    const iter = st.page.objects.find(o => o.def.k === 'iterate');
+    const shape = st.results.get(iter?.id)?.shape;
+    return { def: iter?.def, positions: shape?.states?.map(s => s[0].shape?.p) };
+  });
+  expect(result.def).toMatchObject({ k: 'iterate', random: true });
+  expect(result.positions).toHaveLength(3);
+  expect(result.positions[0]).toEqual({ x: 250, y: 250 });
+  for (const point of result.positions.slice(1)) {
+    expect(point.y).toBe(250);
+    expect(point.x).toBeGreaterThan(200);
+    expect(point.x).toBeLessThan(400);
+    expect(point.x).not.toBe(250);
+  }
 });
 
 test('深度迭代：按住 Shift 且最后选参数，次数取自参数；改参数后像的个数跟着变', async ({ page }) => {

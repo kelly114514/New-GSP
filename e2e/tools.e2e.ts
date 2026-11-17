@@ -67,6 +67,36 @@ test('创建新工具：选中作品 → 命名 → 菜单里出现 → 点选�
   expect(vis.at(-1)).toEqual(['seg', false]);
 });
 
+test('显式选中线段与中点，通过工具菜单创建后只需点选另一条线段', async ({ page }) => {
+  const target = await page.evaluate(() => {
+    const view = window.__app.active, st = view.store;
+    return st.run('构造', () => {
+      const side = (x: number, y: number, w: number) => {
+        const a = st.add({ k: 'free', x, y }).id, b = st.add({ k: 'free', x: x + w, y }).id;
+        return st.add({ k: 'seg', a, b }).id;
+      };
+      const input = side(150, 170, 170);
+      const mid = st.add({ k: 'mid', seg: input });
+      const other = side(450, 280, 150);
+      view.setSel([input, mid.id]);
+      return other;
+    });
+  });
+  await openCustomMenu(page);
+  await page.locator('.toolmenu > .item', { hasText: '创建新工具…' }).click();
+  await page.locator('.dlg input[type=text]').fill('线段中点');
+  await page.locator('.dlg button.primary').click();
+  await expect.poll(() => page.evaluate(() => window.__app.customTool?.inputs.map((i: any) => i.kind))).toEqual(['segment']);
+  const box = await page.locator('.docwin canvas').last().boundingBox();
+  if (!box) throw new Error('找不到绘图区');
+  await page.mouse.click(box.x + 510, box.y + 280);
+  const output = await page.evaluate(() => {
+    const st = window.__app.active.store, ob = st.page.objects.at(-1);
+    return { def: ob.def, shape: st.results.get(ob.id)?.shape };
+  });
+  expect(output).toEqual({ def: { k: 'mid', seg: target }, shape: { k: 'pt', p: { x: 525, y: 280 } } });
+});
+
 test('工具选项（文档选项的“工具”页）：列出文档里的工具并可以删除', async ({ page }) => {
   await page.evaluate(() => {
     const st = window.__app.active.store;

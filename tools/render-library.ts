@@ -1,5 +1,6 @@
 /** 用新版渲染器批量把课件画成 PNG，与原版截图（reference/raw/runtime/capture_library.py）逐个对照。
- * 用法：npx tsx tools/render-library.ts 列表.txt 原版截图目录 输出目录 [--only=序号,序号] [--overwrite] [--timeout-ms=毫秒]
+ * 用法：npx tsx tools/render-library.ts 列表.txt 原版截图目录 输出目录 [--only=序号,序号] [--overwrite] [--timeout-ms=毫秒] [--no-saved-selection] [--static-baseline=目录]
+ * 静态基准目录内与课件同编号的截图对应去掉 9000 的临时原版副本，渲染这些课件时也隐藏保存的选中状态。
  * 列表每行一个 .gsp 路径，序号与原版截图目录里的 NNNN.png、index.json 对应。视图尺寸取原版截图尺寸，缺省 1190×636。
  * 页面坐标按 1:1 画（PrintWindow 在 150% 缩放下按 96 dpi 输出）。需要开发服务器（npm run dev）在 5173 端口。
  */
@@ -14,6 +15,8 @@ const only = selection ? new Set(selection.slice('--only='.length).split(',').ma
   return Number(s);
 })) : undefined;
 const overwrite = options.includes('--overwrite');
+const savedSelection = !options.includes('--no-saved-selection');
+const staticDir = options.find(o => o.startsWith('--static-baseline='))?.slice('--static-baseline='.length);
 const initOption = options.find(o => o.startsWith('--init='));   // 每个页面加载前先执行的脚本，用于临时开关做对照实验
 const initScript = initOption?.slice('--init='.length);
 const timeoutOption = options.find(o => o.startsWith('--timeout-ms='));
@@ -41,7 +44,7 @@ for (let i = 0; i < items.length; i++) {
   const b64 = readFileSync(items[i]).toString('base64');
   const t0 = Date.now();
   try {
-    const job = page.evaluate(async ([data, W, H]) => {
+    const job = page.evaluate(async ([data, W, H, savedSel]) => {
       const P = ['/src/gsp/codec.ts', '/src/core/engine.ts', '/src/ui/render.ts', '/src/core/model.ts'];
       const { decodeFile } = await import(/* @vite-ignore */ P[0]); const { evaluatePage } = await import(/* @vite-ignore */ P[1]); const { drawPage, applyDisplay } = await import(/* @vite-ignore */ P[2]);
       const { pageDisplay } = await import(/* @vite-ignore */ P[3]);
@@ -60,12 +63,12 @@ for (let i = 0; i < items.length; i++) {
         if (pass) await new Promise(r => setTimeout(r, 400));
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = pg.background ?? prefs.background; ctx.fillRect(0, 0, c.width, c.height);
         ctx.setTransform(1, 0, 0, 1, -sc.x, -sc.y);
-        drawPage(ctx, pg, res, { selection: new Set(), hideHidden: true, view });
+        drawPage(ctx, pg, res, { selection: new Set(savedSel ? pg.savedSelection ?? [] : []), hideHidden: true, view });
       }
       let undef = 0, unsupported = 0;
       for (const r of res.values()) { if (r.status === 'undefined') undef++; else if (r.status !== 'ok') unsupported++; }
       return { png: c.toDataURL('image/png').split(',')[1], page: doc.current ?? 0, undef, unsupported };
-    }, [b64, W, H] as const);
+    }, [b64, W, H, savedSelection && !(staticDir && existsSync(join(staticDir, key + '.png')))] as const);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, rej) => { timer = setTimeout(() => rej(new Error('超时')), timeoutMs); });
     const r = await Promise.race([job, timeout]).finally(() => clearTimeout(timer));

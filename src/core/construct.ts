@@ -1,5 +1,5 @@
 /** 构造与变换：把选择转成新对象。所有函数须在 store.run 事务内调用。 */
-import { isCirc, isLine, isPt, pathPointAt, pathUsesPixelDistance, polygonEdgeAt, projectOnPath, type Shape } from './engine';
+import { isCirc, isLine, isPt, pathPointAt, pathUsesPixelDistance, polygonEdgeAt, projectOnPath, viewParamRange, type Shape } from './engine';
 import * as G from './geom';
 import type { Pt } from './geom';
 import { CM } from './expr';
@@ -33,19 +33,28 @@ export function classOf(o: Obj): ObjClass {
 
 export interface Marks {
   center?: Id; mirror?: Id; vector?: [Id, Id]; angle?: [Id, Id, Id] | { m: Id }; distance?: Id; ratio?: { segs: [Id, Id] } | { m: Id } | { pts: [Id, Id, Id] };
+  rectDistances?: [Id, Id];
+  translationMode?: TranslateBy['mode'];
 }
 
 const shape = (st: Store, id: Id): Shape | undefined => st.results.get(id)?.shape;
 export const ptOf = (st: Store, id: Id): Pt | undefined => { const s = shape(st, id); return isPt(s) ? s.p : undefined; };
 
-/** 复用已有的、父对象完全相同的对象（原版构造线段时会复用已存在的线段）。 */
-function findExisting(st: Store, def: Def, same: (o: Def) => boolean): Obj | undefined {
-  return st.page.objects.find(o => o.def.k === def.k && same(o.def));
+type ReusableConstruction = Extract<Def, { k: 'seg' | 'ray' | 'line' | 'mid' | 'parallel' | 'perp' | 'circle' | 'circle-seg' | 'arc-circle' | 'arc3' }>;
+
+/** 按父对象复用原版构造；线段和直线接受反向的两点顺序。 */
+export function constructOnce(st: Store, def: ReusableConstruction, recompute = true): Obj {
+  const refs = parentsOf(def), unordered = def.k === 'seg' || def.k === 'line';
+  const existing = st.page.objects.find(o => {
+    if (o.def.k !== def.k) return false;
+    const other = parentsOf(o.def);
+    return other.every((id, i) => id === refs[i]) || unordered && other[0] === refs[1] && other[1] === refs[0];
+  });
+  return existing ?? st.add(def, {}, recompute);
 }
 
 export function addSegmentLike(st: Store, kind: 'seg' | 'ray' | 'line', a: Id, b: Id): Obj {
-  const have = findExisting(st, { k: kind, a, b }, d => d.k === kind && (d as { a: Id; b: Id }).a === a && (d as { a: Id; b: Id }).b === b);
-  return have ?? st.add({ k: kind, a, b });
+  return constructOnce(st, { k: kind, a, b });
 }
 
 /** 选中 ≥2 个点：2 个点连一条，3 个以上首尾相接成闭合链。返回涉及的对象。 */
@@ -59,18 +68,49 @@ export function constructLines(st: Store, kind: 'seg' | 'ray' | 'line', points: 
   return out;
 }
 
-export function constructMidpoints(st: Store, segs: Id[]): Obj[] { return segs.map(s => st.add({ k: 'mid', seg: s })); }
+export function constructMidpoints(st: Store, segs: Id[]): Obj[] { return segs.map(s => constructOnce(st, { k: 'mid', seg: s })); }
 
-/** 两个路径当前所有交点（按分支顺序）；返回新建的点。 */
+function pointsOnDefiningPath(def: Def | undefined): Id[] {
+  switch (def?.k) {
+    case 'seg': case 'ray': case 'line': return [def.a, def.b];
+    case 'parallel': case 'perp': return [def.pt];
+    case 'bisect': return [def.v];
+    case 'circle': return [def.p];
+    case 'arc3': return [def.a, def.b, def.c];
+    default: return [];
+  }
+}
+
+/** 两个路径当前所有交点（按分支顺序），含可直接复用的共用点。 */
 export function constructIntersections(st: Store, a: Id, b: Id): Obj[] {
+  const secondPoints = pointsOnDefiningPath(st.get(b)?.def);
+  const shared = pointsOnDefiningPath(st.get(a)?.def).filter(id => secondPoints.includes(id));
+  const unique = isLine(shape(st, a)) && isLine(shape(st, b));
   const out: Obj[] = [];
+  const samePoint = (p: Pt, q: Pt | undefined) => p.x === q?.x && p.y === q?.y;
   for (let branch = 0; branch < 2; branch++) {
+    const existing = st.page.objects.find(o => {
+      const d = o.def;
+      return d.k === 'inter' && d.branch === branch && !d.alternate &&
+        (d.a === a && d.b === b || unique && d.a === b && d.b === a);
+    });
+    const first = out.length ? ptOf(st, out[0].id) : undefined;
+    const known = existing && ptOf(st, existing.id);
+    if (known && !samePoint(known, first)) {
+      out.push(existing);
+      continue;
+    }
     const probe = st.add({ k: 'inter', a, b, branch });
-    const current = shape(st, probe.id), first = out[0] && shape(st, out[0].id);
-    // 相切时两条分支都可求值，但新建交点只建一个。
-    const same = isPt(current) && isPt(first) && current.p.x === first.p.x && current.p.y === first.p.y;
-    if (st.results.get(probe.id)?.status === 'ok' && !same) out.push(probe);
-    else { st.page.objects.pop(); st.page.nextId--; st.recompute(); break; }
+    const p = ptOf(st, probe.id);
+    const duplicate = p && samePoint(p, first);
+    const reusedId = p && shared.find(id => { const q = ptOf(st, id); return q && G.dist(p, q) <= G.EPS; });
+    if (p && !duplicate && reusedId === undefined) out.push(probe);
+    else {
+      st.page.objects.pop();
+      st.page.nextId--;
+      st.recompute();
+      if (reusedId !== undefined && !duplicate) out.push(st.get(reusedId)!);
+    }
   }
   return out;
 }
@@ -88,10 +128,10 @@ export function intersectionCount(st: Store, a: Id, b: Id): number {
   return n;
 }
 
-export function constructParallelPerp(st: Store, kind: 'parallel' | 'perp', pt: Id, line: Id): Obj { return st.add({ k: kind, pt, line }); }
+export function constructParallelPerp(st: Store, kind: 'parallel' | 'perp', pt: Id, line: Id): Obj { return constructOnce(st, { k: kind, pt, line }); }
 export function constructBisector(st: Store, a: Id, v: Id, b: Id): Obj { return st.add({ k: 'bisect', a, v, b }); }
 
-/** "对象上的点"：在路径上取一个默认位置建立依附点。 */
+/** “对象上的点”在路径上随机取点，工具单击沿用指针投影。 */
 export function constructPointOnPath(st: Store, pathId: Id, at?: Pt): Obj | undefined {
   const path = shape(st, pathId);
   if (!path) return undefined;
@@ -102,7 +142,17 @@ export function constructPointOnPath(st: Store, pathId: Id, at?: Pt): Obj | unde
     if (pr.side) return st.add({ k: 'onpath', path: pathId, t: pr.side.t, edge: pr.side.edge });
     t = pr.t; abs = !!pr.abs;
   }
-  else t = path.k === 'circle' || path.k === 'disk' ? Math.PI * 0.8 : path.k === 'line' ? (path.s.ext === 'segment' ? 0.5 : 0.5) : path.k === 'poly' ? 0.1 : 0.5;
+  else {
+    const pos = Math.random();
+    t = path.k === 'circle' || path.k === 'disk' ? pos * G.TAU : pos;
+    if (path.k === 'line' && path.s.ext !== 'segment' && st.ctx.view) {
+      const range = viewParamRange(path.s, st.ctx.view, 0);
+      if (range) {
+        const lo = path.s.ext === 'ray' ? Math.max(0, range[0]) : range[0];
+        if (range[1] > lo) t = lo + (range[1] - lo) * pos;
+      }
+    }
+  }
   if (path.k === 'poly') {
     const side = polygonEdgeAt(path.pts, t);
     return st.add({ k: 'onpath', path: pathId, t: side.t, edge: side.edge });
@@ -113,7 +163,7 @@ export function constructPointOnPath(st: Store, pathId: Id, at?: Pt): Obj | unde
 }
 
 /** 圆上的弧：两个点必须在圆周上（或依附于圆）。 */
-export function constructArcOnCircle(st: Store, circle: Id, a: Id, b: Id): Obj { return st.add({ k: 'arc-circle', circle, a, b }); }
+export function constructArcOnCircle(st: Store, circle: Id, a: Id, b: Id): Obj { return constructOnce(st, { k: 'arc-circle', circle, a, b }); }
 
 export function constructInterior(st: Store, sel: Obj[]): Obj[] {
   const points = sel.filter(o => classOf(o) === 'point');
@@ -144,7 +194,7 @@ function isPicture(page: Page, id: Id): boolean {
 }
 
 /** 对一组对象做变换：点直接变换，线/圆/多边形先变换其定义点再按原类型重建。 */
-export function transformObjects(st: Store, ids: Id[], mk: (src: Id) => Def | Id): Obj[] {
+export function transformObjects(st: Store, ids: Id[], mk: (src: Id) => Def | Id, builtIn = false): Obj[] {
   const memo = new Map<Id, Id>(), created: Obj[] = [];
   const imgPoint = (id: Id): Id => {
     const m = memo.get(id); if (m !== undefined) return m;
@@ -160,6 +210,7 @@ export function transformObjects(st: Store, ids: Id[], mk: (src: Id) => Def | Id
     const d = o.def;
     let nd: Def | undefined;
     if (isPicture(st.page, id)) return imgPoint(id);
+    if (builtIn && (d.k === 'arc-center' || d.k === 'arc-int' || d.k === 'bisect' || d.k === 'parallel' || d.k === 'perp')) return imgPoint(id);
     if (isPointDef(d)) return imgPoint(id);
     if (d.k === 'seg' || d.k === 'ray' || d.k === 'line') nd = { k: d.k, a: imgPoint(d.a), b: imgPoint(d.b) };
     else if (d.k === 'circle') nd = { k: 'circle', c: imgPoint(d.c), p: imgPoint(d.p) };
@@ -229,10 +280,10 @@ export function marksUsable(st: Store, m: Marks): { center: boolean; mirror: boo
   };
 }
 
-export function translateBy(st: Store, ids: Id[], by: TranslateBy) { return transformObjects(st, ids, src => ({ k: 'translate', src, by })); }
-export function rotateBy(st: Store, ids: Id[], center: Id, angle: AngleBy) { return transformObjects(st, ids, src => ({ k: 'rotate', src, center, angle })); }
-export function dilateBy(st: Store, ids: Id[], center: Id, ratio: RatioBy) { return transformObjects(st, ids, src => ({ k: 'dilate', src, center, ratio })); }
-export function reflectBy(st: Store, ids: Id[], mirror: Id) { return transformObjects(st, ids, src => ({ k: 'reflect', src, mirror })); }
+export function translateBy(st: Store, ids: Id[], by: TranslateBy) { return transformObjects(st, ids, src => ({ k: 'translate', src, by }), true); }
+export function rotateBy(st: Store, ids: Id[], center: Id, angle: AngleBy) { return transformObjects(st, ids, src => ({ k: 'rotate', src, center, angle }), true); }
+export function dilateBy(st: Store, ids: Id[], center: Id, ratio: RatioBy) { return transformObjects(st, ids, src => ({ k: 'dilate', src, center, ratio }), true); }
+export function reflectBy(st: Store, ids: Id[], mirror: Id) { return transformObjects(st, ids, src => ({ k: 'reflect', src, mirror }), true); }
 
 // ---------------- 坐标系与度量 ----------------
 /** 页面上第一个坐标系；没有则返回 undefined。 */
@@ -257,7 +308,7 @@ export function setGridStyle(st: Store, sys: Obj, grid: 'square' | 'rect' | 'pol
   const uy = st.get(sys.def.unitY), ux = st.get(sys.def.unitX), two = grid === 'rect' || grid === 'tri';
   st.update(sys.id, { ...sys.def, grid, showGrid: true });
   if (uy) uy.hidden = !two;
-  if (!two && ux?.def.k === 'translate' && ux.def.by.mode === 'rect' && uy?.def.k === 'translate' && uy.def.by.mode === 'rect') st.update(uy.id, { ...uy.def, by: { ...uy.def.by, dy: ux.def.by.dx } });
+  if (!two && ux?.def.k === 'translate' && ux.def.by.mode === 'rect' && uy?.def.k === 'translate' && uy.def.by.mode === 'rect') st.update(uy.id, { ...uy.def, by: { ...uy.def.by, dy: ux.def.by.dx, dyPx: ux.def.by.dxPx } });
 }
 
 /** 坐标系的单位点拖动：沿所在坐标轴改变单位长度。返回 false 表示这个点不是可拖的单位点。 */
@@ -268,14 +319,14 @@ export function dragSysUnit(st: Store, sys: Obj, unit: Id, p: Pt): boolean {
   const MIN = 0.05, two = d.grid === 'rect' || d.grid === 'tri';
   if (unit === d.unitX) {
     const dx = Math.max(MIN, (p.x - org.x) / CM);
-    st.update(ux.id, { ...ux.def, by: { ...ux.def.by, dx } });
-    if (!two) st.update(uy.id, { ...uy.def, by: { ...uy.def.by, dy: dx } });
+    st.update(ux.id, { ...ux.def, by: { ...ux.def.by, dx, dxPx: undefined } });
+    if (!two) st.update(uy.id, { ...uy.def, by: { ...uy.def.by, dy: dx, dyPx: undefined } });
     return true;
   }
   if (unit === d.unitY) {
     const dy = Math.max(MIN, (org.y - p.y) / CM);
-    st.update(uy.id, { ...uy.def, by: { ...uy.def.by, dy } });
-    if (!two) st.update(ux.id, { ...ux.def, by: { ...ux.def.by, dx: dy } });
+    st.update(uy.id, { ...uy.def, by: { ...uy.def.by, dy, dyPx: undefined } });
+    if (!two) st.update(ux.id, { ...ux.def, by: { ...ux.def.by, dx: dy, dxPx: undefined } });
     return true;
   }
   return false;

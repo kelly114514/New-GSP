@@ -2,6 +2,8 @@
 import { remapDef } from '../core/remap';
 import { evaluateTargets } from '../core/engine';
 import { normalizeRuns } from '../core/text-runs';
+import { cmToPx } from '../core/expr';
+import { originalFontName } from './fonts';
 import { DEFAULT_DISPLAY, TEXT_DEFAULTS, defaultValueDisplay, isPointDef, pageAutoSnap, pageDisplay, type DisplayPrefs, type Doc, type Obj, type Page, type TextCat } from '../core/model';
 
 export interface ContentDifference { path: string; before: unknown; after: unknown }
@@ -17,11 +19,23 @@ export function describeDifference(path: string): string {
 
 function objectContent(o: Obj, page: Page, ids: Map<number, number>) {
   const def = remapDef(o.def, ids);
+  if (def.k === 'translate') {
+    const by = def.by;
+    if (by.mode === 'rect') {
+      if (by.dxBy === undefined) by.dxPx ??= cmToPx(by.dx);
+      if (by.dyBy === undefined) by.dyPx ??= cmToPx(by.dy);
+      by.dx = 0;
+      by.dy = 0;
+    } else if (by.mode === 'polar' && 'fixed' in by.dist) {
+      by.distPx ??= cmToPx(by.dist.fixed);
+      by.dist.fixed = 0;
+    }
+  }
   if (def.k === 'text') {
     // 连续的同字体片段与合并后的片段显示完全相同；无效的旧公式缓存不参与显示。
     if (def.runs) {
-      const runs = normalizeRuns(def.runs);
-      if (!runs.length || (runs.length === 1 && JSON.stringify(runs[0].font) === JSON.stringify(def.font) && runs[0].text === def.text)) delete def.runs;
+      const runs = normalizeRuns(def.runs.map(r => ({ ...r, font: { ...r.font, name: originalFontName(r.font.name) } })));
+      if (!runs.length || (runs.length === 1 && JSON.stringify(runs[0].font) === JSON.stringify({ ...def.font, name: originalFontName(def.font.name) }) && runs[0].text === def.text)) delete def.runs;
       else def.runs = runs;
     }
     if (def.mathText !== def.text) { delete def.math; delete def.mathText; }
@@ -36,7 +50,7 @@ function objectContent(o: Obj, page: Page, ids: Map<number, number>) {
   if (def.k === 'text' && def.anchor !== undefined && def.off) def.at = { x: 0, y: 0 };
   let base = o;
   const seen = new Set<number>();
-  while (['translate', 'rotate', 'dilate', 'reflect'].includes(base.def.k) && 'src' in base.def && !seen.has(base.id)) {
+  while (['translate', 'rotate', 'dilate', 'reflect', 'colorize'].includes(base.def.k) && 'src' in base.def && !seen.has(base.id)) {
     seen.add(base.id);
     const parent = page.objects.find(p => p.id === (base.def as { src: number }).src);
     if (!parent) break;
@@ -50,6 +64,7 @@ function objectContent(o: Obj, page: Page, ids: Map<number, number>) {
   const style = { ...(def.k === 'text' ? {} : { color: o.style.color }), ...(point ? { pointSize: o.style.pointSize } : {}), ...(line ? { width: o.style.width, dash: o.style.dash } : {}), ...(region ? { fillAlpha: Math.round((o.style.fillAlpha ?? 0.5) * 255) / 255 } : {}) };
   const { id: _id, src: _src, style: _style, def: _def, ...rest } = o;
   const content = { ...rest, label: o.label ?? (def.k === 'param' || def.k === 'func' ? def.name : undefined), trace: !!o.trace, unselectable: !!o.unselectable, def, style };
+  if (def.k === 'button') content.at ??= def.at;
   if (def.k === 'calc' || def.k === 'measure') content.valueDisplay ??= defaultValueDisplay(o);
   if (content.colorBy) content.colorBy = { ...content.colorBy, param: ids.get(content.colorBy.param) ?? content.colorBy.param };
   return content;
@@ -62,7 +77,7 @@ export function documentContent(doc: Doc): unknown {
     settings: { ...doc.settings, display: doc.pages[0] ? pageDisplay(doc, doc.pages[0]) : { ...DEFAULT_DISPLAY, ...doc.settings.display } }, paper: doc.paper, tools: doc.tools ?? [],
     pages: doc.pages.map(page => {
       const ids = new Map(page.objects.map((o, i) => [o.id, i + 1]));
-      return { name: page.name, labelCounter: page.labelCounter, autoSnap: pageAutoSnap(page), display: pageDisplay(doc, page), transforms: (page.transforms ?? []).map(t => ({ ...t, src: ids.get(t.src) ?? t.src, img: ids.get(t.img) ?? t.img })), startupButtons: (page.startupButtons ?? []).map(id => ids.get(id) ?? id), objects: page.objects.map(o => objectContent(o, page, ids)) };
+      return { name: page.name, labelCounter: page.labelCounter, autoSnap: pageAutoSnap(page), display: pageDisplay(doc, page), transforms: (page.transforms ?? []).map(t => ({ ...t, src: ids.get(t.src) ?? t.src, img: ids.get(t.img) ?? t.img })), savedSelection: (page.savedSelection ?? []).map(id => ids.get(id) ?? id), objects: page.objects.map(o => objectContent(o, page, ids)) };
     }),
   };
 }
@@ -92,6 +107,7 @@ export function compareContent(before: Doc, after: Doc): ContentDifference[] {
   };
   function walk(a: unknown, b: unknown, path: string) {
     if (Object.is(a, b)) return;
+    if (path.endsWith('.font.name') && typeof a === 'string' && typeof b === 'string' && originalFontName(a) === originalFontName(b)) return;
     // 显示精度未指定时编码写默认值，读回后有值不算丢失。
     // 原版字号以整数保存；只容忍整数取整引入的半像素差。
     if (path.endsWith('.font.size') && typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) <= 0.5) return;
@@ -108,7 +124,7 @@ export function compareContent(before: Doc, after: Doc): ContentDifference[] {
           const entries = Object.entries(style ?? {}).filter(([key, value]) => {
             const inherited = cat === 'label' && key === 'italic' ? (prefs.mathItalic ?? DEFAULT_DISPLAY.mathItalic) : defaults?.[key];
             return value !== undefined && value !== inherited;
-          }).sort(([a], [b]) => a.localeCompare(b));
+          }).map(([key, value]) => [key, key === 'name' && typeof value === 'string' ? originalFontName(value) : value]).sort(([a], [b]) => String(a).localeCompare(String(b)));
           if (entries.length) styles[cat] = Object.fromEntries(entries);
         }
         return JSON.stringify({ ...DEFAULT_DISPLAY, ...prefs, textStyles: styles });

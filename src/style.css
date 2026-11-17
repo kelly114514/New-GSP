@@ -112,6 +112,10 @@ html, body { height: 100%; margin: 0; overflow: hidden; font: 13px 'Segoe UI', '
 .objchecks { display: flex; justify-content: center; gap: 24px; }
 .dlg .fraction { display: inline-flex; flex-direction: column; align-items: center; margin-top: 6px; }
 .dlg .fraction hr { width: 76px; margin: 3px 0; border: 0; border-top: 1px solid #333; }
+.dlg .transform-fixed { text-align: center; }
+.dlg .transform-fixed .row { justify-content: center; }
+.dlg .transform-ref { text-align: center; padding: 8px 0; }
+.dlg .transform-center .tgt { min-width: 0; padding: 0; border: 0; background: none; font-style: italic; }
 .pbox { min-width: 78px; min-height: 32px; border: 1px solid #999; background: #fff; font-style: italic; padding: 2px 8px; }
 .pbox.on { background: #ffd0d0; border-color: #c66; }
 .pc-row { font-size: 15px; }

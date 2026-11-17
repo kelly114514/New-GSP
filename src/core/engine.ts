@@ -2,7 +2,7 @@
 import * as G from './geom';
 import type { Pt, Straight, Circ } from './geom';
 import { byId, type Def, type DisplayPrefs, type Id, type Num, type Obj, type Page, parentsOf, descendants } from './model';
-import { CM, derive, evalExpr, isRadianMode, q, setRadianMode, usesX, type EvalEnv, type Expr, type Q } from './expr';
+import { CM, cmToPx, derive, evalExpr, isRadianMode, q, setRadianMode, usesX, type EvalEnv, type Expr, type Q } from './expr';
 import { parameterColor } from './color';
 import { imageBox, imageCorners } from './image';
 import { warpBounds, warpCells, warpGrid, warpVertex, type WarpMesh } from './warp';
@@ -20,7 +20,7 @@ export type Shape =
   | { k: 'num'; q: Q }
   | { k: 'coords'; x: number; y: number }
   | { k: 'text'; text: string; eq?: { kind: 'line'; vertical: boolean; m: number; b: number; x: number } | { kind: 'circle'; cx: number; cy: number; r: number } }
-  | { k: 'paths'; paths: Pt[][]; colors?: (string | undefined)[][]; parameters?: number[][] }
+  | { k: 'paths'; paths: Pt[][]; colors?: (string | undefined)[][]; parameters?: number[][]; arrows?: [Pt, Pt][] }
   | { k: 'sys'; origin: Pt; ux: Pt; uy: Pt }
   | { k: 'func'; heightPaths?: Pt[][] }
   | { k: 'table'; cols: { name: string; unit: string }[]; rows: number[][]; intFirst?: boolean }
@@ -175,10 +175,10 @@ export function systemUnit(s: Extract<Shape, { k: 'sys' }>) { return s; }
 export function toSys(sys: Extract<Shape, { k: 'sys' }>, p: Pt): { x: number; y: number } | undefined {
   const d = G.sub(p, sys.origin), ux = sys.ux, uy = sys.uy, det = G.cross(ux, uy);
   if (Math.abs(det) < G.EPS) return undefined;
-  return { x: G.cross(d, uy) / det, y: G.cross(ux, d) / det };
+  return { x: G.systemCoordinate(d.x, d.y, ux.x, ux.y, uy.x, uy.y, det, true), y: G.systemCoordinate(d.x, d.y, ux.x, ux.y, uy.x, uy.y, det, false) };
 }
 export function fromSys(sys: Extract<Shape, { k: 'sys' }>, x: number, y: number): Pt {
-  return { x: sys.origin.x + sys.ux.x * x + sys.uy.x * y, y: sys.origin.y + sys.ux.y * x + sys.uy.y * y };
+  return { x: G.systemPosition(sys.origin.x, x, sys.ux.x, y, sys.uy.x), y: G.systemPosition(sys.origin.y, x, sys.ux.y, y, sys.uy.y) };
 }
 
 /** 路径上的点：参数到坐标。 */
@@ -328,12 +328,12 @@ export function projectToPath(path: Shape | undefined, p: Pt): { t: number; p: P
   return undefined;
 }
 
-export function sampleFunction(f: (x: number) => number | undefined, x0: number, x1: number, n: number, toPt: (x: number, y: number) => Pt, clipY: [number, number]): Pt[][] {
+export function sampleFunction(f: (x: number) => number | undefined, x0: number, x1: number, n: number, toPt: (x: number, y: number) => Pt, clipY: [number, number], first = 0, lastIndex = n, stride = 1): Pt[][] {
   const paths: Pt[][] = [];
   let cur: Pt[] = [];
   let last: number | undefined;
   const [y0, y1] = clipY;
-  for (let i = 0; i <= n; i++) {
+  for (let i = first; i <= lastIndex; i += stride) {
     const x = x0 + ((x1 - x0) * i) / n, y = f(x);
     if (y === undefined || !Number.isFinite(y)) { if (cur.length > 1) paths.push(cur); cur = []; last = undefined; continue; }
     // 渐近线附近的陡变：跨过很大的 y 跳变时断开，避免错误连线
@@ -358,12 +358,17 @@ function transformOf(d: Def, get: Get, page: Page): TMap | undefined {
       if (by.mode === 'rect') {
         const dx = by.dxBy !== undefined ? qOf(get, by.dxBy)?.v : by.dx, dy = by.dyBy !== undefined ? qOf(get, by.dyBy)?.v : by.dy;
         if (dx === undefined || dy === undefined) return undefined;
-        return { f: p => ({ x: p.x + dx * CM, y: p.y - dy * CM }), scale: 1, flip: false };
+        const px = (by.dxBy === undefined ? by.dxPx : undefined) ?? cmToPx(dx);
+        const py = (by.dyBy === undefined ? by.dyPx : undefined) ?? cmToPx(dy);
+        return { f: p => ({ x: p.x + px, y: p.y - py }), scale: 1, flip: false };
       }
-      const dist = numOf(get, by.dist), ang = numOf(get, by.angle);
+      const dist = numOf(get, by.dist);
+      const marker = 'marker' in by.angle ? byId(page, by.angle.m)?.def : undefined;
+      const ang = 'marker' in by.angle ? (marker?.k === 'angle-mark' ? markedSweep(marker, get) : undefined) : numOf(get, by.angle);
       if (dist === undefined || ang === undefined) return undefined;
       const rad = (ang * Math.PI) / 180;
-      return { f: p => ({ x: p.x + dist * CM * Math.cos(rad), y: p.y - dist * CM * Math.sin(rad) }), scale: 1, flip: false };
+      const px = by.distPx ?? cmToPx(dist);
+      return { f: p => ({ x: p.x + px * Math.cos(rad), y: p.y - px * Math.sin(rad) }), scale: 1, flip: false };
     }
     case 'rotate': {
       const c = pointOf(get, d.center); if (!c) return undefined;
@@ -587,18 +592,23 @@ function evalIterate(d: IterDef, get: Get, page: Page, ctx: EvalCtx, results: Re
 
   let states: Result[][] = [pre], total = 0, capped = false;
   const shown: Result[][] = [], chain: Result[][] = [];
-  // 原版迭代对话框的“到随机位置”：前像中的路径点每一层取路径上的随机位置（IFS-五角繁星的三种作法.gsp、谢氏（随机）.gsp 的随机选择，
-  // 原版画出五角繁星和谢尔宾斯基三角形）。随机序列用迭代记录里的种子，结果稳定，但与原版的序列不同。
-  const randomPaths = d.pre.map((preId, i) => {
-    // 前像是路径点时它取随机位置；前像是自由点而初象（映射目标）是路径点时，随机位置落在初象上（仿射-分形蕨.gsp 的随机选择）。
-    let ob = byId(page, preId);
-    if (d.random && ob?.def.k !== 'onpath') { const target = byId(page, d.maps[0]?.[i]); if (target?.def.k === 'onpath') ob = target; }
-    if (!d.random || ob?.def.k !== 'onpath') return undefined;
-    const pathId = ob.def.path, path = sh(get, pathId);
-    // 路径依赖迭代里的前像或体内对象时（0813 蒲丰投针：针尖所在圆的圆心由本层同时随机选出的两个点决定），每次随机取点前要在本层的状态下重算路径。
-    const live = d.pre.includes(pathId) || d.body.includes(pathId);
-    return path ? { path, pathId, live, ...randomRange(path) } : undefined;
+  // 已用原版核验的独立初象先取给定位置，后续每条映射在自己的路径上选点。
+  const independentImages = d.random && d.pre.length === 1 && d.maps.every(([id]) => {
+    const def = byId(page, id)?.def;
+    return id !== d.pre[0] && !d.body.includes(id) && (def?.k === 'onpath' || def?.k === 'free');
   });
+  const randomPaths = independentImages ? new Map(d.maps.map(map => [map, map.map(id => {
+    const def = byId(page, id)?.def;
+    return def?.k === 'onpath' ? def.path : undefined;
+  })])) : undefined;
+  // 多原象、依赖型和自映射保留随状态移动原象的行为，覆盖投针及已有随机分形课件。
+  const sourcePaths = d.random && !independentImages ? d.pre.map((id, i) => {
+    const pre = byId(page, id)?.def, first = byId(page, d.maps[0]?.[i])?.def;
+    const pathId = pre?.k === 'onpath' ? pre.path : first?.k === 'onpath' ? first.path : undefined;
+    if (pathId === undefined) return undefined;
+    const path = sh(get, pathId);
+    return path ? { pathId, path, live: d.pre.includes(pathId) || d.body.includes(pathId) } : undefined;
+  }) : undefined;
   let seed = (d.salt ?? 0x2f5f5538) >>> 0;
   const rnd = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   for (let level = 0; level <= depth && states.length; level++) {
@@ -612,15 +622,16 @@ function evalIterate(d: IterDef, get: Get, page: Page, ctx: EvalCtx, results: Re
       for (const mp of d.maps) {
         const ns: Result[] = [];
         for (let i = 0; i < mp.length; i++) {
-          const rp = randomPaths[i];
-          if (!rp) { ns.push(g(mp[i])); continue; }
-          let { path, circle, lo, hi } = rp;
-          if (rp.live) {
-            // 本层前面已挑好的随机前像替换进状态，再求这个前像的路径。
-            const partial = st.map((r, j) => (j < i && randomPaths[j] ? ns[j] : r));
-            const live = sh(underState(d, partial, get, page, ctx, results), rp.pathId);
-            if (live) ({ path, circle, lo, hi } = { path: live, ...randomRange(live) });
+          const pathId = level > 0 ? randomPaths?.get(mp)?.[i] : undefined;
+          const source = sourcePaths?.[i];
+          if (pathId === undefined && !source) { ns.push(g(mp[i])); continue; }
+          let path = pathId !== undefined ? sh(g, pathId) : source?.path;
+          if (source?.live) {
+            const partial = st.map((r, j) => j < i && sourcePaths?.[j] ? ns[j] : r);
+            path = sh(underState(d, partial, get, page, ctx, results), source.pathId) ?? path;
           }
+          if (!path) { ns.push(UNDEF); continue; }
+          const { circle, lo, hi } = randomRange(path);
           const u = rnd(), p = pathPointAt(path, circle ? u * G.TAU : lo + (hi - lo) * u);
           ns.push(p ? OK({ k: 'pt', p }) : UNDEF);
         }
@@ -1624,9 +1635,9 @@ function evalLocus(d: Extract<Def, { k: 'locus' }>, o: Obj, page: Page, get: Get
   }
   return paths.some(p => p.length > 1) ? OK({ k: 'paths', paths, ...(colors.some(p => p.some(Boolean)) ? { colors } : {}) }) : UNDEF;
 }
-/** 直线参数（a→b 为 0→1）在视图外扩半个视图的矩形内的范围。 */
-function viewParamRange(s: Straight, v: NonNullable<EvalCtx['view']>): [number, number] | undefined {
-  const mx = (v.x1 - v.x0) / 2, my = (v.y1 - v.y0) / 2, r = { x0: v.x0 - mx, y0: v.y0 - my, x1: v.x1 + mx, y1: v.y1 + my };
+/** 以 a→b 为 0→1，求直线在矩形内的参数区间。 */
+export function viewParamRange(s: Straight, v: NonNullable<EvalCtx['view']>, margin = 0.5): [number, number] | undefined {
+  const mx = (v.x1 - v.x0) * margin, my = (v.y1 - v.y0) * margin, r = { x0: v.x0 - mx, y0: v.y0 - my, x1: v.x1 + mx, y1: v.y1 + my };
   const dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
   let t0 = -Infinity, t1 = Infinity;
   for (const [p, q] of [[-dx, s.a.x - r.x0], [dx, r.x1 - s.a.x], [-dy, s.a.y - r.y0], [dy, r.y1 - s.a.y]] as const) {
@@ -1644,24 +1655,33 @@ function dependsChain(page: Page, id: Id): Set<Id> {
   return out;
 }
 
+function plotSysCorners(sys: Extract<Shape, { k: 'sys' }>, view = { x0: 0, y0: 0, x1: 1200, y1: 800 }): Pt[] {
+  return [{ x: view.x0, y: view.y0 }, { x: view.x1, y: view.y0 }, { x: view.x0, y: view.y1 }, { x: view.x1, y: view.y1 }]
+    .map(c => toSys(sys, c)).filter((p): p is Pt => !!p);
+}
+
+export function initialPlotDomain(sys: Shape | undefined, view: EvalCtx['view'], sideways: boolean) {
+  if (sys?.k !== 'sys') return undefined;
+  const axis = sideways ? 'y' : 'x';
+  const values = plotSysCorners(sys, view).map(c => c[axis]);
+  if (values.length) return { lo: Math.min(...values), hi: Math.max(...values) };
+  return undefined;
+}
+
 function evalPlot(d: Extract<Def, { k: 'plot' }>, get: Get, page: Page, ctx: EvalCtx): Result {
   const sysShape = sh(get, d.sys);
   if (sysShape?.k !== 'sys' || get(d.func).status !== 'ok') return UNDEF;
-  const view = ctx.view ?? { x0: 0, y0: 0, x1: 1200, y1: 800 };
-  const corners = [{ x: view.x0, y: view.y0 }, { x: view.x1, y: view.y0 }, { x: view.x0, y: view.y1 }, { x: view.x1, y: view.y1 }].map(c => toSys(sysShape, c)).filter(Boolean) as { x: number; y: number }[];
+  const corners = plotSysCorners(sysShape, ctx.view);
   if (!corners.length) return UNDEF;
   const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
   const fd = byId(page, d.func)?.def, form = fd?.k === 'func' ? fd.form : undefined;
   const value = functionValue(get, page, d.func);
-  if (form === 'x=f(y)') {
-    const m = Math.max(200, Math.min(4000, d.samples));
-    const lo = d.lo ?? Math.min(...ys), hi = d.hi ?? Math.max(...ys);
-    return OK({ k: 'paths', paths: sampleFunction(value, lo, hi, m, (y, x) => fromSys(sysShape, x, y), [Math.min(...xs), Math.max(...xs)]) });
-  }
+  const intervals = Math.max(1, Math.min(0xfffffffe, Math.floor(d.samples) - 1));
+  const maxEvaluations = 100_000;
   if (form === 'r=f(t)' || form === 't=f(r)') {
     // 极坐标：角度按度；r=f(θ) 扫一整圈，θ=f(r) 的 r 扫到视图最远的角
     const far = Math.max(...corners.map(c => Math.hypot(c.x, c.y)));
-    const m = Math.max(360, Math.min(4000, d.samples)), paths: G.Pt[][] = []; let cur: G.Pt[] = [];
+    const m = Math.min(intervals, maxEvaluations), paths: G.Pt[][] = []; let cur: G.Pt[] = [];
     for (let i = 0; i <= m; i++) {
       const u = form === 'r=f(t)' ? (i / m) * 360 : (i / m) * far, w = value(u);
       if (w === undefined) { if (cur.length > 1) paths.push(cur); cur = []; continue; }
@@ -1671,10 +1691,27 @@ function evalPlot(d: Extract<Def, { k: 'plot' }>, get: Get, page: Page, ctx: Eva
     if (cur.length > 1) paths.push(cur);
     return OK({ k: 'paths', paths });
   }
-  const lo = d.lo ?? Math.min(...xs), hi = d.hi ?? Math.max(...xs);
-  const n = Math.max(200, Math.min(4000, Math.round(d.samples * Math.max(1, (view.x1 - view.x0) / 600))));
-  const paths = sampleFunction(value, lo, hi, n, (x, y) => fromSys(sysShape, x, y), [Math.min(...ys), Math.max(...ys)]);
-  return OK({ k: 'paths', paths });
+  const sideways = form === 'x=f(y)', along = sideways ? ys : xs, across = sideways ? xs : ys;
+  const visibleMin = Math.min(...along), visibleMax = Math.max(...along);
+  const lo = d.lo ?? visibleMin, hi = d.hi ?? visibleMax;
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || !Number.isFinite(intervals) || !(hi > lo)) return UNDEF;
+  const toPoint = (u: number, v: number) => sideways ? fromSys(sysShape, v, u) : fromSys(sysShape, u, v);
+  // 裁切时保留定义域上的原采样网格，并多取两个点以绘制跨越视口边缘的线段。
+  const spacing = (hi - lo) / intervals;
+  const clip = !!ctx.view && intervals > 4000 && !page.objects.some(o => o.def.k === 'onpath' && byId(page, o.def.path)?.def === d);
+  const first = clip ? Math.max(0, Math.floor((visibleMin - lo) / spacing) - 2) : 0;
+  const last = clip ? Math.min(intervals, Math.ceil((visibleMax - lo) / spacing) + 2) : intervals;
+  const stride = Math.max(1, Math.ceil((last - first) / maxEvaluations));
+  const paths = sampleFunction(value, lo, hi, intervals, toPoint, [Math.min(...across), Math.max(...across)], first, last, stride);
+  if (d.endpointMark === 0) return OK({ k: 'paths', paths });
+  const arrows: [Pt, Pt][] = [];
+  const tangent = Math.min(spacing, (hi - lo) / 100);
+  for (const [end, inner] of [[d.lo, lo + tangent], [d.hi, hi - tangent]] as const) {
+    if (end === undefined || end < visibleMin || end > visibleMax) continue;
+    const a = value(end), b = value(inner);
+    if (a !== undefined && b !== undefined && Number.isFinite(a) && Number.isFinite(b)) arrows.push([toPoint(end, a), toPoint(inner, b)]);
+  }
+  return OK({ k: 'paths', paths, ...(arrows.length ? { arrows } : {}) });
 }
 
 function evalPcurvePoint(d: Extract<Def, { k: 'pcurve' }>, get: Get, page: Page, u: number): Pt | undefined {

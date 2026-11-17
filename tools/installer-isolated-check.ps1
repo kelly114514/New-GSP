@@ -12,6 +12,10 @@ $shortcuts = @((Join-Path ([Environment]::GetFolderPath('Desktop')) "$name.lnk")
 if (Test-Path -LiteralPath $base) { throw '临时路径已存在' }
 foreach ($shortcut in $shortcuts) { if (Test-Path -LiteralPath $shortcut) { throw "快捷方式已存在：$shortcut" } }
 foreach ($key in $keys) { & reg.exe query $key *> $null; if ($LASTEXITCODE -eq 0) { throw "注册表项已存在：$key" } }
+foreach ($ext in @('gsp','ngsp')) {
+  $choice = "HKCU:/Software/Microsoft/Windows/CurrentVersion/Explorer/FileExts/.$ext/UserChoice"
+  if (Test-Path -LiteralPath $choice) { throw "已有用户指定的 .$ext 默认应用，保留当前关联" }
+}
 New-Item -ItemType Directory -Path $base | Out-Null
 $marker = Join-Path $base 'owner.txt'
 Set-Content -LiteralPath $marker -Value $token -Encoding ascii
@@ -42,7 +46,7 @@ try {
     if ($value -ne $expected) { throw "关联不符：$ext" }
   }
   Write-Host '安装主程序 SHA256：' (Get-FileHash $exe -Algorithm SHA256).Hash
-  & npx.cmd tsx tools/desktop-save-smoke.ts $exe
+  & npx.cmd tsx tools/desktop-save-smoke.ts $exe --shell
   if ($LASTEXITCODE -ne 0) { throw '桌面冒烟失败' }
 } finally {
   if (Test-Path (Join-Path $install 'uninstall.exe')) {

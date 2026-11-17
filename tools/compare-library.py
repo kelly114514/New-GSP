@@ -1,5 +1,5 @@
 """对照原版截图与新版渲染：相对各自背景的前景在 2 像素内互相覆盖的比例。
-用法：python tools/compare-library.py 原版截图目录 新版渲染目录 输出.json [列表.txt]
+用法：python tools/compare-library.py 原版截图目录 新版渲染目录 输出.json [列表.txt] [--static-baseline=目录]
 得分 = min(原版墨迹被新版覆盖的比例, 新版墨迹被原版覆盖的比例)，越低差异越大。另给出彩色墨迹（饱和度高）的同样指标。
 """
 import json, sys
@@ -9,7 +9,10 @@ from PIL import Image
 from scipy.ndimage import binary_dilation
 
 orig, new, outp = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-items = Path(sys.argv[4]).read_text(encoding='utf-8').splitlines() if len(sys.argv) > 4 else None
+extra = sys.argv[4:]
+static_baseline = next((Path(a.split('=', 1)[1]) for a in extra if a.startswith('--static-baseline=')), None)
+list_path = next((Path(a) for a in extra if not a.startswith('--')), None)
+items = list_path.read_text(encoding='utf-8').splitlines() if list_path else None
 K = np.ones((5, 5), bool)
 
 
@@ -38,7 +41,8 @@ res = {}
 for p in sorted(orig.glob('[0-9][0-9][0-9][0-9].png')):
     q = new / p.name
     if not q.exists(): continue
-    oi, oc, ob = masks(p)
+    static = static_baseline / p.name if static_baseline else None
+    oi, oc, ob = masks(static if static and static.is_file() else p)
     ni, nc, nb = masks(q, (oi.shape[1], oi.shape[0]), np.asarray(ob, dtype=np.int16))
     h, w = min(oi.shape[0], ni.shape[0]), min(oi.shape[1], ni.shape[1])
     oi, oc, ni, nc = oi[:h, :w], oc[:h, :w], ni[:h, :w], nc[:h, :w]

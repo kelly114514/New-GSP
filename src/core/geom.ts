@@ -158,3 +158,13 @@ export function circleHitsRect(c: Circ, r: { x0: number; y0: number; x1: number;
   const far = Math.max(...[[r.x0, r.y0], [r.x1, r.y0], [r.x0, r.y1], [r.x1, r.y1]].map(([x, y]) => Math.hypot(c.c.x - x, c.c.y - y)));
   return near <= c.r && far >= c.r;
 }
+/** 坐标轴对齐时直接相除，避免叉积多引入一次舍入。 */
+export function systemCoordinate(dx: number, dy: number, xx: number, xy: number, yx: number, yy: number, det: number, x: boolean): number {
+  if (xy === 0 && yx === 0) return x ? dx / xx : dy / yy;
+  return x ? (dx * yy - dy * yx) / det : (xx * dy - xy * dx) / det;
+}
+
+export function systemPosition(origin: number, primary: number, primaryUnit: number, secondary: number, secondaryUnit: number): number {
+  const p = origin + primary * primaryUnit;
+  return secondaryUnit === 0 ? p : p + secondary * secondaryUnit;
+}

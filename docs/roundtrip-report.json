@@ -3,62 +3,390 @@
     "total": 1431,
     "unchangedExact": 1431,
     "editable": 1431,
-    "encodeFail": 463,
-    "encoded": 968,
-    "diffFiles": 68,
-    "definitionDiffFiles": 64,
-    "modelEqual": 900,
+    "encodeFail": 61,
+    "encoded": 1370,
+    "diffFiles": 81,
+    "definitionDiffFiles": 74,
+    "modelEqual": 1289,
     "sourceRebuildExact": 0,
     "guardAcceptedLoss": 0
   },
   "scope": "仅新版模型内容与保存入口验证；不证明尚未解码字段无损，不代表原版互读验收",
   "reasons": {
-    "原版不能保留字体 宋体": 178,
-    "arc-int 的变换": 10,
-    "附着在点上的文本（无位置）": 36,
-    "colorize 的变换": 70,
-    "弧或其它路径的交点": 4,
-    "arc-center 的变换": 15,
+    "原版会重算与当前列值不同的表格最后一行": 4,
     "旧版式的内嵌工具请保存在 .ngsp 课件中": 18,
     "图片格式 image/bmp（只有 PNG 能写成原版格式）": 1,
-    "表格的列不是距离度量": 58,
-    "原版不能保留字体 楷体": 12,
-    "原版不能保留字体 黑体": 39,
-    "bisect 的变换": 3,
+    "坐标度量（无数值）": 2,
+    "表格的列不是可写入的数值": 12,
+    "表格包含无法写入的单元格": 1,
+    "多个坐标系共享对象的编码角色冲突": 11,
     "轨迹对象类型": 1,
     "垂线/平行线上以像素计的点（参照线不是坐标轴）": 1,
-    "image-clip 的变换": 1,
-    "坐标度量（无数值）": 1,
-    "科学计数法的数值": 4,
-    "多个坐标系共享对象的编码角色冲突": 10,
-    "变换得到的垂线/平行线上的点（参数单位未验证）": 1
+    "表格的数值单位尚待原版验证": 1,
+    "科学计数法的数值": 5,
+    "image-clip 的变换": 2,
+    "变换得到的垂线/平行线上的点（参数单位未验证）": 1,
+    "原版不能保留字体 Arial Narrow": 1
   },
   "categories": {
-    "pages.*.objects.*.def.font.name": 1,
-    "pages.*.objects.*.def.font.size": 6,
-    "pages.*.objects.*.def.unit": 127,
-    "pages.*.objects.*.def.runs.*.text": 26,
-    "pages.*.objects.*.def.runs.*": 28,
+    "pages.*.objects.*.def.font.name": 23,
+    "pages.*.objects.*.def.font.size": 34,
+    "pages.*.objects.*.def.font.bold": 22,
+    "pages.*.objects.*.def.runs.*.font.bold": 12,
+    "pages.*.objects.*.def.runs.*.font.name": 14,
+    "pages.*.objects.*.def.runs.*.font.size": 12,
+    "pages.*.objects.*.def.unit": 133,
+    "pages.*.name": 13,
+    "pages.*.objects.*.def.runs.*.text": 39,
+    "pages.*.objects.*.def.runs.*": 34,
     "pages.*.objects.*.def.runs.*.font.color": 6,
-    "pages.*.objects.*.def.runs": 6,
-    "pages.*.objects.*.def.font.bold": 4,
-    "pages.*.objects.*.toolLabel": 12,
-    "pages.*.objects.*.def.value": 1,
-    "pages.*.objects.*.style.width": 657,
-    "pages.*.name": 2
+    "pages.*.objects.*.def.value": 2,
+    "pages.*.objects.*.def.font.italic": 3,
+    "pages.*.objects.*.def.runs": 20,
+    "pages.*.objects.*.toolLabel": 20,
+    "pages.*.objects.*.def.runs.*.font.italic": 2,
+    "pages.*.objects.*.def.font.underline": 3,
+    "pages.*.objects.*.label": 1
   },
   "rows": [
     {
       "file": "Sample.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "differences": [
+        {
+          "path": "pages.10.objects.5.def.font.name",
+          "before": "Arial",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.10.objects.5.def.font.size",
+          "before": 36,
+          "after": 1
+        },
+        {
+          "path": "pages.11.objects.354.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.11.objects.354.def.font.size",
+          "before": 36,
+          "after": 1
+        },
+        {
+          "path": "pages.12.objects.323.def.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.12.objects.323.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.12.objects.323.def.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.12.objects.323.def.runs.0.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.12.objects.323.def.runs.0.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.12.objects.323.def.runs.0.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.12.objects.323.def.runs.2.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.12.objects.323.def.runs.2.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.12.objects.323.def.runs.2.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.12.objects.334.def.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.12.objects.334.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.12.objects.334.def.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.12.objects.334.def.runs.0.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.12.objects.334.def.runs.0.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.12.objects.334.def.runs.0.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.12.objects.334.def.runs.2.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.12.objects.334.def.runs.2.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.12.objects.334.def.runs.2.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.15.objects.4.def.font.name",
+          "before": "Arial",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.15.objects.4.def.font.size",
+          "before": 36,
+          "after": 1
+        },
+        {
+          "path": "pages.16.objects.5.def.font.name",
+          "before": "Arial",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.16.objects.5.def.font.size",
+          "before": 36,
+          "after": 1
+        },
+        {
+          "path": "pages.17.objects.354.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.17.objects.354.def.font.size",
+          "before": 24,
+          "after": 1
+        },
+        {
+          "path": "pages.18.objects.323.def.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.18.objects.323.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.18.objects.323.def.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.18.objects.323.def.runs.0.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.18.objects.323.def.runs.0.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.18.objects.323.def.runs.0.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.18.objects.323.def.runs.2.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.18.objects.323.def.runs.2.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.18.objects.323.def.runs.2.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.18.objects.334.def.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.18.objects.334.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.18.objects.334.def.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.18.objects.334.def.runs.0.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.18.objects.334.def.runs.0.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.18.objects.334.def.runs.0.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.18.objects.334.def.runs.2.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.18.objects.334.def.runs.2.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.18.objects.334.def.runs.2.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.6.objects.323.def.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.6.objects.323.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.6.objects.323.def.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.6.objects.323.def.runs.0.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.6.objects.323.def.runs.0.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.6.objects.323.def.runs.0.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.6.objects.323.def.runs.2.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.6.objects.323.def.runs.2.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.6.objects.323.def.runs.2.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.6.objects.334.def.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.6.objects.334.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.6.objects.334.def.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.6.objects.334.def.runs.0.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.6.objects.334.def.runs.0.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.6.objects.334.def.runs.0.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.6.objects.334.def.runs.2.font.bold",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.6.objects.334.def.runs.2.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.6.objects.334.def.runs.2.font.size",
+          "before": 16,
+          "after": 1
+        },
+        {
+          "path": "pages.9.objects.4.def.font.name",
+          "before": "Arial",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.9.objects.4.def.font.size",
+          "before": 36,
+          "after": 18
+        }
+      ]
     },
     {
       "file": "Samples\\4.x实例\\初中数学积件库.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\其它教学\\clock4.gsp",
-      "reason": "附着在点上的文本（无位置）"
+      "reason": "原版会重算与当前列值不同的表格最后一行"
     },
     {
       "file": "Samples\\4.x实例\\官长寿作品\\其它教学\\logtable.gsp",
@@ -86,53 +414,24 @@
       ]
     },
     {
-      "file": "Samples\\4.x实例\\官长寿作品\\地理物理\\example-24.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\地理物理\\example-29.gsp",
-      "reason": "弧或其它路径的交点"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\地理物理\\example-35.gsp",
+      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-15.gsp",
       "differences": [
         {
-          "path": "pages.0.objects.117.def.unit",
-          "before": "angle",
-          "after": "none"
+          "path": "pages.12.name",
+          "before": "3",
+          "after": "13"
         },
         {
-          "path": "pages.0.objects.136.def.unit",
-          "before": "angle",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-05.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-07.gsp",
-      "differences": [
+          "path": "pages.17.name",
+          "before": "4",
+          "after": "18"
+        },
         {
-          "path": "pages.4.objects.106.def.unit",
-          "before": "angle",
-          "after": "none"
+          "path": "pages.7.name",
+          "before": "2",
+          "after": "8"
         }
       ]
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-14.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-15.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-22.gsp",
-      "reason": "colorize 的变换"
     },
     {
       "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-56.gsp",
@@ -587,19 +886,108 @@
     },
     {
       "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-57.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\平面应用\\example-61.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\杂例\\example-41.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\杂例\\example-46.gsp",
-      "reason": "arc-center 的变换"
+      "differences": [
+        {
+          "path": "pages.0.objects.115.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.0.objects.115.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.0.objects.115.def.font.size",
+          "before": 14,
+          "after": 16
+        },
+        {
+          "path": "pages.0.objects.116.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.0.objects.116.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.0.objects.116.def.font.size",
+          "before": 14,
+          "after": 16
+        },
+        {
+          "path": "pages.0.objects.74.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.113.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.2.objects.113.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.2.objects.113.def.font.size",
+          "before": 14,
+          "after": 16
+        },
+        {
+          "path": "pages.2.objects.114.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.2.objects.114.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.2.objects.114.def.font.size",
+          "before": 14,
+          "after": 16
+        },
+        {
+          "path": "pages.2.objects.72.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.4.objects.105.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.4.objects.105.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.4.objects.105.def.font.size",
+          "before": 14,
+          "after": 16
+        },
+        {
+          "path": "pages.4.objects.106.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.4.objects.106.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.4.objects.106.def.font.size",
+          "before": 14,
+          "after": 16
+        }
+      ]
     },
     {
       "file": "Samples\\4.x实例\\官长寿作品\\空间曲面\\doughnut.gsp",
@@ -622,435 +1010,214 @@
       ]
     },
     {
-      "file": "Samples\\4.x实例\\官长寿作品\\空间曲面\\earth.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\4.x实例\\官长寿作品\\空间曲面\\example-38.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
       "file": "Samples\\4.x实例\\官长寿作品\\空间曲面\\example-39.gsp",
       "reason": "旧版式的内嵌工具请保存在 .ngsp 课件中"
-    },
-    {
-      "file": "Samples\\4.x实例\\物理课件集.gsp",
-      "reason": "colorize 的变换"
     },
     {
       "file": "Samples\\4.x实例\\经典实例.gsp",
       "reason": "图片格式 image/bmp（只有 PNG 能写成原版格式）"
     },
     {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\2010湖南衡阳(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\三个参数控制颜色(蚂蚁).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\三角形内角和定理(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\光的折射(蚂蚁制作).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\化圆为方(蚂蚁制作).gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\圆柱侧面展开图(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
       "file": "Samples\\5.x实例\\侯仰顺作品\\时钟.gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\时钟(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\杨老师问题-迭代（蚂蚁）.gsp",
       "differences": [
         {
-          "path": "pages.0.objects.17.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.18.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.0.objects.83.def.value",
+          "before": 259182.0076495277,
+          "after": 259182.00765
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\正n边形滚动(蚂蚁).gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\正方体11种展开图(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\正方体展开图完整版(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\用几何画板演示分数的意义(蚂蚁制作).gsp",
-      "reason": "原版不能保留字体 楷体"
     },
     {
       "file": "Samples\\5.x实例\\侯仰顺作品\\用迭代演示动态反比例函数作图（蚂蚁制作）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\侯仰顺作品\\用迭代绘制表格（蚂蚁制作）.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "differences": [
+        {
+          "path": "pages.0.objects.108.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.0.objects.108.def.font.italic",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.0.objects.108.def.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.0.objects.108.def.runs",
+          "after": [
+            {
+              "text": "y=0x",
+              "font": {
+                "name": "Times New Roman",
+                "size": 24,
+                "bold": true,
+                "italic": true,
+                "underline": false,
+                "color": "#0000ff"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\向忠作品\\对数函数的图象和性质.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\幂函数的图象和性质.gsp",
-      "reason": "colorize 的变换"
+      "differences": [
+        {
+          "path": "pages.0.objects.197.def.font.name",
+          "before": "楷体_GB2312",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.0.objects.197.def.font.size",
+          "before": 36,
+          "after": 24
+        },
+        {
+          "path": "pages.0.objects.2.toolLabel",
+          "before": true
+        },
+        {
+          "path": "pages.0.objects.7.toolLabel",
+          "before": true
+        },
+        {
+          "path": "pages.0.objects.8.toolLabel",
+          "before": true
+        },
+        {
+          "path": "pages.0.objects.9.toolLabel",
+          "before": true
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\向忠作品\\指数函数的图象和性质.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\椭圆、双曲线第一定义系列练习.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\正弦函数、余弦函数的图象.gsp",
-      "reason": "附着在点上的文本（无位置）"
+      "differences": [
+        {
+          "path": "pages.0.objects.2.toolLabel",
+          "before": true
+        },
+        {
+          "path": "pages.0.objects.7.toolLabel",
+          "before": true
+        },
+        {
+          "path": "pages.0.objects.8.toolLabel",
+          "before": true
+        },
+        {
+          "path": "pages.0.objects.9.toolLabel",
+          "before": true
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\向忠作品\\正弦型函数图象变换.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\用二分法求方程的近似解.gsp",
       "differences": [
         {
-          "path": "pages.0.objects.120.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\计时器.gsp",
-      "differences": [
+          "path": "pages.0.objects.204.def.font.italic",
+          "before": false,
+          "after": true
+        },
         {
-          "path": "pages.0.objects.88.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\计时器3.gsp",
-      "differences": [
+          "path": "pages.0.objects.204.def.font.name",
+          "before": "Arial",
+          "after": "Times New Roman"
+        },
         {
-          "path": "pages.0.objects.454.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\向忠作品\\计时器4.gsp",
-      "differences": [
+          "path": "pages.0.objects.204.def.font.size",
+          "before": 14,
+          "after": 24
+        },
         {
-          "path": "pages.0.objects.132.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.0.objects.204.def.runs",
+          "after": [
+            {
+              "text": "01π",
+              "font": {
+                "name": "Arial",
+                "size": 14,
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "color": "#ff0000"
+              }
+            }
+          ]
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2002年吉林-雪山飞狐.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2004俄罗斯全国高考一题（雪山飞狐）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2008烟台和2006桂林.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2008烟台和2006桂林2.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2009台州24题[烟台飞狐制作].gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2009年湖南娄底市数学中考试题第25题（烟台飞狐）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2009衡阳第26题[飞狐制作].gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010年东营压轴题（雪山飞狐）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010年山东临沂第14题（烟台飞狐）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010年江苏徐州.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010年湖州第23题（烟台飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010年福建福州（飞狐制作）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010年青岛24题（飞狐制作）.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\2010福建宁德(飞狐制作).gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\一道抛物线的题目（飞狐制作）.gsp",
-      "reason": "附着在点上的文本（无位置）"
     },
     {
       "file": "Samples\\5.x实例\\周维波作品\\一道抛物线题目（雪山飞狐）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\一道极值问题（雪山飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\一道重叠面积的题目（雪山飞狐）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\三角转子的滚动-雪山飞狐.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\剪拼法验证勾股定理（烟台飞狐）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\半圆在地面的上的滚动（烟台飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\圆在正多边形外的滚动完整版（雪山飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\圆在正多边形外的滚动完整版（雪山飞狐11.01.07）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\垂径定理（雪山飞狐）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\小熊维尼（烟台飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\折线上点的运动（飞狐制作）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\描点连线作函数图象（雪山飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\正三角形和正方形渐开线（雪山飞狐）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\矩形一角的折叠问题.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\能自动判断象限的任意角（烟台飞狐）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\角平分线的尺规作图（雪山飞狐）.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\周维波作品\\迭代正多边形渐开线（雪山飞狐）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\08常德市中考(7.31).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\2010年河北中考试题(2013.1.13).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\2012年德州中考压轴题.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\2012年江苏省淮安市中考压轴(四种方法).gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\三角形与矩形重叠面积.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\开关门.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\折扇.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\时钟.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\温州市龙湾区实验中学适应性测试试题(孙禄京).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\点值变换制作重叠面积教程.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\直尺划角动画.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\矩形的翻折.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\翻折圆.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\试题演绎(2013.1.20).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\转盘.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\孙禄京作品\\锤子剪刀布.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\※my整体法初探.gsp",
-      "reason": "colorize 的变换"
+      "reason": "坐标度量（无数值）"
     },
     {
       "file": "Samples\\5.x实例\\孟令岩作品\\※my无理数的迭代.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\※圆锥，圆柱，圆台展开.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\※演绎双动点和整体法.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\mly习作-五角星出水导函数.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "differences": [
+        {
+          "path": "pages.0.objects.24.def.font.size",
+          "before": 14,
+          "after": 16
+        },
+        {
+          "path": "pages.0.objects.24.def.runs",
+          "after": [
+            {
+              "text": "0",
+              "font": {
+                "name": "宋体",
+                "size": 14,
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "color": "#ff00ff"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\孟令岩作品\\三角函数版（石岩）.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\勾股定理小题.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "differences": [
+        {
+          "path": "pages.0.objects.204.def.font.size",
+          "before": 14,
+          "after": 24
+        },
+        {
+          "path": "pages.0.objects.204.def.runs",
+          "after": [
+            {
+              "text": "01π",
+              "font": {
+                "name": "Times New Roman",
+                "size": 14,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "color": "#ff0000"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\孟令岩作品\\投币模拟试验（共两版）（石岩）.gsp",
-      "reason": "colorize 的变换"
+      "reason": "原版会重算与当前列值不同的表格最后一行"
     },
     {
       "file": "Samples\\5.x实例\\孟令岩作品\\投针试验（石岩）.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\投骰子模拟试验（1）（石岩）.gsp",
-      "reason": "arc-center 的变换"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\5.x实例\\孟令岩作品\\投骰子模拟试验（2）石岩.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\描点法画函数图像（石岩）2012.9.17.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\摩天轮.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\撒豆模拟试验1（石岩）.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\旋转+平移重叠面积8.4mly.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\正三角形在连续的弧上遗憾之滚动.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\孟令岩作品\\石岩滚动练习 .gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\(inRm)三角转子.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\(inRm)三角转子3.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\(inRm)割圆为方.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\(inRm)割圆为方详解.gsp",
-      "reason": "arc-int 的变换"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\5.x实例\\方小庆作品\\(inRm)平方和差公式.gsp",
@@ -1079,44 +1246,8 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\方小庆作品\\(inRm)简单迭代12例.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\(inRm)错觉 9例.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\割圆为方详解(inRm).gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\勾股弦图(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\方小庆作品\\反比例函数课件(inRm).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\圆的滚动全解(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\曲线上的均匀轨迹详解(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\曲线面积割补(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\果圆(尺规法 inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\棘轮(inRm).gsp",
-      "reason": "arc-center 的变换"
+      "reason": "表格包含无法写入的单元格"
     },
     {
       "file": "Samples\\5.x实例\\方小庆作品\\正多边形上滚动的圆（inRm+小刀）.gsp",
@@ -1130,276 +1261,230 @@
     },
     {
       "file": "Samples\\5.x实例\\方小庆作品\\正多边形直线滚动详解(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\花括弧(inRm).gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\重叠问题(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方小庆作品\\齿轮传动4例(inRm).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\方益初作品\\俄罗斯2004高考题（温州小刀）.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\李忠平作品\\2011中考江苏无锡第26题(百年孤独)简化.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\凸四边形，圆，正多边形的渐开线（有贵）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\函数图象迭代(liyougui).gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\勾股弦图(liyougui).gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\椭圆滚动全解（有贵）.gsp",
-      "reason": "bisect 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\正五边形点的迭代(yougui).gsp",
       "differences": [
         {
-          "path": "pages.0.objects.10.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.2.name",
+          "before": "2",
+          "after": "3"
         },
         {
-          "path": "pages.0.objects.11.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.3.name",
+          "before": "3",
+          "after": "4"
+        },
+        {
+          "path": "pages.4.name",
+          "before": "4",
+          "after": "5"
+        },
+        {
+          "path": "pages.5.name",
+          "before": "5",
+          "after": "6"
+        },
+        {
+          "path": "pages.6.name",
+          "before": "6",
+          "after": "7"
+        },
+        {
+          "path": "pages.7.name",
+          "before": "7",
+          "after": "8"
+        },
+        {
+          "path": "pages.8.name",
+          "before": "8",
+          "after": "9"
+        },
+        {
+          "path": "pages.9.name",
+          "before": "9",
+          "after": "10"
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\正多边形点的迭代教程(yougui).gsp",
-      "differences": [
-        {
-          "path": "pages.0.objects.12.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.13.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.1.objects.10.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.1.objects.11.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.2.objects.11.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.2.objects.8.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.3.objects.10.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.3.objects.11.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.4.objects.11.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.4.objects.12.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\李有贵作品\\渐开线（有贵）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\李秋生作品\\方轮小汽车.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李秋生作品\\方轮小汽车2.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\（含边界和不含边界）凹凸多边形区域内整解（李章博）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\任意边数凸多边形在直线上滚动工具（李章博）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\割圆为方（李章博）.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\垒积长方体（李章博）[2].gsp",
-      "differences": [
-        {
-          "path": "pages.0.objects.41.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.44.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.47.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\太极图(李章博）2.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\指数计算器（李章博）.gsp",
-      "differences": [
-        {
-          "path": "pages.0.objects.870.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.903.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.905.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.907.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.908.def.unit",
-          "before": "distance",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.909.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\曲边三角形滚动（李章博）.gsp",
-      "reason": "原版不能保留字体 黑体"
     },
     {
       "file": "Samples\\5.x实例\\李章博作品\\杨辉三角1（李章博）.gsp",
-      "reason": "原版不能保留字体 黑体"
+      "reason": "多个坐标系共享对象的编码角色冲突"
     },
     {
       "file": "Samples\\5.x实例\\李章博作品\\杨辉三角2（李章博）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\椭圆定长弦轨迹（李章博）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\李章博作品\\自由运动一（李章博）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\梁宝同作品\\三角形点阵（梁宝同）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\梁宝同作品\\扇形在直线上的滚动（梁宝同）.gsp",
-      "reason": "arc-int 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\梁宝同作品\\点列（梁宝同）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\梁宝同作品\\递增点列（梁宝同制作）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\田野风作品\\函数图象(田野风).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\(精致的几何画板课件)2010金华市中考压轴题.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "reason": "多个坐标系共享对象的编码角色冲突"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\中考动态题\\09成都第28题等.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\2009哈尔滨21.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\2009天水25.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\2009年湖南娄底市数学中考试题第25题.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\2010浙江台州考题（白头佬）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\2010福建宁德压轴题三种不同做法.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\2011重庆中考第26题(重叠部分制作步骤).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\一道重叠面积的题目_(1).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\动感体验2010年青岛中考数学压轴题.gsp",
-      "reason": "原版不能保留字体 楷体"
+      "differences": [
+        {
+          "path": "pages.1.objects.3.def.runs.25.text",
+          "before": "Q_(n)",
+          "after": "Q"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.26.text",
+          "before": "  (2",
+          "after": "_("
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.27.font.italic",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.27.font.name",
+          "before": "宋体",
+          "after": "Times New Roman"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.27.text",
+          "before": "≤",
+          "after": "n"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.28.text",
+          "before": "n",
+          "after": ")  (2"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.30.text",
+          "before": "7，",
+          "after": "n"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.31.font.italic",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.31.font.name",
+          "before": "Times New Roman",
+          "after": "宋体"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.31.text",
+          "before": "n",
+          "after": "≤"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.32.text",
+          "before": "为整数)，则当",
+          "after": "7，"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.33.text",
+          "before": "Q_(n) ",
+          "after": "n"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.34.text",
+          "before": "的概率最大时，",
+          "after": "为整数)，则当"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.35.text",
+          "before": "n",
+          "after": "Q"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.36.text",
+          "before": "\n",
+          "after": "_("
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.37.text",
+          "before": "      ",
+          "after": "n"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.38.text",
+          "before": "的所有可能的值为______．\n",
+          "after": ")"
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.39",
+          "after": {
+            "text": " ",
+            "font": {
+              "name": "Times New Roman",
+              "size": 36,
+              "bold": false,
+              "italic": true,
+              "underline": false,
+              "color": "#000000"
+            }
+          }
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.40",
+          "after": {
+            "text": "的概率最大时，",
+            "font": {
+              "name": "Times New Roman",
+              "size": 36,
+              "bold": false,
+              "italic": false,
+              "underline": false,
+              "color": "#000000"
+            }
+          }
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.41",
+          "after": {
+            "text": "n",
+            "font": {
+              "name": "Times New Roman",
+              "size": 36,
+              "bold": false,
+              "italic": true,
+              "underline": false,
+              "color": "#000000"
+            }
+          }
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.42",
+          "after": {
+            "text": "\n",
+            "font": {
+              "name": "Times New Roman",
+              "size": 36,
+              "bold": false,
+              "italic": false,
+              "underline": false,
+              "color": "#000000"
+            }
+          }
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.43",
+          "after": {
+            "text": "      ",
+            "font": {
+              "name": "Times New Roman",
+              "size": 36,
+              "bold": false,
+              "italic": true,
+              "underline": false,
+              "color": "#000000"
+            }
+          }
+        },
+        {
+          "path": "pages.1.objects.3.def.runs.44",
+          "after": {
+            "text": "的所有可能的值为______．\n",
+            "font": {
+              "name": "Times New Roman",
+              "size": 36,
+              "bold": false,
+              "italic": false,
+              "underline": false,
+              "color": "#000000"
+            }
+          }
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\中考动态题\\解析2010四川数学高考19题.gsp",
@@ -1504,34 +1589,6 @@
           ]
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\中考动态题\\齐齐哈尔2009.28.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\20101115桴槎山峰－学习点名系统.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\七星彩选号.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\万年历.gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\不显示方法之至尊.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\不规则图形的填充.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\两曲线围成的封闭图形.gsp",
-      "reason": "原版不能保留字体 宋体"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\两点不同路径速度的工具化课件.gsp",
@@ -1639,14 +1696,6 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\两点同时在折线上以不同速度运动.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\二分法求方程的根.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\二次函数图像及性质——顶点式.gsp",
       "differences": [
         {
@@ -1671,10 +1720,6 @@
           ]
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\二次函数顶点式(sdytstl).gsp",
-      "reason": "附着在点上的文本（无位置）"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\修改的分段函数.gsp",
@@ -1706,18 +1751,6 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\关于最短距离【刘密贵】2010-9-3.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\几何概型(zd0076).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\函数合成.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\分段函数.gsp",
       "differences": [
         {
@@ -1747,80 +1780,76 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\分段函数作图器.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\分段赋色法.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\利用制表功能快速获取点的坐标.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\勾股定理.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\勾股定理（未完成）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\参数框输入技巧.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\双曲线轴对称变换简单制作.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\双点不同速度且不同路径的运动 周传高.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\变色.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\图中的阴影.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\图案设计举例.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\图片也能构造轨迹.gsp",
-      "reason": "轨迹对象类型"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\圆在ksinx上滚动(new).gsp",
       "differences": [
         {
-          "path": "pages.0.objects.125.def.unit",
-          "before": "angle",
-          "after": "none"
+          "path": "pages.7.objects.240.def.font.underline",
+          "before": false,
+          "after": true
         },
         {
-          "path": "pages.0.objects.38.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.7.objects.240.def.runs",
+          "after": [
+            {
+              "text": "a-b2",
+              "font": {
+                "name": "Tahoma",
+                "size": 24,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "color": "#0000ff"
+              }
+            }
+          ]
         },
         {
-          "path": "pages.0.objects.43.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.7.objects.241.def.font.underline",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.7.objects.241.def.runs",
+          "after": [
+            {
+              "text": "a-b2",
+              "font": {
+                "name": "Tahoma",
+                "size": 24,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "color": "#0000ff"
+              }
+            }
+          ]
+        },
+        {
+          "path": "pages.7.objects.242.def.font.underline",
+          "before": false,
+          "after": true
+        },
+        {
+          "path": "pages.7.objects.242.def.runs",
+          "after": [
+            {
+              "text": "a-b2",
+              "font": {
+                "name": "Tahoma",
+                "size": 24,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "color": "#0000ff"
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\如何使AB闪烁.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\学用参数.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\图片也能构造轨迹.gsp",
+      "reason": "轨迹对象类型"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\投掷硬币实验.gsp",
@@ -1833,40 +1862,30 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\折扇另一法.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\抛豆实验.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\报时闹钟.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\排列组合问题.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\文字特效.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\显隐.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\曲线与直线、x轴所围成的图形阴影填充.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\有理数加减法训练出题系统.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\根据表格数据画圆.gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.8.def.font.size",
+          "before": 48,
+          "after": 16
+        },
+        {
+          "path": "pages.0.objects.8.def.runs",
+          "after": [
+            {
+              "text": "0:D+1:D=",
+              "font": {
+                "name": "Times New Roman",
+                "size": 48,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "color": "#0000ff"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\椭圆中心的轨迹.gsp",
@@ -1877,14 +1896,6 @@
           "after": "angle"
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\渐变色教程.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\滑轮组.gsp",
-      "reason": "原版不能保留字体 黑体"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\演奏原理.gsp",
@@ -1998,80 +2009,6 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\点值构造法分段函数.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\点在折线上运动.gsp",
-      "differences": [
-        {
-          "path": "pages.0.objects.70.def.unit",
-          "before": "distance",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\真正的折扇.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\简易电子琴.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\线段在正方形内滑动.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\自定义变换.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\轴对称的动态演示.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\迭代中级技巧.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\迭代举例.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\迭代练习.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\追踪轨迹的妙用.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\逐行显示文本的二个思路.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\闪烁方法汇总（7种方法）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\霓虹效果.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\技巧型案例\\顶点式二次函数（颜色控制动态范围）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\N等分角(0-2pi).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\n等分角(0-pi).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\经典问题集\\三角形内切四圆（内有答案）.gsp",
       "differences": [
         {
@@ -2087,3454 +2024,12 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\三角形内角和定理.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\三角车轮.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\两个钉子的橡皮筋.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\任意角的积件.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\最大公约数与最小公倍数.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\分段函数控制分段速度.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\割圆术.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\动态实例（不使用第一交点）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\勾股树.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\化圆为方2.02.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\双曲线中心对称与二次函数的轴对称.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\双曲线的两种对称性.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\反比例函数图象的画法.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\台球瞄准练习.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\周期函数图像完美方案.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\周期函数图像的做法（正方形滚动实例）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\圆在正多边形内滚动.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\圆柱-圆台-圆锥.gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\圆滚动制作步骤.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\多边形滚动.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\带标签的斜n棱锥.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\彩色分层钢管.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\截棱锥得棱台.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\经典问题集\\抛豆实验估算圆周率.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\放大镜.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\新版点将台.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\方阵(下图是方老师的优化）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\旋转的斜棱锥.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\旋转的棱锥台柱.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\时钟1.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\杨辉三角(迭代两次).gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\构造正N边形.gsp",
-      "differences": [
-        {
-          "path": "pages.0.objects.1000.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1001.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1004.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1005.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1008.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1009.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1012.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1013.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1016.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1017.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1020.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1021.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1024.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1025.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1028.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1029.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1032.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1033.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1036.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1037.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1040.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1041.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1044.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1045.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1048.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1049.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1052.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1053.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1056.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1057.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1060.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1061.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1064.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1065.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1068.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1069.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1072.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1073.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1076.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1077.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.108.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1080.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1081.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1084.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1085.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1088.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1089.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.109.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1092.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1093.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1096.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1097.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1100.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1101.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1104.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1105.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1108.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1109.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1112.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1113.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1116.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1117.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.112.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1120.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1121.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1124.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1125.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1128.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1129.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.113.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1132.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1133.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1136.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1137.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1140.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1141.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1144.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1145.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1148.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1149.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1152.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1153.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1156.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1157.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.116.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1160.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1161.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1164.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1165.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1168.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1169.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.117.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1172.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1173.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1176.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1177.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1180.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1181.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1184.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1185.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1188.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1189.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1192.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1193.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1196.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1197.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.120.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1200.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1201.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1204.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1205.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1208.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1209.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.121.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1212.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1213.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1216.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1217.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1220.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1221.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1224.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1225.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1228.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1229.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1232.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1233.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1236.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1237.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.124.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1240.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1241.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1244.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1245.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1248.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1249.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.125.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1252.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1253.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1256.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1257.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1260.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1261.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1264.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1265.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1268.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1269.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1272.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1273.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1276.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1277.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.128.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1280.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1281.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1284.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1285.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1288.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1289.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.129.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1292.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1293.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1296.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1297.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1300.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1301.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1304.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1305.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1308.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1309.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1312.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1313.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1316.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1317.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.132.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1320.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1321.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1324.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1325.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1328.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1329.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.133.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1332.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1333.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1336.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1337.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1340.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1341.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1344.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1345.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1348.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1349.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1352.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1353.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1356.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1357.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.136.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1360.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1361.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1364.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1365.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1368.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1369.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.137.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1372.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1373.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1376.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1377.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1380.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1381.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1384.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1385.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1388.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1389.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1392.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1393.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1396.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1397.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.140.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1400.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1401.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1404.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1405.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1408.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1409.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.141.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1412.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1413.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1416.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1417.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.1420.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.144.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.145.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.148.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.149.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.152.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.153.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.156.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.157.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.160.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.161.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.164.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.165.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.168.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.169.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.172.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.173.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.176.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.177.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.180.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.181.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.184.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.185.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.188.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.189.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.192.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.193.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.196.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.197.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.200.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.201.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.204.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.205.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.208.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.209.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.212.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.213.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.216.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.217.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.220.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.221.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.224.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.225.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.228.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.229.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.232.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.233.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.236.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.237.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.240.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.241.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.244.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.245.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.248.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.249.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.252.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.253.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.256.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.257.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.260.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.261.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.264.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.265.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.268.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.269.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.272.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.273.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.276.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.277.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.280.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.281.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.284.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.285.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.288.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.289.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.292.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.293.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.296.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.297.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.300.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.301.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.304.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.305.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.308.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.309.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.312.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.313.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.316.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.317.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.320.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.321.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.324.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.325.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.328.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.329.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.332.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.333.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.336.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.337.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.340.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.341.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.344.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.345.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.348.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.349.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.352.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.353.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.356.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.357.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.360.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.361.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.364.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.365.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.368.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.369.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.372.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.373.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.376.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.377.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.380.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.381.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.384.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.385.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.388.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.389.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.392.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.393.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.396.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.397.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.400.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.401.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.404.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.405.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.408.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.409.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.412.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.413.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.416.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.417.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.420.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.421.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.424.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.425.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.428.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.429.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.432.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.433.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.436.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.437.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.440.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.441.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.444.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.445.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.448.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.449.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.452.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.453.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.456.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.457.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.460.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.461.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.464.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.465.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.468.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.469.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.472.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.473.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.476.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.477.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.480.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.481.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.484.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.485.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.488.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.489.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.492.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.493.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.496.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.497.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.500.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.501.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.504.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.505.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.508.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.509.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.512.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.513.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.516.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.517.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.520.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.521.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.524.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.525.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.528.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.529.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.532.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.533.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.536.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.537.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.540.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.541.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.544.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.545.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.548.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.549.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.552.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.553.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.556.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.557.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.560.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.561.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.564.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.565.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.568.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.569.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.572.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.573.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.576.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.577.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.580.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.581.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.584.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.585.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.588.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.589.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.592.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.593.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.596.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.597.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.600.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.601.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.604.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.605.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.608.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.609.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.612.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.613.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.616.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.617.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.620.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.621.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.624.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.625.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.628.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.629.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.632.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.633.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.636.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.637.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.640.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.641.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.644.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.645.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.648.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.649.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.652.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.653.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.656.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.657.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.660.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.661.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.664.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.665.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.668.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.669.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.672.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.673.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.676.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.677.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.680.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.681.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.684.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.685.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.688.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.689.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.692.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.693.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.696.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.697.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.700.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.701.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.704.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.705.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.708.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.709.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.712.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.713.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.716.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.717.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.720.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.721.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.724.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.725.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.728.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.729.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.732.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.733.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.736.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.737.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.740.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.741.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.744.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.745.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.748.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.749.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.752.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.753.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.756.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.757.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.760.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.761.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.764.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.765.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.768.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.769.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.772.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.773.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.776.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.777.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.780.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.781.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.784.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.785.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.788.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.789.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.792.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.793.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.796.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.797.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.800.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.801.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.804.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.805.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.808.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.809.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.812.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.813.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.816.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.817.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.820.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.821.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.824.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.825.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.828.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.829.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.832.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.833.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.836.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.837.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.840.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.841.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.844.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.845.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.848.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.849.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.852.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.853.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.856.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.857.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.860.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.861.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.864.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.865.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.868.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.869.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.872.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.873.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.876.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.877.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.880.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.881.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.884.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.885.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.888.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.889.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.892.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.893.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.896.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.897.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.900.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.901.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.904.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.905.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.908.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.909.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.912.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.913.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.916.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.917.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.920.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.921.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.924.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.925.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.928.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.929.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.932.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.933.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.936.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.937.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.940.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.941.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.944.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.945.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.948.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.949.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.952.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.953.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.956.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.957.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.960.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.961.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.964.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.965.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.968.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.969.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.972.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.973.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.976.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.977.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.980.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.981.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.984.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.985.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.988.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.989.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.992.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.993.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.996.style.width",
-          "before": 2,
-          "after": 1
-        },
-        {
-          "path": "pages.0.objects.997.style.width",
-          "before": 2,
-          "after": 1
-        }
-      ]
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\柱锥台.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\椭圆在椭圆上滚动.gsp",
-      "reason": "bisect 的变换"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\经典问题集\\模拟实例.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\橡皮筋.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\正五边形点的迭代.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\正十七边形的尺规作图.gsp",
-      "reason": "bisect 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\正多边形在正多边形内的滑动（2011.06.15）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\正方体展开制作步骤.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\正方体的11种展开图.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "reason": "原版会重算与当前列值不同的表格最后一行"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\经典问题集\\正方体表面展开图.gsp",
@@ -5554,10 +2049,6 @@
           "after": "2"
         }
       ]
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\渐开线(回收站).gsp",
-      "reason": "原版不能保留字体 宋体"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\经典问题集\\环形跑道.gsp",
@@ -5580,544 +2071,270 @@
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\环形跑道上的点.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\经纬度.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\绘制棋盘.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\缩放法构造渐开线--初学迭代的老师可以此增加些理解.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\虚实型旋转正n棱锥（用霍焰平台制作）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\计算圆周率π.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\计算概率.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\转动的太极图A.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\转动的斜棱柱（带标签）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\钉子问题之分段函数控制分段颜色.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\钉子问题的路程函数解法.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\鈡表学习1.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\长方体展开图.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\阴影填充.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\阶乘.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\经典问题集\\随机点名.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\Angle.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\c(z-d)_d.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\GSP振动叠加图样vibrancy2002 (159)tokeypressvibrancy.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\swirl曲面.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\torus[圆环体].gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\一元一次不等式组的解集图.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\一道立几题的几何画板求解.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\一道考题.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\三变速.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\三角形内接矩形的面积何时最大？.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\三角形放大.gsp",
-      "reason": "arc-center 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\保形映射1.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\保形映射2.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "reason": "表格的数值单位尚待原版验证"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\几何最值三例.gsp",
-      "reason": "原版不能保留字体 黑体"
+      "reason": "原版会重算与当前列值不同的表格最后一行"
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\函数的单调性.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\函数的奇偶性.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\动点问题.gsp",
+      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\双曲线之最短距离之求解.gsp",
       "differences": [
         {
-          "path": "pages.0.objects.32.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.1.objects.98.def.font.bold",
+          "before": false,
+          "after": true
         },
         {
-          "path": "pages.0.objects.42.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.1.objects.98.def.font.italic",
+          "before": true,
+          "after": false
         },
         {
-          "path": "pages.0.objects.62.def.unit",
-          "before": "distance",
-          "after": "none"
+          "path": "pages.1.objects.98.def.font.name",
+          "before": "Times New Roman",
+          "after": "华文彩云"
+        },
+        {
+          "path": "pages.1.objects.98.def.font.size",
+          "before": 24,
+          "after": 18
+        },
+        {
+          "path": "pages.1.objects.98.def.runs",
+          "after": [
+            {
+              "text": "x²0-y²1=1",
+              "font": {
+                "name": "Times New Roman",
+                "size": 24,
+                "bold": false,
+                "italic": true,
+                "underline": false,
+                "color": "#ffffff"
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\勾形函数的对称性.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\十进制数转化为2到16进制数.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\双坐标系下的图像.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\双曲线之最短距离之求解.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\双曲线演示.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\变幻曲线.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\周长为12的矩形的面积的极值[白头佬制作].gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\圆心角__导入新课.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\多边形外角和.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\多边形的翻折.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\天秤.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\太阳、地球、月亮.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\定点直线.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\实例13：数据的收集与整理.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\对数函数.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\小学课件—分数意义和三角形内角和.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\已知圆A交圆B于C、D两点，过点C作一直线k，使k被两圆所截线段之和=CD..gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\幂函数.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\幼儿学数学课件.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\折叠与数学.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\折纸１.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\抛物线的旋转.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\指数函数和对数函数.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\挖掘机.gsp",
-      "reason": "弧或其它路径的交点"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\数据的收集与整理.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\新年好.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\春节快乐.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\曲线交点工具示例.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\有理数加法演示.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\有趣的数学图案.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\杂七杂八最新版.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\正十二面体.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\正弦和余弦.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\点在折线上运动的实例.gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\点在正方形内、外一网打尽.gsp",
-      "reason": "原版不能保留字体 黑体"
+      "reason": "科学计数法的数值"
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\特殊四边形.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\王老师七巧板.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\直线和平面的位置关系.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\直线平分三角形的面积（统一几何做法）.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "differences": [
+        {
+          "path": "pages.0.objects.25.label",
+          "before": "T[1]"
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\省优质课的说课课件（函数与方程）.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\磁场方向竖直.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\线段大小比较.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\绘图标准坐标系.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\羊吃草（已更新）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\菱形周长的极值.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\质数.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\集合之子交并补.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\集合之数轴.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\面积函数图像.gsp",
-      "reason": "附着在点上的文本（无位置）"
-    },
-    {
-      "file": "Samples\\5.x实例\\群师作品\\综合杂例类\\题.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\5.x实例\\郑飞宇作品\\一款精致的小车广告.gsp",
       "reason": "image-clip 的变换"
     },
     {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\七彩荷.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\全动态蜻蜓.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\全方位折纸（涂色）.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
       "file": "Samples\\5.x实例\\郑飞宇作品\\广告片断.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\正弦函数的图像和性质.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "reason": "image-clip 的变换"
     },
     {
       "file": "Samples\\5.x实例\\郑飞宇作品\\正弦型函数图像变换(修正颜色).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\毛笔.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\画板打造动态字.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\直线与曲线.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\郑飞宇作品\\眼中的佛头.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\5.x实例\\阮国祥作品\\五边形迭代（漫步）.gsp",
-      "reason": "原版不能保留字体 楷体"
-    },
-    {
-      "file": "Samples\\5.x实例\\阮国祥作品\\双曲线对称性（一个图形三种对称）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\阮国祥作品\\黑白方块.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\09台州27题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\09山西中考第26题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\2005徐州动态题(一线天).gsp",
-      "reason": "colorize 的变换"
+      "differences": [
+        {
+          "path": "pages.2.objects.66.def.font.size",
+          "before": 24,
+          "after": 18
+        },
+        {
+          "path": "pages.2.objects.66.def.runs",
+          "after": [
+            {
+              "text": "y=sin(0x+π3)",
+              "font": {
+                "name": "Times New Roman",
+                "size": 24,
+                "bold": false,
+                "italic": false,
+                "underline": false,
+                "color": "#ff0000"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\陈发铨作品\\2010江苏无锡湖滨区中考数学二模试题（一线天）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\2010河北中考压轴题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\2010福州(一线天).gsp",
-      "reason": "colorize 的变换"
+      "differences": [
+        {
+          "path": "pages.1.objects.229.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.1.objects.229.def.runs",
+          "after": [
+            {
+              "text": "t=103",
+              "font": {
+                "name": "Times New Roman",
+                "size": 16,
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "color": "#000080"
+              }
+            }
+          ]
+        },
+        {
+          "path": "pages.1.objects.230.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.1.objects.230.def.runs",
+          "after": [
+            {
+              "text": "10-2t10=3-3(t-3)6",
+              "font": {
+                "name": "Times New Roman",
+                "size": 16,
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "color": "#000080"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\陈发铨作品\\2011中考山东聊城第25题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\2011中考淮安压轴题（一线天）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\2011南京六合区一模压轴题(一线天).gsp",
-      "reason": "colorize 的变换"
+      "differences": [
+        {
+          "path": "pages.0.objects.385.def.font.size",
+          "before": 16,
+          "after": 18
+        },
+        {
+          "path": "pages.0.objects.387.def.font.size",
+          "before": 16,
+          "after": 18
+        }
+      ]
     },
     {
       "file": "Samples\\5.x实例\\陈发铨作品\\2011泉港质检题25(一线天).gsp",
       "reason": "坐标度量（无数值）"
     },
     {
-      "file": "Samples\\5.x实例\\陈发铨作品\\2011重庆中考第26题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\动点面积题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\太极图整体轨迹(一线天).gsp",
-      "reason": "弧或其它路径的交点"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\广州中山考题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\异线动点题（一线天）.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\经典动态题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\5.x实例\\陈发铨作品\\面积题(一线天).gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\分形艺术\\Alternating(@Period_==_0).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Apollonius问题.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\Bob28.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\C-CplxSpiralBullet.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Carr_2003视频原文件.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Carr1405.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Carr1465.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Carr1605.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
       "file": "Samples\\分形艺术\\carr1972.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Carr1997(XAXIS).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Carr2003.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\carr2431.gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.97.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\Carr3305(YAXIS)2.gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.1.objects.117.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.151.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.168.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.180.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\Carr3315(YAXIS).gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.120.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.155.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.203.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\carr3500.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Cayley-mand.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Cayley-mand(更新).gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.107.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.123.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.131.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.147.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.151.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.0.objects.163.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\f(z)=(z^k+c)除z_with_c=0.001.gsp",
@@ -6126,10 +2343,6 @@
     {
       "file": "Samples\\分形艺术\\f(z)=(z3+c)除z_with_c=0.001.gsp",
       "reason": "科学计数法的数值"
-    },
-    {
-      "file": "Samples\\分形艺术\\Four_Mandelbrot_Julia.gsp",
-      "reason": "表格的列不是距离度量"
     },
     {
       "file": "Samples\\分形艺术\\FSK.gsp",
@@ -6190,11 +2403,13 @@
     },
     {
       "file": "Samples\\分形艺术\\J-L-Perspective.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\J-L-Perspective(seed1).gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.114.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\J32.5.gsp",
@@ -6416,20 +2631,49 @@
       "reason": "多个坐标系共享对象的编码角色冲突"
     },
     {
-      "file": "Samples\\分形艺术\\M(et).gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\分形艺术\\Mandelbrot集球面贴图.gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.1.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.0.objects.1.def.runs",
+          "after": [
+            {
+              "text": "Mandelbrot set:z→z²+c",
+              "font": {
+                "name": "Times New Roman",
+                "size": 24,
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "color": "#ff8000"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\Mandlebot_Alternating_Inv.gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.1.objects.119.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.126.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\Mira分形-三鹰翅.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\Mobius变换下的julia_set.gsp",
@@ -6442,72 +2686,163 @@
       ]
     },
     {
-      "file": "Samples\\分形艺术\\MoebiusMandel(Normal).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\Moebius变换下的Mandelbrot集.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\M集的反形.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\M集边界的另类作法.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
       "file": "Samples\\分形艺术\\N set z^-5+1=0,z=c+c^-1.gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\N set：z^4+1=0，transf：z=u+u^-1，u=(aw+b)(cw+d)^-1.gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\N set：z^9+1=0，transf：z=(aw+b)(cw+d)^-1.gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\N set：z^c-1=0，c=4i.gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\N set：z^c+1=0，c=10.35107+2.91042i.gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\N set：z^c+1=0，c=10.66271+2.64583i.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\N_sin_M.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\NewtonZapple(Newton^pz).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\NewtonZapple(Newton^z).gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\Nova-I_(Julia).gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.1.objects.135.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.136.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.146.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.147.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.135.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.136.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.146.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.147.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\Nova-I(Julia).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\OldPhoenix.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\p disk.gsp",
-      "reason": "原版不能保留字体 宋体"
+      "differences": [
+        {
+          "path": "pages.1.objects.135.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.136.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.146.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.1.objects.147.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.135.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.136.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.146.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.2.objects.147.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.3.objects.135.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.3.objects.136.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.3.objects.137.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.3.objects.146.def.unit",
+          "before": "none",
+          "after": "angle"
+        },
+        {
+          "path": "pages.3.objects.147.def.unit",
+          "before": "none",
+          "after": "angle"
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\Popcorn.gsp",
@@ -6518,30 +2853,6 @@
           "after": "angle"
         }
       ]
-    },
-    {
-      "file": "Samples\\分形艺术\\riemann分形.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\Shard_Mandlebrot.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\sierpinskimod.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\sinZ+CcosZ.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\UF-Chico(视频原文件).gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\UF中的一例1.gsp",
-      "reason": "表格的列不是距离度量"
     },
     {
       "file": "Samples\\分形艺术\\z((a3z_+_a2)z_+_a1)z五.gsp",
@@ -6568,15 +2879,38 @@
     },
     {
       "file": "Samples\\分形艺术\\例15【Julia set 4.2】.gsp",
-      "reason": "表格的列不是距离度量"
-    },
-    {
-      "file": "Samples\\分形艺术\\例15【Julia set 4.3】.gsp",
-      "reason": "表格的列不是距离度量"
+      "differences": [
+        {
+          "path": "pages.0.objects.1.def.font.bold",
+          "before": true,
+          "after": false
+        },
+        {
+          "path": "pages.0.objects.1.def.font.size",
+          "before": 36,
+          "after": 16
+        },
+        {
+          "path": "pages.0.objects.1.def.runs",
+          "after": [
+            {
+              "text": "Julia set 2:z→z²+c",
+              "font": {
+                "name": "Times New Roman",
+                "size": 36,
+                "bold": true,
+                "italic": false,
+                "underline": false,
+                "color": "#8a66d9"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "file": "Samples\\分形艺术\\例20【N set z^12+1=0,z→c+c^-1】.gsp",
-      "reason": "表格的列不是距离度量"
+      "reason": "表格的列不是可写入的数值"
     },
     {
       "file": "Samples\\分形艺术\\分式变换下的复分形2.gsp",
@@ -6608,20 +2942,8 @@
       ]
     },
     {
-      "file": "Samples\\分形艺术\\分形.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\分形艺术\\分形1.gsp",
       "reason": "多个坐标系共享对象的编码角色冲突"
-    },
-    {
-      "file": "Samples\\分形艺术\\分形之路.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\分形之路(灰度着色）.gsp",
-      "reason": "原版不能保留字体 宋体"
     },
     {
       "file": "Samples\\分形艺术\\分形图(k=-2).gsp",
@@ -6689,10 +3011,6 @@
       ]
     },
     {
-      "file": "Samples\\分形艺术\\双曲变换福.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\分形艺术\\变个花样玩Popcorn_2.gsp",
       "differences": [
         {
@@ -6721,14 +3039,6 @@
           "after": "angle"
         }
       ]
-    },
-    {
-      "file": "Samples\\分形艺术\\复函数迭代轨道２.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\分形艺术\\复分形扫描框架带【带预览框可缩放】.gsp",
-      "reason": "表格的列不是距离度量"
     },
     {
       "file": "Samples\\分形艺术\\复数分形z^4.gsp",
@@ -6763,64 +3073,8 @@
       "reason": "多个坐标系共享对象的编码角色冲突"
     },
     {
-      "file": "Samples\\分形艺术\\探索M－J集新算法.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\新年好.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\未命名分形6.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\分形艺术\\未命名分形7.gsp",
-      "reason": "colorize 的变换"
-    },
-    {
-      "file": "Samples\\分形艺术\\牛迭f(z)_=_c^2z^4_-_(c^4+1)z^2_+_c^2.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\牛迭试验(改）.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\球极映射.gsp",
-      "differences": [
-        {
-          "path": "pages.0.objects.26.def.unit",
-          "before": "angle",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.29.def.unit",
-          "before": "angle",
-          "after": "none"
-        },
-        {
-          "path": "pages.0.objects.33.def.unit",
-          "before": "angle",
-          "after": "none"
-        }
-      ]
-    },
-    {
-      "file": "Samples\\分形艺术\\球面谢宾斯基.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Samples\\分形艺术\\用“极细”线和0.1的速度扫描的彩色图sinZ+CcosZ.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
       "file": "Samples\\分形艺术\\等高线试验.gsp",
-      "reason": "多个坐标系共享对象的编码角色冲突"
-    },
-    {
-      "file": "Samples\\分形艺术\\缺一页的Arboresent肺.gsp",
-      "reason": "弧或其它路径的交点"
+      "reason": "原版不能保留字体 Arial Narrow"
     },
     {
       "file": "Samples\\分形艺术\\自己动手玩儿Popcorn.gsp",
@@ -6875,10 +3129,6 @@
       "reason": "旧版式的内嵌工具请保存在 .ngsp 课件中"
     },
     {
-      "file": "Tool Folder\\27 排列组合.gsp",
-      "reason": "原版不能保留字体 黑体"
-    },
-    {
       "file": "Tool Folder\\28 向量工具.gsp",
       "reason": "旧版式的内嵌工具请保存在 .ngsp 课件中"
     },
@@ -6897,14 +3147,6 @@
     {
       "file": "Tool Folder\\33 物理工具.gsp",
       "reason": "旧版式的内嵌工具请保存在 .ngsp 课件中"
-    },
-    {
-      "file": "Tool Folder\\34 度量工具.gsp",
-      "reason": "原版不能保留字体 宋体"
-    },
-    {
-      "file": "Tool Folder\\35 算法框图.gsp",
-      "reason": "原版不能保留字体 宋体"
     },
     {
       "file": "Tool Folder\\37 三维透视.gsp",

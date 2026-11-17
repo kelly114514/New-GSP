@@ -380,10 +380,11 @@ describe('应用状态相关的命令', () => {
       distance = st.add({ k: 'measure', m: 'distance', refs: [a, b] }).id;
       angle = st.add({ k: 'measure', m: 'angle', refs: [a, b, c] }).id;
     });
-    const v = view(st, [point, distance]);
+    const v = { ...view(st, [point, distance]), setSel(ids: Id[]) { this.sel = ids; } };
     const c = { app: { ...app(), refresh() {}, flashStatus() {} } as never, view: v as never, shift: false };
     await executeCommand(36944, c);
     expect(v.marks).toEqual({ distance });
+    expect(v.sel).toEqual([point]);
     v.sel = [point, angle];
     await executeCommand(36941, c);
     expect(v.marks).toEqual({ distance, angle: { m: angle } });

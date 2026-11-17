@@ -7,7 +7,7 @@
  * 本文件不依赖 engine.ts 的运行时（只引入类型），避免循环引用。 */
 import type { Result } from './engine';
 import { byId, parentsOf, type Def, type Id, type Page } from './model';
-import { CM, isRadianMode, realPow, type Expr } from './expr';
+import { cmToPx, isRadianMode, realPow, type Expr } from './expr';
 import { EPS } from './geom';
 import * as G from './geom';
 
@@ -282,10 +282,10 @@ function compile(iter: Extract<Def, { k: 'iterate' }>, page: Page): FastProgram 
       const p = slotOf(d.refs[0], 'pt'), s = slotOf(d.refs[1], 'sys'), slot = alloc(1), isX = d.m === 'abscissa';
       entity.set(id, { kind: 'num', slot });
       ops.push(v => {
-        // 与 toSys 同样的运算：d = p - origin；x = cross(d, uy) / det；y = cross(ux, d) / det
+        // 与 toSys 共用坐标换算的运算顺序。
         const dx = v[p] - v[s], dy = v[p + 1] - v[s + 1];
         const det = v[s + 6];
-        const r = isX ? (dx * v[s + 5] - dy * v[s + 4]) / det : (v[s + 2] * dy - v[s + 3] * dx) / det;
+        const r = G.systemCoordinate(dx, dy, v[s + 2], v[s + 3], v[s + 4], v[s + 5], det, isX);
         if (!Number.isFinite(r)) return false;
         v[slot] = r; return true;
       });
@@ -295,7 +295,8 @@ function compile(iter: Extract<Def, { k: 'iterate' }>, page: Page): FastProgram 
       entity.set(id, { kind: 'num', slot, unit: angle ? 'angle' : 'none' });
       ops.push(v => {
         const dx = v[p] - v[s], dy = v[p + 1] - v[s + 1], det = v[s + 6];
-        const x = (dx * v[s + 5] - dy * v[s + 4]) / det, y = (v[s + 2] * dy - v[s + 3] * dx) / det;
+        const x = G.systemCoordinate(dx, dy, v[s + 2], v[s + 3], v[s + 4], v[s + 5], det, true);
+        const y = G.systemCoordinate(dx, dy, v[s + 2], v[s + 3], v[s + 4], v[s + 5], det, false);
         const r = Math.hypot(x, y);
         if (!Number.isFinite(r)) return false;
         v[slot] = angle ? (r < EPS ? 0 : (Math.atan2(y, x) * 180 / Math.PI + 360) % 360) : r;
@@ -349,9 +350,10 @@ function compile(iter: Extract<Def, { k: 'iterate' }>, page: Page): FastProgram 
       entity.set(id, { kind: 'pt', slot });
       ops.push(v => { v[slot] = v[src] + (v[b] - v[a]); v[slot + 1] = v[src + 1] + (v[b + 1] - v[a + 1]); return Number.isFinite(v[slot]) && Number.isFinite(v[slot + 1]); });
     } else if (d.k === 'translate' && d.by.mode === 'rect' && d.by.dxBy === undefined && d.by.dyBy === undefined) {
-      const src = slotOf(d.src, 'pt'), slot = alloc(2), dx = d.by.dx, dy = d.by.dy;
+      const src = slotOf(d.src, 'pt'), slot = alloc(2);
+      const dx = d.by.dxPx ?? cmToPx(d.by.dx), dy = d.by.dyPx ?? cmToPx(d.by.dy);
       entity.set(id, { kind: 'pt', slot });
-      ops.push(v => { v[slot] = v[src] + dx * CM; v[slot + 1] = v[src + 1] - dy * CM; return Number.isFinite(v[slot]) && Number.isFinite(v[slot + 1]); });
+      ops.push(v => { v[slot] = v[src] + dx; v[slot + 1] = v[src + 1] - dy; return Number.isFinite(v[slot]) && Number.isFinite(v[slot + 1]); });
     } else if (d.k === 'rotate' && d.angle.mode !== 'mark') {
       const kind = shapeKind(d.src); if (kind !== 'pt' && kind !== 'line' && kind !== 'circle') return fail();
       const src = slotOf(d.src, kind), c = slotOf(d.center, 'pt'), a = d.angle.mode === 'marked' ? slotOf(d.angle.a, 'pt') : -1,
@@ -386,7 +388,7 @@ function compile(iter: Extract<Def, { k: 'iterate' }>, page: Page): FastProgram 
     } else if (d.k === 'plotfix') {
       const s = slotOf(d.sys, 'sys'), slot = alloc(2);
       entity.set(id, { kind: 'pt', slot });
-      ops.push(v => { v[slot] = v[s] + v[s + 2] * d.x + v[s + 4] * d.y; v[slot + 1] = v[s + 1] + v[s + 3] * d.x + v[s + 5] * d.y; return Number.isFinite(v[slot]) && Number.isFinite(v[slot + 1]); });
+      ops.push(v => { v[slot] = G.systemPosition(v[s], d.x, v[s + 2], d.y, v[s + 4]); v[slot + 1] = G.systemPosition(v[s + 1], d.x, v[s + 3], d.y, v[s + 5]); return Number.isFinite(v[slot]) && Number.isFinite(v[slot + 1]); });
     } else if (d.k === 'plotxy') {
       const ux = unitOf(d.x), uy = unitOf(d.y);
       const sx = slotOf(d.x, 'num', ux), sy = slotOf(d.y, 'num', uy), s = slotOf(d.sys, 'sys'), slot = alloc(2);
@@ -397,7 +399,7 @@ function compile(iter: Extract<Def, { k: 'iterate' }>, page: Page): FastProgram 
         if (!Number.isFinite(px0) || !Number.isFinite(py0)) return false;
         const angle = uy === 'angle' ? v[sy] * Math.PI / 180 : v[sy];
         const x = d.polar ? px0 * Math.cos(angle) : px0, y = d.polar ? px0 * Math.sin(angle) : py0;
-        const px = v[s] + v[s + 2] * x + v[s + 4] * y, py = v[s + 1] + v[s + 3] * x + v[s + 5] * y;
+        const px = G.systemPosition(v[s], x, v[s + 2], y, v[s + 4]), py = G.systemPosition(v[s + 1], x, v[s + 3], y, v[s + 5]);
         if (!Number.isFinite(px) || !Number.isFinite(py)) return false;
         v[slot] = px; v[slot + 1] = py; return true;
       });

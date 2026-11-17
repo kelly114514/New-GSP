@@ -19,6 +19,7 @@ export class IterPanel {
   private finalOnly = false;
   private nonPoint: boolean;
   private nonPointTouched = false;
+  private random = false;
   /** 生成迭代数据表：有数值原象时默认勾选（原版采集：结构菜单里该项默认带勾）。 */
   private table = true;
   private readonly box: HTMLElement;
@@ -153,8 +154,11 @@ export class IterPanel {
     ];
   }
   private canTable() { const maps = this.maps.filter(m => m.every(x => x !== undefined)); return tableColumns(this.view.store, { pre: this.pre.map(o => o.id), maps: maps as Id[][] }).length > 0 && this.maps.length === 1; }
+  private canMovePathPoints() {
+    return this.maps.some(map => map.some(id => id !== undefined && this.view.store.get(id)?.def.k === 'onpath'));
+  }
   private structureMenu(): MenuItem[] {
-    const later = '本版暂缓';
+    const canMove = this.canMovePathPoints();
     return [
       { label: '添加新的映射\tCtrl+A', run: () => this.addMap(), disabled: !this.complete() },
       { label: '删除当前映射', run: () => this.deleteMap(), disabled: this.maps.length < 2 },
@@ -164,8 +168,8 @@ export class IterPanel {
       { label: '', sep: true },
       { label: '生成迭代数据表', run: () => { this.table = !this.table; this.refresh(); }, checked: this.table && this.canTable(), disabled: !this.canTable(), title: this.canTable() ? '' : '需要数值原象（参数、计算）和一个映射' },
       { label: '', sep: true },
-      { label: '移动原象上的点：相对类似的位置', disabled: true, title: later },
-      { label: '移动原象上的点：所在对象的随机位置', disabled: true, title: later },
+      { label: '移动原象上的点：相对类似的位置', disabled: !canMove, checked: canMove && !this.random, run: () => { this.random = false; } },
+      { label: '移动原象上的点：所在对象的随机位置', disabled: !canMove, checked: canMove && this.random, run: () => { this.random = true; } },
     ];
   }
 
@@ -189,7 +193,7 @@ export class IterPanel {
         const r = constructIteration(st, {
           pre: this.pre.map(o => o.id), maps: this.maps as Id[][],
           depth: this.depthParam ? { param: this.depthParam.id } : { fixed: this.depth },
-          finalOnly: this.finalOnly, nonPointOnly: this.nonPoint, table: this.table && this.canTable(),
+          finalOnly: this.finalOnly, nonPointOnly: this.nonPoint, table: this.table && this.canTable(), random: this.random && this.canMovePathPoints(),
         });
         made.push(...r.images.map(o => o.id));
       });

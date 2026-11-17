@@ -3,12 +3,15 @@ import { readRecords, type RecordEntry } from './records';
 import { buttonSize } from '../core/button';
 import { hasStructure, isPlainTextMarkup, readRichText, readRichTextRuns, readRichTextTree, type RichNode } from './richtext';
 import { legacyBitmap } from './bitmap';
+import { ANIMATION_SPEED_FIELDS, animationSpeedFromFile, originalAnimationOptions } from './animation';
+import { fontRecord, originalFontName } from './fonts';
 import { compareContent, describeDifference, sourceSnapshot } from './semantic';
-import { type FuncForm, DEFAULT_DISPLAY, TEXT_CATS, TEXT_DEFAULTS, TEXT_REF, VALUE_DISPLAYS, defaultValueDisplay, type DisplayPrefs, type TextStyle, newDoc, emptyPage, defaultStyle, parentsOf, isPointDef, pageAutoSnap, pageDisplay, type Def, type Doc, type EmbeddedTool, type Id, type Obj, type Page, type Style } from '../core/model';
-import { CM, evalExpr, type Expr } from '../core/expr';
+import { type FuncForm, DEFAULT_DISPLAY, TEXT_CATS, TEXT_DEFAULTS, TEXT_REF, VALUE_DISPLAYS, defaultValueDisplay, type DisplayPrefs, type TextStyle, newDoc, emptyPage, defaultStyle, parentsOf, isArcDef, isCircleDef, isPointDef, isStraightDef, pageAutoSnap, pageDisplay, type Def, type Doc, type EmbeddedTool, type Id, type Obj, type Page, type Style } from '../core/model';
+import { CM, cmToPx, evalExpr, type Expr } from '../core/expr';
 import { evaluatePage, evaluateTargets, polygonEdgeAt, type Results } from '../core/engine';
 import { imageBox, imageCorners, type Affine } from '../core/image';
 import { isExternalActionUrl, legacyHelpTopic } from '../core/link';
+import { toolGivenSlot } from '../core/tooling';
 import { measureName as measureTitle } from '../ui/render';
 
 export class Unsupported extends Error {}
@@ -30,6 +33,11 @@ const fpx = (v: number) => Math.max(-32768, Math.min(32767, Math.round(v)));   /
 const upx = (v: number) => v;
 const hex = (c: string) => c.length === 7 ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : [0, 0, 0];
 const rgb = (r: number, g: number, b: number) => `#${[r, g, b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
+
+/** 对默认厘米换算不能精确复原的记录，额外保留原始像素数。 */
+function exactPixels<K extends string>(field: K, px: number): Partial<Record<K, number>> {
+  return cmToPx(px / CM) === px ? {} : { [field]: px } as Record<K, number>;
+}
 
 // ======================= 编码 =======================
 class Out {
@@ -224,11 +232,12 @@ function rec1300(bytes: Uint8Array, w: number, h: number): Uint8Array {
 // ---- 方程度量（2300 富文本）----
 type Eq = { kind: 'line'; vertical: boolean; m: number; b: number; x: number } | { kind: 'circle'; cx: number; cy: number; r: number };
 const runT = (t: string) => `<T${enc.encode(t).length.toString(16).toUpperCase()}x${t}>`;
-/** 原版打开并另存时会把这些已实测字体替换为 Tahoma，不能冒充完整保存。 */
-function requireOriginalFont(name: string): void {
-  if (['microsoft yahei', 'segoe ui', 'simsun', 'simhei', 'kaiti', '宋体', '黑体', '楷体'].includes(name.trim().toLowerCase())) {
+/** 已观察到替换或仍需复测的字体名，继续提示转存新版格式。 */
+function requireOriginalFont(name: string): string {
+  if (!name.trim() || name.includes('\0') || name.trim().toLowerCase() === 'arial narrow') {
     throw new Unsupported(`原版不能保留字体 ${name}`);
   }
+  return originalFontName(name);
 }
 /** 文本节点所需的字体：公式的括号和叶节点也可能各自使用独立字体。 */
 function richFonts(node: RichNode): string[] {
@@ -243,8 +252,7 @@ function richFonts(node: RichNode): string[] {
   }
 }
 function richStyle(f: import('../core/model').FontSpec, fonts: string[]): string {
-  requireOriginalFont(f.name);
-  const i = fonts.indexOf(f.name);
+  const i = fonts.indexOf(requireOriginalFont(f.name));
   if (i < 0 || !Number.isFinite(f.size) || f.size <= 0 || !/^#[0-9a-f]{6}$/i.test(f.color)) throw new Unsupported('文字字体或颜色');
   const X = (v: number) => v.toString(16).toUpperCase(), [r, g, b] = hex(f.color);
   return `#${X(Math.max(1, Math.round(f.size)))}P${i ? X(i) : ''}W${f.bold ? 2 : 1}S${f.italic ? 2 : 1}U${f.underline ? 2 : 1}R${X(r + 1)}G${X(g + 1)}L${X(b + 1)}`;
@@ -358,8 +366,8 @@ function underlyingDef(cx: Ctx, def: Def): Def {
   return def;
 }
 
-/** 轨迹的类型取决于被着色或变换前的几何对象。 */
-function locusSourceDef(cx: Ctx, def: Def): Def {
+/** 已着色或变换的对象按最初的几何原象分类。 */
+function baseGeometryDef(cx: Ctx, def: Def): Def {
   const visited = new Set<Id>();
   while (def.k === 'colorize' || def.k === 'translate' || def.k === 'rotate' || def.k === 'dilate' || def.k === 'reflect') {
     const id = def.src;
@@ -375,20 +383,22 @@ function locusSourceDef(cx: Ctx, def: Def): Def {
 /** 变换得到的对象在文件里的类别/类型/样式种类：与原象相同（样本：线段→线段 2/14，圆→圆 3/28，三角形内部→4/52 …）；认不出的原象拒绝写出。 */
 function transformClass(cx: Ctx, srcId: Id): { cat: number; kind: number; mode: 'point' | 'line' | 'region' | 'plain' } {
   const src = cx.page.objects.find(x => x.id === srcId);
-  const d = src ? underlyingDef(cx, src.def) : undefined;
+  const d = src ? baseGeometryDef(cx, src.def) : undefined;
   if (!d) throw new Unsupported('变换的原象不存在');
   if (isPointDef(d)) return { cat: 1, kind: 4, mode: 'point' };
   switch (d.k) {
-    case 'image': return { cat: 16, kind: 78, mode: 'plain' };
+    case 'image': return { cat: 16, kind: d.drawing ? 98 : 78, mode: 'plain' };
     case 'seg': return { cat: 2, kind: 14, mode: 'line' };
     case 'ray': return { cat: 2, kind: 13, mode: 'line' };
     case 'line': return { cat: 2, kind: 12, mode: 'line' };
     case 'parallel': return { cat: 2, kind: 46, mode: 'line' };
     case 'perp': return { cat: 2, kind: 47, mode: 'line' };
+    case 'bisect': return { cat: 2, kind: 13, mode: 'line' }; // 变换后的角平分线是射线类型
     case 'circle': case 'circle-seg': return { cat: 3, kind: 28, mode: 'line' };
-    case 'arc-circle': case 'arc3': return { cat: 12, kind: 67, mode: 'line' };
+    case 'arc-circle': case 'arc3': case 'arc-center': return { cat: 12, kind: 67, mode: 'line' };
     case 'poly': return { cat: 4, kind: d.pts.length === 3 ? 52 : d.pts.length === 4 ? 53 : d.pts.length === 5 ? 54 : 55, mode: 'region' };
     case 'circle-int': return { cat: 5, kind: 16, mode: 'region' };
+    case 'arc-int': return { cat: 13, kind: d.mode === 'sector' ? 68 : 69, mode: 'region' };
     default: throw new Unsupported(`${d.k} 的变换`);
   }
 }
@@ -404,9 +414,26 @@ function objectPrecision(cx: Ctx, o: Obj, unit?: string): number {
 /** 本页样式表的一项：[u16 字体序号][u16 字号像素][u16 粗 1/2][u16 斜 1/2][u16 下划线 1/2][u16 1 ×5]，缺省项全为 0（原版自己的文件也这样）。 */
 // 后三项是文字颜色，每个分量存“值 + 1”（1 即 0、256 即 255）：0338 的点标签样式 (1,256,1,1)… 对应红色、0522 的 (…,1,1,256) 对应蓝色（原版截图核对）。
 const styleColorParts = (color?: string): number[] => { const m = /^#([0-9a-f]{6})$/i.exec(color ?? ''); return m ? [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) + 1) : [1, 1, 1]; };
-const styleKey = (fonts: string[], f?: import('../core/model').FontSpec) => f ? [Math.max(0, fonts.indexOf(f.name)), Math.round(f.size), f.bold ? 2 : 1, f.italic ? 2 : 1, f.underline ? 2 : 1, 1, 1, ...styleColorParts(f.color)].join(',') : '0,0,0,0,0,0,0,0,0,0';
+const styleKey = (fonts: string[], f?: import('../core/model').FontSpec) => f ? [Math.max(0, fonts.indexOf(originalFontName(f.name))), Math.round(f.size), f.bold ? 2 : 1, f.italic ? 2 : 1, f.underline ? 2 : 1, 1, 1, ...styleColorParts(f.color)].join(',') : '0,0,0,0,0,0,0,0,0,0';
 const ownFont = (o: Obj) => (o.def.k === 'text' ? undefined : o.font);
 function styleIndex(cx: Ctx, o: Obj): number { const i = cx.styles.indexOf(styleKey(cx.fonts, ownFont(o))); return i < 0 ? cx.styles.indexOf(styleKey(cx.fonts)) : i; }
+
+type AnimateButton = Extract<import('../core/model').ButtonAction, { type: 'animate' }>;
+function animationRecord(action: AnimateButton): Uint8Array {
+  const flags = { forward: 0, backward: 1, bounce: 2, random: 3 }[action.direction] << 12;
+  const speed = typeof action.speed === 'number' ? action.speed : ANIMATION_SPEED_FIELDS[action.speed];
+  const record = new Buf(36);
+  record.u16(62);
+  record.v.setFloat32(20, 25600, true);
+  if (action.gspOptions) {
+    const source = originalAnimationOptions(action.gspOptions);
+    if (!source) throw new Unsupported('动画按钮的原版记录不完整');
+    record.b.set(source);
+  }
+  record.v.setUint16(6, (record.v.getUint16(6, true) & ~0xb000) | flags | (action.once ? 0x8000 : 0), true);
+  record.v.setFloat32(8, speed, true);
+  return record.b;
+}
 
 function encodeObject(out: Out, o: Obj, cx: Ctx) {
   const d = o.def;
@@ -479,15 +506,15 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
     }
     case 'mid': hdr = header(1, 1, 11, o, 'point'); parents = [ix(d.seg)]; break;
     case 'inter': {
-      const A = cx.page.objects.find(x => x.id === d.a)!, B = cx.page.objects.find(x => x.id === d.b)!;
-      const pathKind = (x: Obj) => underlyingDef(cx, x.def).k;
-      const isC = (x: Obj) => ['circle', 'circle-seg', 'arc-circle', 'arc3', 'arc-center'].includes(pathKind(x));
-      const nC = Number(isC(A)) + Number(isC(B));
-      const isStraight = (x: Obj) => ['seg', 'ray', 'line', 'parallel', 'perp', 'bisect'].includes(pathKind(x)), isPaths = (x: Obj) => ['locus', 'plot', 'pcurve'].includes(pathKind(x));
-      if (pathKind(A) === 'ray' && pathKind(B) === 'poly' && d.branch === 0 && !d.alternate) {
+      const aDef = need(cx.page.objects.find(x => x.id === d.a), '交点缺少父对象').def;
+      const bDef = need(cx.page.objects.find(x => x.id === d.b), '交点缺少父对象').def;
+      const A = baseGeometryDef(cx, aDef), B = baseGeometryDef(cx, bDef);
+      const isRound = (def: Def) => isCircleDef(def) || isArcDef(def);
+      const nC = Number(isRound(A)) + Number(isRound(B));
+      const isPaths = (def: Def) => def.k === 'locus' || def.k === 'plot' || def.k === 'pcurve';
+      if (A.k === 'ray' && B.k === 'poly' && d.branch === 0 && !d.alternate) {
         hdr = header(93, 1, 45, o, 'point'); parents = [ix(d.a), ix(d.b)]; break;
       }
-      const aDef = A.def, bDef = B.def;
       if (aDef.k === 'plot' && bDef.k === 'plot' && aDef.sys === bDef.sys) {
         const fa = cx.page.objects.find(x => x.id === aDef.func)?.def;
         const fb = cx.page.objects.find(x => x.id === bDef.func)?.def;
@@ -497,16 +524,16 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
           rec3 = new Buf(8).u16(98).u16(0).u32(d.branch).b; break;
         }
       }
-      if (((isStraight(A) || isC(A)) && isPaths(B)) || ((isStraight(B) || isC(B)) && isPaths(A))) {
+      if (((isStraightDef(A) || isRound(A)) && isPaths(B)) || ((isStraightDef(B) || isRound(B)) && isPaths(A))) {
         // 方法 98：父对象 [直线型或圆型, 曲线]，2003 = [u16 98][u16 0][u32 序号]。
         if (!Number.isInteger(d.branch) || d.branch < 0 || d.branch > 0xffffffff) throw new Unsupported('曲线交点序号');
         hdr = header(98, 1, 45, o, 'point'); parents = isPaths(A) ? [ix(d.b), ix(d.a)] : [ix(d.a), ix(d.b)];
         const b = new Buf(8); b.u16(98).u16(0).u32(d.branch); rec3 = b.b; break;
       }
-      if ([A, B].some(x => !isStraight(x) && !isC(x)) || d.branch < 0 || d.branch > (nC ? 1 : 0)) throw new Unsupported('弧或其它路径的交点');
+      if ([A, B].some(def => !isStraightDef(def) && !isRound(def)) || d.branch < 0 || d.branch > (nC ? 1 : 0)) throw new Unsupported('弧或其它路径的交点');
       const method = nC === 0 ? 9 : nC === 1 ? 11 + d.branch : 13 + d.branch;
       hdr = header(method, 1, 45, o, 'point');
-      parents = nC === 1 && isC(A) ? [ix(d.b), ix(d.a)] : [ix(d.a), ix(d.b)]; break;
+      parents = nC === 1 && isRound(A) ? [ix(d.b), ix(d.a)] : [ix(d.a), ix(d.b)]; break;
     }
     case 'translate': {
       const by = d.by;
@@ -514,7 +541,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
         const unitX = role === 'unitX';
         hdr = header(unitX ? 52 : sys?.two ? 55 : 54, 1, 40, o, 'point', sys?.two && !unitX ? undefined : { b2: role === 'unitY' ? 4 : o.hidden ? 1 : 0 });   // 矩形/三角网格：纵轴单位点是独立的（方法 55，可见，原版采集 probe_grid2）
         parents = [role === 'unitX' ? ix(d.src) : ix(sys!.unitX)];
-        const b = new Buf(12); b.u16(unitX ? 52 : sys?.two ? 55 : 54).u16(0).f64((unitX ? by.mode === 'rect' ? by.dx : 1 : by.mode === 'rect' ? by.dy : 1) * CM); rec3 = b.b; break;
+        const b = new Buf(12); b.u16(unitX ? 52 : sys?.two ? 55 : 54).u16(0).f64(by.mode !== 'rect' ? CM : unitX ? by.dxPx ?? cmToPx(by.dx) : by.dyPx ?? cmToPx(by.dy)); rec3 = b.b; break;
       }
       if (by.mode === 'vector') { hdr = header(16, 1, 4, o, 'point'); parents = [ix(d.src), ix(by.from), ix(by.to)]; }
       else if (by.mode === 'rect') {
@@ -523,19 +550,21 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
         hdr = header(method, 1, 4, o, 'point');
         parents = [ix(d.src), ...(xMarked ? [ix(by.dxBy!)] : []), ...(yMarked ? [ix(by.dyBy!)] : [])];
         if (method === 17) {
-          const b = new Buf(52); b.u16(17).u16(0).f64(by.dx * CM).f64(by.dx).u32(1).f64(by.dy * CM).f64(by.dy).u32(1); rec3 = b.b;
+          const b = new Buf(52); b.u16(17).u16(0).f64(by.dxPx ?? cmToPx(by.dx)).f64(by.dx).u32(1).f64(by.dyPx ?? cmToPx(by.dy)).f64(by.dy).u32(1); rec3 = b.b;
         } else if (method !== 20) {
           const fixed = method === 18 ? by.dx : by.dy;
-          rec3 = new Buf(28).u16(method).u16(0).f64(fixed * CM).f64(fixed).u32(1).u32(0).b;
+          rec3 = new Buf(28).u16(method).u16(0).f64((method === 18 ? by.dxPx : by.dyPx) ?? cmToPx(fixed)).f64(fixed).u32(1).u32(0).b;
         }
       } else {
         const dm = 'm' in by.dist, am = 'pts' in by.angle;
         if ('m' in by.angle) {
+          const marker = 'marker' in by.angle;
           if ('m' in by.dist) {
-            hdr = header(26, 1, 4, o, 'point'); parents = [ix(d.src), ix(by.angle.m), ix(by.dist.m)];
+            hdr = header(marker ? 118 : 26, 1, 4, o, 'point'); parents = [ix(d.src), ix(by.angle.m), ix(by.dist.m)];
           } else if ('fixed' in by.dist) {
-            hdr = header(23, 1, 4, o, 'point'); parents = [ix(d.src), ix(by.angle.m)];
-            rec3 = new Buf(28).u16(23).u16(0).f64(by.dist.fixed * CM).f64(by.dist.fixed).u32(1).u32(0).b;
+            const method = marker ? 117 : 23;
+            hdr = header(method, 1, 4, o, 'point'); parents = [ix(d.src), ix(by.angle.m)];
+            rec3 = new Buf(28).u16(method).u16(0).f64(by.distPx ?? cmToPx(by.dist.fixed)).f64(by.dist.fixed).u32(1).u32(0).b;
           } else throw new Unsupported('极坐标平移距离');
           break;
         }
@@ -543,7 +572,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
         if (!dm && !am) {
           const th = (((by.angle as { fixed: number }).fixed) * Math.PI) / 180;
           hdr = header(21, 1, 4, o, 'point'); parents = [ix(d.src)];
-          const b = new Buf(60); b.u16(21).u16(0).f64(-Math.sin(th)).f64(Math.cos(th)).f64((by.angle as { fixed: number }).fixed).u32(1).f64((by.dist as { fixed: number }).fixed * CM).f64((by.dist as { fixed: number }).fixed).u32(1); rec3 = b.b;
+          const b = new Buf(60); b.u16(21).u16(0).f64(-Math.sin(th)).f64(Math.cos(th)).f64((by.angle as { fixed: number }).fixed).u32(1).f64(by.distPx ?? cmToPx((by.dist as { fixed: number }).fixed)).f64((by.dist as { fixed: number }).fixed).u32(1); rec3 = b.b;
         } else if (dm && !am) {          // 标记距离 + 固定角度：方法 24
           const deg = (by.angle as { fixed: number }).fixed, th = (deg * Math.PI) / 180;
           hdr = header(24, 1, 4, o, 'point'); parents = [ix(d.src), ix((by.dist as { m: Id }).m)];
@@ -551,7 +580,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
         } else if (!dm && am) {          // 固定距离 + 标记角度：方法 22
           const cmv = (by.dist as { fixed: number }).fixed;
           hdr = header(22, 1, 4, o, 'point'); parents = [ix(d.src), ...(by.angle as { pts: [Id, Id, Id] }).pts.map(ix)];
-          const b = new Buf(28); b.u16(22).u16(0).f64(cmv * CM).f64(cmv).u32(1).u32(0); rec3 = b.b;
+          const b = new Buf(28); b.u16(22).u16(0).f64(by.distPx ?? cmToPx(cmv)).f64(cmv).u32(1).u32(0); rec3 = b.b;
         } else {                         // 都标记：方法 25
           hdr = header(25, 1, 4, o, 'point'); parents = [ix(d.src), ...(by.angle as { pts: [Id, Id, Id] }).pts.map(ix), ix((by.dist as { m: Id }).m)];
         }
@@ -662,7 +691,8 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
       if (d.k === 'func' && d.derivativeOf !== undefined) throw new Unsupported('保留来源关系的导函数');
       if (d.k === 'func' && d.symbol) throw new Unsupported('用“y=”记号显示的函数');
       const refs = parentsOf(d), isFn = d.k === 'func';
-      const u = (cx.results.get(o.id)?.shape as { q?: { u?: string } } | undefined)?.q?.u;
+      const result = cx.results.get(o.id)?.shape;
+      const u = result?.k === 'num' ? result.q.u : d.k === 'calc' ? d.unit : undefined;
       const calcKind = u === 'distance' ? 48 : u === 'angle' ? 49 : 51;     // 计算结果的单位决定类型号
       hdr = header(refs.length ? 48 : 0, 11, isFn ? 57 : calcKind, o, 'plain'); parents = refs.length ? refs.map(ix) : undefined;
       const toks = exprTokens(d.expr, id => need(refs.indexOf(id) < 0 ? undefined : refs.indexOf(id), '表达式引用'));
@@ -683,10 +713,8 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
       else if (a.type === 'animate') {
         // 2003（36 字节）：偏移 6 的高半字节是方向（0 向前 1 向后 2 双向 3 随机），偏移 8 的 f32 是速度（慢 4、中 24、快 80）。真实鼠标采集
         // 偏移 6 的 u16：位 12–13 是方向，0x8000 位是“只播放一次”（原版采集 v-anim、on01）
-        const dir = { forward: 0, backward: 1, bounce: 2, random: 3 }[a.direction], sp = typeof a.speed === 'number' ? a.speed : { slow: 4, medium: 24, fast: 80 }[a.speed];
         A = 2; tparents = a.targets;
-        const ab = new Buf(36); ab.u16(62).u16(0).u16(0).u16((dir << 12) | (a.once ? 0x8000 : 0)); ab.v.setFloat32(8, sp, true); ab.v.setFloat32(20, 25600, true);
-        rec3b = ab.b;
+        rec3b = animationRecord(a);
       }
       else if (a.type === 'move') { A = 3; B = { slow: 0, medium: 1, fast: 2, high: 3 }[a.speed]; tparents = [a.from, a.to, ...(a.pairs ?? []).flat()]; aux = a.toInitial ? 1 : a.legacyFinal ? 0x10000 : 0; }
       else if (a.type === 'series') {
@@ -722,11 +750,16 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
     case 'text': {
       const rich = richTextMarkup(d, cx.fonts);
       if (d.anchor !== undefined && !d.off) throw new Unsupported('附着在点上的文本（没有偏移）');
+      if (d.anchor !== undefined && !d.refs?.length) throw new Unsupported('附着文本缺少原版需要的引用对象');
       if (d.anchor !== undefined || d.refs?.length) {   // 方法 90 的首个父对象为锚点；方法 73 的父对象全为插入对象。
         const box = cx.results.get(o.id)?.shape as { at?: { x: number; y: number } } | undefined;
-        const at = d.anchor === undefined ? d.at : box?.at;
+        const anchor = d.anchor === undefined ? undefined : cx.results.get(d.anchor);
+        // 原版在两直线平行时仍保存附着文本的最后位置。只允许解码器能恢复的居中偏移。
+        const cached = anchor?.status === 'undefined' && d.off?.x === -d.w / 2 && d.off.y === -d.h / 2
+          && [d.at.x, d.at.y].every(value => Number.isInteger(value) && value === fpx(value));
+        const at = d.anchor === undefined || cached ? d.at : box?.at;
         if (!at) throw new Unsupported('附着在点上的文本（无位置）');
-        const f = d.font, X = (v: number) => v.toString(16).toUpperCase(), fi = cx.fonts.indexOf(f.name), [cr, cg, cb] = hex(f.color);
+        const f = d.font, X = (v: number) => v.toString(16).toUpperCase(), fi = cx.fonts.indexOf(originalFontName(f.name)), [cr, cg, cb] = hex(f.color);
         const attrs = `#${X(Math.max(1, Math.round(f.size)))}P${fi > 0 ? X(fi) : ''}${f.bold ? 'W2' : ''}${f.italic ? 'S2' : ''}${f.underline ? 'U2' : ''}${cr + cg + cb > 0 ? `R${X(cr + 1)}G${X(cg + 1)}L${X(cb + 1)}` : ''}`;
         const lead = d.anchor === undefined ? 1 : 2;
         const runs = d.text.split('\n').map(line => {
@@ -751,7 +784,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
       hdr = header(0, 0, 19, o, 'plain'); hdr.set(hex(/^#[0-9a-f]{6}$/i.test(d.font.color) ? d.font.color : '#000000'), 12);   // 对象头颜色是文字的缺省颜色
       // <T 后面的十六进制数是该段文字的 UTF-8 字节数（abc→3，“你好 123”→A，line1→5），不是字体号
       // # 后的字号按十六进制写入；原版实测其数字与页面逻辑像素的文字绘制尺寸对应。
-      const f = d.font, X = (v: number) => v.toString(16).toUpperCase(), fi = cx.fonts.indexOf(f.name), [cr, cg, cb] = hex(f.color);
+      const f = d.font, X = (v: number) => v.toString(16).toUpperCase(), fi = cx.fonts.indexOf(originalFontName(f.name)), [cr, cg, cb] = hex(f.color);
       const attrs = `#${X(Math.max(1, Math.round(f.size)))}P${fi > 0 ? X(fi) : ''}${f.bold ? 'W2' : ''}${f.italic ? 'S2' : ''}${f.underline ? 'U2' : ''}${cr + cg + cb > 0 ? `R${X(cr + 1)}G${X(cg + 1)}L${X(cb + 1)}` : ''}`;
       const markup = rich ?? `<S${attrs}<VL${d.text.split(String.fromCharCode(10)).map(l => `<T${enc.encode(l).length.toString(16).toUpperCase()}x${l}>`).join('')}>>`, mb = enc.encode(markup);
       const field = (18 + mb.length + 1 + 1) & ~1, recLen = (18 + mb.length + 1 + 3) & ~3;
@@ -778,7 +811,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
         const a = new Buf(48); a.f64(aa / w).f64(ab / h).f64(tx).f64(ac / w).f64(ad / h).f64(ty);
         tail.push([2216, a.b]);
       }
-      hdr = header(method, 16, 78, o, 'plain'); new DataView(hdr.buffer).setUint32(20, ri, true);
+      hdr = header(method, 16, d.drawing ? 98 : 78, o, 'plain'); new DataView(hdr.buffer).setUint32(20, ri, true);
       tail.push([8004, new Buf(2).u16(ri).b]); label = false; break;
     }
     case 'custom-point': {
@@ -807,15 +840,28 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
     }
     case 'table': {
       if (d.cols.length < 1) throw new Unsupported('空表格');
-      const cols = d.cols.map(id => cx.page.objects.find(x => x.id === id));
-      for (const col of cols) {
-        const unit = col && (cx.results.get(col.id)?.shape as { q?: { u?: string } } | undefined)?.q?.u;
-        if (!col || col.def.k !== 'measure' || unit !== 'distance') throw new Unsupported('表格的列不是距离度量');
+      const cols = d.cols.map(id => {
+        const obj = cx.page.objects.find(x => x.id === id), shape = cx.results.get(id)?.shape;
+        if (!obj || shape?.k !== 'num' || !Number.isFinite(shape.q.v) || !['measure', 'calc', 'param'].includes(obj.def.k)) throw new Unsupported('表格的列不是可写入的数值');
+        const unit = shape.q.u;
+        if (unit === 'angle' && cx.display.angleUnit !== 'deg' || unit === 'distance' && cx.display.distUnit !== 'cm') throw new Unsupported('表格的数值单位尚待原版验证');
+        return { obj, unit, live: shape.q.v, precision: Math.min(100, objectPrecision(cx, obj, unit)) };
+      });
+      if (d.rows.some(row => row.length !== cols.length || row.some(v => !Number.isFinite(v)))) throw new Unsupported('表格包含无法写入的单元格');
+      const last = d.rows.at(-1);
+      if (last && cols.some(({ live, precision }, i) => Number(live.toFixed(precision)) !== Number(last[i].toFixed(precision)))) {
+        throw new Unsupported('原版会重算与当前列值不同的表格最后一行');
       }
       const run = (t: string) => `<T${enc.encode(t).length.toString(16).toUpperCase()}x${t}>`;
-      // 原版样本：(列数+2) 个 '0'，各列表头，然后每行 '0' + 各列的值；一列、两列样本均如此
-      const heads = cols.map(col => `<H<SS2${run(' ')}><SO2<SS2${run(measureTitle(cx.page, cx.results, col!))}>>>`).join('');
-      const text = '0'.repeat(cols.length + 2) + heads + d.rows.map(r => '0' + cols.map((_, ci) => `<H<H${run(r[ci].toFixed(2))}>${run('厘米')}>`).join('')).join('');
+      // 原版另存会用当前列值重算最后一行。历史值不能伪装成当前值。
+      // 2317 正文是 (列数+2) 个 '0'，各列表头，然后每行 '0' + 各列的值。
+      const heads = cols.map(({ obj }) => `<H<SS2${run(' ')}><SO2<SS2${run(measureTitle(cx.page, cx.results, obj))}>>>`).join('');
+      const text = '0'.repeat(cols.length + 2) + heads + d.rows.map(row => '0' + cols.map(({ unit, precision }, i) => {
+        const value = run(row[i].toFixed(precision).replace(/^-/, '–'));
+        if (unit === 'angle') return `<H<H${value}><!B0>>`;
+        if (unit === 'distance') return `<H<H${value}>${run('厘米')}>`;
+        return `<H${value}>`;
+      }).join('')).join('');
       const tb = enc.encode(text), total = (28 + tb.length + 3) & ~3;
       const t = new Buf(total); t.u32(0x90d).u32(total).u32(0x10).u16(fpx(o.at?.x ?? 10)).u16(fpx(o.at?.y ?? 34)).u16(d.rows.length + 2).u16(cols.length + 1).u16(1); t.b.set(tb, 28);
       hdr = header(91, 17, 83, o, 'plain'); parents = d.cols.map(ix);
@@ -841,12 +887,12 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
     case 'locus': {
       // 轨迹（真实鼠标采集）：父对象 = [被驱动点, 路径, 驱动点, …驱动点到被驱动点之间依赖链上的对象（含被驱动点）]
       const drv = cx.page.objects.find(x => x.id === d.driver);
-      if (!drv || (d.parameter ? drv.def.k !== 'param' || d.path !== undefined : !isPointDef(locusSourceDef(cx, drv.def)))) throw new Unsupported('轨迹驱动对象');
+      if (!drv || (d.parameter ? drv.def.k !== 'param' || d.path !== undefined : !isPointDef(baseGeometryDef(cx, drv.def)))) throw new Unsupported('轨迹驱动对象');
       const pathId = d.parameter ? undefined : d.path ?? (drv.def.k === 'onpath' ? drv.def.path : undefined);
       if (!d.parameter && pathId === undefined) throw new Unsupported('轨迹缺少采样路径');
       const out = cx.page.objects.find(x => x.id === d.out);
       if (!out) throw new Unsupported('轨迹的被驱动对象不存在');
-      const source = locusSourceDef(cx, out.def);
+      const source = baseGeometryDef(cx, out.def);
       const point = isPointDef(source);
       if (!d.parameter && !point && !['seg', 'ray', 'line', 'parallel', 'perp', 'bisect', 'circle', 'circle-seg', 'arc-circle', 'arc-center', 'arc3', 'poly', 'circle-int', 'arc-int', 'locus', 'plot', 'pcurve', 'iterimg'].includes(source.k)) throw new Unsupported('轨迹对象类型');
       const ids = new Set<Id>([d.driver]), order = cx.page.objects.map(x => x.id);
@@ -865,7 +911,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
       }
       const pathShape = cx.results.get(pathId!)?.shape;
       const pathObj = need(cx.page.objects.find(x => x.id === pathId), '轨迹的采样路径不存在');
-      const pathDef = locusSourceDef(cx, pathObj.def);
+      const pathDef = baseGeometryDef(cx, pathObj.def);
       const circlePath = pathShape?.k === 'circle' || pathShape?.k === 'disk' || (!pathShape && ['circle', 'circle-seg', 'circle-int'].includes(pathDef.k));
       const range: [number, number] = d.pathRange ?? (circlePath ? [0, Math.PI * 2] : [0, 1]);
       hdr = d.colored ? header(102, 6, 90, o, 'line') : header(35, 6, point ? 42 : 43, o, 'line');
@@ -902,7 +948,7 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
       const b = new Buf(40); b.f64(d.lo ?? -15.74).f64(d.hi ?? 15.74).u32(Math.max(2, Math.round(d.samples)));   // 采样数按模型保存，不用默认值猜测来源。
       const fn = cx.page.objects.find(x => x.id === d.func)?.def;
       b.o = 20; b.u16(Math.max(0, FUNC_FORMS.indexOf(fn?.k === 'func' ? fn.form ?? 'y=f(x)' : 'y=f(x)')));
-      b.o = 22; b.u16(3).u16(0).u16(0x20).u16(0x55).u16(0x49).u16(1);
+      b.o = 22; b.u16(d.flags ?? 3).u16(0).u16(0x20).u16(0x55).u16(0x49).u32(d.endpointMark ?? 1);
       tail = [[2306, b.b], ...nameRecs(o)]; label = false; break;
     }
     case 'sys': {
@@ -955,6 +1001,10 @@ function encodeObject(out: Out, o: Obj, cx: Ctx) {
 
 /** 编码为原版 .gsp。遇到没有样本依据的对象抛 Unsupported，绝不丢弃后继续保存。 */
 export function encodeGsp(doc: Doc, notes: Set<string> = new Set()): Uint8Array {
+  return encodeGspBytes(doc, notes);
+}
+
+function encodeGspBytes(doc: Doc, notes: Set<string>, legacyFontRecords = false, toolGivens?: ReadonlySet<Id>): Uint8Array {
   if (doc.tools?.some(t => t.legacy)) throw new Unsupported('旧版式的内嵌工具请保存在 .ngsp 课件中');
   const out = new Out();
   out.chunks.push(enc.encode('GSP4'));
@@ -970,12 +1020,11 @@ export function encodeGsp(doc: Doc, notes: Set<string> = new Set()): Uint8Array 
   for (const page of doc.pages) {
     const fonts = page.objects.flatMap(o => o.def.k === 'text'
       ? [o.def.font.name, ...(o.def.runs?.map(r => r.font.name) ?? []), ...(o.def.math && o.def.mathText === o.def.text ? richFonts(o.def.math) : [])]
-      : o.font ? [o.font.name] : []);
-    fonts.forEach(requireOriginalFont);
+      : o.font ? [o.font.name] : []).map(requireOriginalFont);
     const display = pageDisplay(doc, page);
     const cx = { notes, images, styles: [] as string[], fonts: ['Times New Roman', ...new Set(fonts.filter(name => name !== 'Times New Roman'))], results: evaluatePage(page, undefined, undefined, { angleUnit: display.angleUnit }), index: new Map<Id, number>(), page, display, sysRole: new Map<Id, SysRole>(), measureCount: 0, labelCounts: [] } as Ctx;
     page.objects.forEach((o, i) => cx.index.set(o.id, i + 1));
-    for (const o of page.objects) if (o.def.k === 'sys') {
+    for (const o of page.objects) if (o.def.k === 'sys' && !toolGivens?.has(o.id)) {
       const ctx = { two: o.def.grid === 'rect' || o.def.grid === 'tri', piX: o.def.grid === 'tri' || !!o.def.piX, piY: !!o.def.piY, unitX: o.def.unitX };
       for (const [id, role] of [[o.def.origin, 'origin'], [o.def.unitX, 'unitX'], [o.def.unitY, 'unitY'], [o.def.axisX, 'axisX'], [o.def.axisY, 'axisY']] as const) {
         const prior = cx.sysRole.get(id);
@@ -1006,9 +1055,8 @@ export function encodeGsp(doc: Doc, notes: Set<string> = new Set()): Uint8Array 
       TEXT_CATS.forEach(([cat], index) => {
         const style = { ...TEXT_DEFAULTS[cat].style, ...display.textStyles?.[cat] };
         if (cat === 'label' && display.textStyles?.label?.italic === undefined) style.italic = display.mathItalic;
-        requireOriginalFont(style.name);
         if (!Number.isInteger(style.size) || style.size < 1 || style.size > 0xffff) throw new Unsupported('文档文本字号超出原版格式范围');
-        const name = enc.encode(style.name), b = new Buf((26 + name.length + 2) & ~1);
+        const name = enc.encode(requireOriginalFont(style.name)), b = new Buf((26 + name.length + 2) & ~1);
         b.u16(index).u16(0).u16(1).u16(style.size).u16(style.bold ? 2 : 1).u16(style.italic ? 2 : 1).u16(style.underline ? 2 : 1);
         for (let j = 0; j < 6; j++) b.u16(1);
         b.b.set(name, 26);
@@ -1029,14 +1077,20 @@ export function encodeGsp(doc: Doc, notes: Set<string> = new Set()): Uint8Array 
     // 本页字体表（1201）和样式表（1203）。文本的 P 序号是字体在表里的位置，各对象的 2008 是样式表序号。
     cx.styles = ['0,16,1,1,1,1,1,1,1,1', styleKey(cx.fonts)];   // 第 0 项沿用旧写法（Times New Roman 16），第 1 项是缺省项
     for (const o of page.objects) { const k = styleKey(cx.fonts, ownFont(o)); if (!cx.styles.includes(k)) cx.styles.push(k); }
-    cx.fonts.forEach((nm, i) => { const nb = enc.encode(nm), r = new Uint8Array((nb.length + 3) & ~1); r[0] = i === 0 ? 1 : 0; r.set(nb, 2); out.rec(1201, r); });   // 字体表：[u16 标志][UTF-8 名字][NUL]，补齐到偶数
+    cx.fonts.forEach((name, index) => {
+      if (!legacyFontRecords) { out.rec(1201, fontRecord(name)); return; }
+      // 仅用于证明旧新版文件可逐字节重建，实际写出始终使用正确的字体记录。
+      const utf8 = enc.encode(name), old = new Uint8Array((utf8.length + 3) & ~1);
+      old[0] = index === 0 ? 1 : 0;
+      old.set(utf8, 2);
+      out.rec(1201, old);
+    });
     for (const k of cx.styles) { const b = new Buf(20); for (const n of k.split(',')) b.u16(Number(n)); out.rec(1203, b.b); }
-    for (const o of page.objects) encodeObject(out, o, cx);
-    if (page.startupButtons?.length) {
-      const b = new Buf(page.startupButtons.length * 4);
-      for (const id of page.startupButtons) b.u32(need(cx.index.get(id), '打开时执行的按钮'));
-      out.rec(9000, b.b);
+    for (const o of page.objects) {
+      if (toolGivens?.has(o.id)) encodeToolGiven(out, o, cx);
+      else encodeObject(out, o, cx);
     }
+    if (page.savedSelection?.length) out.rec(9000, selectionRecord(page.savedSelection, cx.index));
     for (const t of page.transforms ?? []) {   // 自定义变换：[u32 原象序号][u32 象序号][u32 0][u32 名称长度][名称 UTF-8][4 字节补零]（原版采集 probe_custom2）
       const nb = enc.encode(t.name), b = new Buf(16 + nb.length + 4);
       b.u32(cx.index.get(t.src) ?? 0).u32(cx.index.get(t.img) ?? 0).u32(0).u32(nb.length); b.b.set(nb, 16);
@@ -1077,7 +1131,7 @@ function parseRaw(recs: RecordEntry[], _toolMode = false, legacyTool = false) {
   const precisions: number[] = [], pagePrecisions: number[][] = [], angleUnitCodes: (number | undefined)[] = []; let angleUnitCode: number | undefined, background: string | undefined; const backgrounds: (string | undefined)[] = [];
   const pages: RawObj[][] = [], counters: number[] = [], names: (string | undefined)[] = [], resources: Uint8Array[] = [], fonts: string[] = [], transforms: { src: number; img: number; name: string }[][] = [];
   const tools: EmbeddedTool[] = [];
-  const startupButtons: number[][] = [];
+  const savedSelection: number[][] = [];
   const legacy = isLegacyContainer(recs);
   let page: RawObj[] | undefined, cur: RawObj | undefined, toolRecs: RecordEntry[] | undefined;
   // 每页开头的字体表（1201）和样式表（1203 = [u16 字体序号][u16 字号像素][u16 粗 1/2][u16 斜 1/2][u16 下划线 1/2]…）。
@@ -1100,7 +1154,7 @@ function parseRaw(recs: RecordEntry[], _toolMode = false, legacyTool = false) {
     }
     else if (r.tag === 1000) { page = []; pages.push(page); pagePrecisions.push([]); pageTextTables.push([]); pageFonts = []; pageStyles = []; counters.push(0); scrolls.push(r.data.length >= 8 ? { x: v.getInt16(4, true), y: v.getInt16(6, true) } : { x: 0, y: 0 }); snaps.push(r.data.length >= 12 && v.getUint16(10, true) !== 0); names.push(undefined); transforms.push([]); cur = undefined; }
     else if (r.tag === 9000 && page && r.data.length % 4 === 0) {
-      const ids = startupButtons[pages.length - 1] ??= [];
+      const ids = savedSelection[pages.length - 1] ??= [];
       for (let at = 0; at < r.data.length; at += 4) ids.push(v.getUint32(at, true));
     }
     else if (r.tag === 9009 && page && r.data.length >= 16) { const n = v.getUint32(12, true); transforms[transforms.length - 1].push({ src: v.getUint32(0, true), img: v.getUint32(4, true), name: dec.decode(r.data.subarray(16, 16 + n)) }); }
@@ -1158,7 +1212,7 @@ function parseRaw(recs: RecordEntry[], _toolMode = false, legacyTool = false) {
       else if (r.tag === 2005 && r.data.length >= 24) { const n = v.getUint16(22, true); if (24 + n <= r.data.length) { cur.label = legacyText(r.data.subarray(24, 24 + n), legacyTool); cur.labelShown = v.getUint16(2, true) !== 0; cur.labelCustom = v.getUint16(4, true) !== 0; cur.labelPos = [v.getInt16(6, true), v.getInt16(8, true)]; } }
     }
   }
-  return { pages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts, transforms, startupButtons, tools, mathItalicFlags };
+  return { pages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts, transforms, savedSelection, tools, mathItalicFlags };
 }
 
 /** 表格 2317 的文字：开头 (列数+2) 个“0”和各列表头，之后每行一个“0”再接每列一个单元。单元里第一个文字是数值，
@@ -1179,7 +1233,7 @@ function tableRows(text: string, nc: number): number[][] {
       i++;
     }
     // 含公式布局（<? 或 <! 开头）的单元是原版画的无穷大符号等，不能把其中的数字当成单元的值。
-    cells.push(/<[?!]/.test(text.slice(begin, i)) ? '∞' : first);
+    cells.push(/<\?|<!(?!B0>)/i.test(text.slice(begin, i)) ? '∞' : first);
   }
   void rowStarts;
   // 表头：第一批 nc 个单元前的标记都属于开头
@@ -1286,19 +1340,21 @@ const DECODERS: Record<number, Mk> = {
     return undefined;
   },
   16: (r, p) => (r.parents.length === 3 ? { k: 'translate', src: p(0), by: { mode: 'vector', from: p(1), to: p(2) } } : undefined),
-  17: (r, p) => (r.parents.length === 1 && r.p3 && r.p3.byteLength >= 52 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: r.p3.getFloat64(4, true) / CM, dy: r.p3.getFloat64(24, true) / CM } } : undefined),   // 记录同时有像素值和显示值；显示值的单位可能是厘米、英寸或像素，只有像素值可靠
-  18: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 20 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: r.p3.getFloat64(4, true) / CM, dy: 0, dyBy: p(1) } } : undefined),
-  19: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 20 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: 0, dy: r.p3.getFloat64(4, true) / CM, dxBy: p(1) } } : undefined),
+  17: (r, p) => (r.parents.length === 1 && r.p3 && r.p3.byteLength >= 52 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: r.p3.getFloat64(4, true) / CM, dy: r.p3.getFloat64(24, true) / CM, ...exactPixels('dxPx', r.p3.getFloat64(4, true)), ...exactPixels('dyPx', r.p3.getFloat64(24, true)) } } : undefined),   // 记录同时有像素值和显示值；显示值的单位可能是厘米、英寸或像素，只有像素值可靠
+  18: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 20 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: r.p3.getFloat64(4, true) / CM, dy: 0, ...exactPixels('dxPx', r.p3.getFloat64(4, true)), dyBy: p(1) } } : undefined),
+  19: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 20 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: 0, dy: r.p3.getFloat64(4, true) / CM, ...exactPixels('dyPx', r.p3.getFloat64(4, true)), dxBy: p(1) } } : undefined),
   20: (r, p) => (r.parents.length === 3 ? { k: 'translate', src: p(0), by: { mode: 'rect', dx: 0, dy: 0, dxBy: p(1), dyBy: p(2) } } : undefined),
-  21: (r, p) => (r.parents.length === 1 && r.p3 && r.p3.byteLength >= 60 ? { k: 'translate', src: p(0), by: { mode: 'polar', angle: { fixed: angleDeg(r.p3) }, dist: { fixed: r.p3.getFloat64(32, true) / CM } } } : undefined),
+  21: (r, p) => (r.parents.length === 1 && r.p3 && r.p3.byteLength >= 60 ? { k: 'translate', src: p(0), by: { mode: 'polar', angle: { fixed: angleDeg(r.p3) }, dist: { fixed: r.p3.getFloat64(32, true) / CM }, ...exactPixels('distPx', r.p3.getFloat64(32, true)) } } : undefined),
   27: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 28 ? { k: 'rotate', src: p(0), center: p(1), angle: { mode: 'fixed', deg: angleDeg(r.p3) } } : undefined),
   29: (r, p) => (r.parents.length === 3 ? { k: 'rotate', src: p(0), center: p(1), angle: { mode: 'value', m: p(2) } } : undefined),
   28: (r, p) => (r.parents.length === 5 ? { k: 'rotate', src: p(0), center: p(1), angle: { mode: 'marked', a: p(2), v: p(3), b: p(4) } } : undefined),
-  22: (r, p) => (r.parents.length === 4 && r.p3 && r.p3.byteLength >= 20 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { fixed: r.p3.getFloat64(4, true) / CM }, angle: { pts: [p(1), p(2), p(3)] } } } : undefined),
+  22: (r, p) => (r.parents.length === 4 && r.p3 && r.p3.byteLength >= 20 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { fixed: r.p3.getFloat64(4, true) / CM }, ...exactPixels('distPx', r.p3.getFloat64(4, true)), angle: { pts: [p(1), p(2), p(3)] } } } : undefined),
   24: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 28 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { m: p(1) }, angle: { fixed: angleDeg(r.p3) } } } : undefined),
-  23: (r, p) => (r.cat === 1 && r.kind === 4 && r.parents.length === 2 && r.p3?.byteLength === 28 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { fixed: r.p3.getFloat64(4, true) / CM }, angle: { m: p(1) } } } : undefined),
+  23: (r, p) => (r.cat === 1 && r.kind === 4 && r.parents.length === 2 && r.p3?.byteLength === 28 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { fixed: r.p3.getFloat64(4, true) / CM }, ...exactPixels('distPx', r.p3.getFloat64(4, true)), angle: { m: p(1) } } } : undefined),
   25: (r, p) => (r.parents.length === 5 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { m: p(4) }, angle: { pts: [p(1), p(2), p(3)] } } } : undefined),
   26: (r, p) => (r.cat === 1 && r.kind === 4 && r.parents.length === 3 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { m: p(2) }, angle: { m: p(1) } } } : undefined),
+  117: (r, p) => (r.parents.length === 2 && r.p3?.byteLength === 28 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { fixed: r.p3.getFloat64(4, true) / CM }, ...exactPixels('distPx', r.p3.getFloat64(4, true)), angle: { m: p(1), marker: true } } } : undefined),
+  118: (r, p) => (r.parents.length === 3 ? { k: 'translate', src: p(0), by: { mode: 'polar', dist: { m: p(2) }, angle: { m: p(1), marker: true } } } : undefined),
   33: (r, p) => (r.parents.length === 3 ? { k: 'dilate', src: p(0), center: p(1), ratio: { mode: 'value', m: p(2) } } : undefined),
   30: (r, p) => (r.parents.length === 2 && r.p3 && r.p3.byteLength >= 12 ? { k: 'dilate', src: p(0), center: p(1), ratio: { mode: 'fixed', num: r.p3.getFloat64(4, true), den: 1 } } : undefined),
   32: (r, p) => (r.parents.length === 5 ? { k: 'dilate', src: p(0), center: p(1), ratio: { mode: 'marked', a: p(2), b: p(3), c: p(4) } } : undefined),
@@ -1348,7 +1404,7 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
   const fileCompat = rd.records.find(r => r.tag === 902)?.data;
   const ownCompat = compat('file');
   const legacyDecimalRefs = fileCompat?.length === ownCompat.length && ownCompat.every((byte, i) => fileCompat[i] === byte);
-  const { pages: rawPages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts: fontTable, transforms: rawTransforms, startupButtons, tools: rawTools, mathItalicFlags } = parseRaw(rd.records, opts.tool, opts.legacyTool);
+  const { pages: rawPages, counters, scrolls, snaps, textTable, pageTextTables, precisions, pagePrecisions, angleUnitCode, angleUnitCodes, background, backgrounds, names, resources, fonts: fontTable, transforms: rawTransforms, savedSelection, tools: rawTools, mathItalicFlags } = parseRaw(rd.records, opts.tool, opts.legacyTool);
   const angleUnit = angleUnitCode === 0 ? 'rad' : angleUnitCode === 2 ? 'dir' : 'deg';
   const doc = newDoc('未命名');
   doc.pages = [];
@@ -1419,8 +1475,18 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
         const ps = r.parents.map(ids);
         if ((A === 0 || A === 1) && B < 8) def = mk({ type: 'hideshow', targets: ps, mode: B & 4 ? 'toggle' : A === 0 ? 'hide' : 'show', first: A === 0 ? 'hide' : 'show', fade: !!(B & 2), select: !!(B & 1) }, A === 0 ? '隐藏' : '显示');
         else if (A === 2 && B === 0 && r.p3 && r.p3.byteLength >= 24) {
-          const sp = r.p3.getFloat32(8, true), dir = (r.p3.getUint16(6, true) >> 12) & 3, speed = sp === 4 ? 'slow' : sp === 24 ? 'medium' : sp === 80 ? 'fast' : Number.isFinite(sp) && sp > 0 ? sp : undefined;
-          if (speed) def = mk({ type: 'animate', targets: ps, speed, direction: (['forward', 'backward', 'bounce', 'random'] as const)[dir], ...(r.p3.getUint16(6, true) & 0x8000 ? { once: true } : {}) }, '动画');
+          const dir = (r.p3.getUint16(6, true) >> 12) & 3, speed = animationSpeedFromFile(r.p3.getFloat32(8, true));
+          if (speed) {
+            const action: AnimateButton = { type: 'animate', targets: ps, speed, direction: (['forward', 'backward', 'bounce', 'random'] as const)[dir], ...(r.p3.getUint16(6, true) & 0x8000 ? { once: true } : {}) };
+            const raw = new Uint8Array(r.p3.buffer, r.p3.byteOffset, r.p3.byteLength);
+            if (raw.length === 36 && animationRecord(action).some((v, i) => v !== raw[i])) {
+              const options = raw.slice(), view = new DataView(options.buffer);
+              view.setUint16(6, view.getUint16(6, true) & ~0xb000, true);
+              view.setFloat32(8, 0, true);
+              action.gspOptions = bytesToB64(options);
+            }
+            def = mk(action, '动画');
+          }
         }
         else if (A === 3 && B <= 3 && ps.length >= 2 && ps.length % 2 === 0) {
           const mode = dv.getUint32(16, true);
@@ -1479,7 +1545,7 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
       else if (r.cat === 16 && r.method === 0 && r.parents.length === 0 && r.bitmap && r.d2216?.length === 8) {
         const bitmap = legacyBitmap(r.bitmap), rect = new DataView(r.d2216.buffer, r.d2216.byteOffset, r.d2216.byteLength);
         const x = rect.getInt16(0, true), y = rect.getInt16(2, true), w = rect.getInt16(4, true) - x, h = rect.getInt16(6, true) - y;
-        if (bitmap && w > 0 && h > 0) def = { k: 'image', data: bytesToB64(bitmap.bytes), mime: 'image/bmp', at: { x, y }, w, h };
+        if (bitmap && w > 0 && h > 0) def = { k: 'image', data: bytesToB64(bitmap.bytes), mime: 'image/bmp', at: { x, y }, w, h, ...(r.kind === 98 ? { drawing: true as const } : {}) };
       }
       else if (r.cat === 16 && r.kind === 78 && r.method === 108 && r.parents.length === 2 && r.d2316?.length === 16) {
         const size = new DataView(r.d2316.buffer, r.d2316.byteOffset, 16);
@@ -1489,7 +1555,7 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
         const res = resources[r.imgIndex], rv = new DataView(res.buffer, res.byteOffset, res.byteLength);
         const png = trimPng(res.subarray(8)), nw = rv.getUint32(0, true), nh = rv.getUint32(4, true);
         if (pngSize(png) && nw && nh) {
-          const image = { k: 'image' as const, data: bytesToB64(png), mime: 'image/png', at: { x: 0, y: 0 }, w: nw, h: nh };
+          const image = { k: 'image' as const, data: bytesToB64(png), mime: 'image/png', at: { x: 0, y: 0 }, w: nw, h: nh, ...(r.kind === 98 ? { drawing: true as const } : {}) };
           const [a, b, c] = r.parents;
           if (r.method === 0 && r.parents.length === 0 && r.d2216 && r.d2216.length >= 48) {
             const av = new DataView(r.d2216.buffer, r.d2216.byteOffset, r.d2216.byteLength);
@@ -1524,17 +1590,19 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
       }
       else if (r.cat === 6 && r.kind === 58 && r.method === 72 && r.parents.length === 2 && r.d2306 && r.d2306.length >= 20) {
         const dv = new DataView(r.d2306.buffer, r.d2306.byteOffset, r.d2306.byteLength);
-        def = { k: 'plot', func: ids(r.parents[0]), sys: ids(r.parents[1]), lo: dv.getFloat64(0, true), hi: dv.getFloat64(8, true), samples: dv.getUint32(16, true) };
+        const flags = dv.byteLength >= 24 ? dv.getUint16(22, true) : 3;
+        const endpointMark = dv.byteLength >= 36 ? dv.getUint32(32, true) : 1;
+        def = { k: 'plot', func: ids(r.parents[0]), sys: ids(r.parents[1]), lo: dv.getFloat64(0, true), hi: dv.getFloat64(8, true), samples: dv.getUint32(16, true), ...(flags === 3 ? {} : { flags }), ...(endpointMark === 1 ? {} : { endpointMark }) };
       }
       else if (r.method === 88 && r.cat === 1 && r.kind === 4 && r.parents.length === 1 && sysCandidates.get(r.parents[0])?.kind === 65) def = { k: 'iterpt', img: ids(r.parents[0]) };
       else if (r.method === 0 && r.kind === 41 && r.pos) def = { k: 'free', x: r.pos[0], y: r.pos[1] };
-      else if (r.method === 52 && r.parents.length === 1 && r.cat === 1) def = { k: 'translate', src: ids(r.parents[0]), by: { mode: 'rect', dx: (r.p3?.getFloat64(4, true) ?? CM) / CM, dy: 0 } };
+      else if (r.method === 52 && r.parents.length === 1 && r.cat === 1) def = { k: 'translate', src: ids(r.parents[0]), by: { mode: 'rect', dx: (r.p3?.getFloat64(4, true) ?? CM) / CM, dy: 0, ...exactPixels('dxPx', r.p3?.getFloat64(4, true) ?? CM) } };
       else if ((r.method === 54 || r.method === 55) && r.parents.length === 1 && r.cat === 1) {
         const ux = sysCandidates.get(r.parents[0]);
         // 方法 54（方形/极坐标网格）的纵向单位跟随横轴单位点，自身记录的距离可能是旧值，原版不用它：
         // 复变换.gsp 横轴单位 123.79 像素、54 记 37.8，原版绘图区纵轴 1 在原点上方约 125 像素。方法 55（矩形网格）用自己的距离。
         const same = r.method === 54 && ux?.method === 52 && ux.p3 && ux.p3.byteLength >= 12 ? ux.p3.getFloat64(4, true) : undefined;
-        if (ux?.parents[0] !== undefined) def = { k: 'translate', src: ids(ux.parents[0]), by: { mode: 'rect', dx: 0, dy: (same ?? r.p3?.getFloat64(4, true) ?? CM) / CM } };
+        if (ux?.parents[0] !== undefined) def = { k: 'translate', src: ids(ux.parents[0]), by: { mode: 'rect', dx: 0, dy: (same ?? r.p3?.getFloat64(4, true) ?? CM) / CM, ...exactPixels('dyPx', same ?? r.p3?.getFloat64(4, true) ?? CM) } };
         else def = { k: 'axis-unit', axis: ids(r.parents[0]), direction: 'y', ...(r.method === 55 ? { distance: r.p3?.getFloat64(4, true) ?? CM } : {}) };
       }
       else if (r.method === 56 && r.cat === 1 && r.kind === 40 && r.parents.length === 1 && r.p3 && r.p3.byteLength >= 12 && sysCandidates.get(r.parents[0])?.method === 59) {
@@ -1631,8 +1699,8 @@ export function decodeGsp(bytes: Uint8Array, opts: { tool?: boolean; legacyTool?
     }
     const tfs = (rawTransforms[pi] ?? []).filter(t => t.src >= 1 && t.src <= raw.length && t.img >= 1 && t.img <= raw.length);
     if (tfs.length) page.transforms = tfs.map(t => ({ name: t.name, src: t.src, img: t.img }));   // 对象 ID 就是 1 起的序号
-    const buttons = startupButtons[pi]?.filter(id => id >= 1 && id <= raw.length);
-    if (buttons?.length) page.startupButtons = buttons;
+    const selected = savedSelection[pi]?.filter(id => id >= 1 && id <= raw.length);
+    if (selected?.length) page.savedSelection = selected;
     for (const o of page.objects) if (o.def.k === 'sys') { const uy = page.objects.find(x => x.id === (o.def as { unitY: Id }).unitY); if (uy && uy.def.k !== 'calc' && uy.def.k !== 'measure' && uy.def.k !== 'param') uy.hidden = !(o.def.grid === 'rect' || o.def.grid === 'tri'); }   // 用“单位长度”度量定义坐标轴时（0870），unitY 是计算对象，不是点，不能被当成单位点改隐藏状态   // 方形/极坐标网格只有一个尺度，纵轴单位点不显示
     doc.pages.push(page);
   });
@@ -1703,14 +1771,32 @@ export function decodeToolBody(t: EmbeddedTool): { page: Page; unknown: string[]
   return { page, unknown: page.objects.flatMap(o => (o.def.k === 'unknown' ? [o.def.note] : [])) };
 }
 
-/**
- * 把工具的对象编码成可内嵌的工具（1002…1003 记录，见 docs/gsp格式.md §3h）。
- * 借用页面编码器写对象，再取出对象记录；前提条件的自由点位置写成 0（和原版的工具文件一致）。
- * 遇到没有写入依据的对象抛 Unsupported。注意：原版是否接受这样的工具段还没有互读验证。
- */
+function encodeToolGiven(out: Out, o: Obj, cx: Ctx) {
+  const d = o.def, slot = need(toolGivenSlot(d), '工具前提条件类型');
+  out.rec(2000, header(0, slot.cat, slot.kind, o, 'plain'));
+  const func = slot.kind === 57, unit = slot.kind === 60 ? 'distance' : slot.kind === 49 ? 'angle' : 'none';
+  const at = o.at ?? { x: 10, y: 5 };
+  if (slot.cat === 11) {
+    const tokens = func ? exprTokens({ t: 'x' }, () => { throw new Unsupported('函数前提占位引用'); })
+      : numTokens(d.k === 'param' ? d.value : 1, unit, true);
+    out.rec(2311, record2311(func ? 'func' : 'param', tokens, { at, ...(func ? {} : { unit }) }));
+  }
+  const name = o.label ?? (d.k === 'param' || d.k === 'func' ? d.name : undefined);
+  if (name !== undefined || slot.cat === 11) {
+    const [label] = labelRec(name ?? (func ? 'f' : 't'), o.labelShown, true, !!o.toolLabel);
+    new DataView(label.buffer).setUint16(0, 7, true);
+    out.rec(2005, label);
+    out.rec(2008, new Buf(2).u16(styleIndex(cx, o)).b);
+  }
+  if (slot.cat === 1) out.rec(2201, new Uint8Array(16));
+  else out.rec(2211, rect2211(at, 54, 31));
+  out.rec(2007);
+}
+
+/** 写入工具对象，前提在 1204 中按点选顺序引用。 */
 export function encodeToolBody(objects: Obj[], name: string, prereq: number[], comment?: string): EmbeddedTool {
   const page: Page = { ...emptyPage(), objects: objects.map(o => JSON.parse(JSON.stringify(o)) as Obj), nextId: objects.length + 1 };
-  const bytes = encodeGsp({ ...newDoc('工具'), pages: [page] });
+  const bytes = encodeGspBytes({ ...newDoc('工具'), pages: [page] }, new Set(), false, new Set(prereq));
   const recs = readRecords(bytes).records;
   const from = recs.findIndex(r => r.tag === 1000), to = recs.findIndex(r => r.tag === 1001);
   const body = recs.slice(from + 1, to).filter(r => r.tag === 1201 || r.tag === 1203 || (r.tag >= 2000 && r.tag < 2399));
@@ -1732,6 +1818,12 @@ export function decodeFile(bytes: Uint8Array, name: string): DecodeResult {
   if (head === NGSP_MAGIC) {
     const doc = JSON.parse(dec.decode(bytes.subarray(NGSP_MAGIC.length))) as Doc;
     if (!Array.isArray(doc.pages)) throw new Error('不是有效的新版课件');
+    for (const page of doc.pages as (Page & { startupButtons?: Id[] })[]) {
+      if (page.startupButtons) {
+        page.savedSelection ??= page.startupButtons;
+        delete page.startupButtons;
+      }
+    }
     return { doc, source: { kind: 'ngsp' }, notes: [] };
   }
   void name;
@@ -1742,14 +1834,22 @@ export function decodeFile(bytes: Uint8Array, name: string): DecodeResult {
  * 依据：2201 自由点位置、2003 类型 44 路径距离、方法 96 的失真度和采样数、2000 头的样式字段，以及原版互读的简单文本标记。
  * 候选模型先限制变化范围，再由正式入口重读校验，未解码字节不参与重建。
  */
+function selectionRecord(ids: readonly Id[], index: ReadonlyMap<Id, number>): Uint8Array {
+  const b = new Buf(ids.length * 4);
+  for (const id of ids) b.u32(need(index.get(id), '保存时选中的对象'));
+  return b.b;
+}
+
 function patchSource(doc: Doc, src: Source): Uint8Array | undefined {
   if (!src.bytes || !src.unmodifiedJson) return;
   const before = JSON.parse(src.unmodifiedJson) as Doc;
   if (before.pages.length !== doc.pages.length) return;
   const patches = new Map<RecordEntry, Uint8Array>();
+  const changedSelections = new Map<number, Uint8Array>();
   let pi = -1, oi = -1, tool = false, active = false;
   let pair: { a: Obj; b: Obj } | undefined;
   const rd = readRecords(src.bytes);
+  if (!rd.complete) return;
   const raw = parseRaw(rd.records);
   const signature = rd.records.find(r => r.tag === 900)?.data;
   const utf8TextSource = signature?.[0] === 5 && signature[1] === 0;
@@ -1769,9 +1869,24 @@ function patchSource(doc: Doc, src: Source): Uint8Array | undefined {
         patches.set(r, bytes);
       }
       a.autoSnap = b.autoSnap;
+      if (JSON.stringify(a.savedSelection) !== JSON.stringify(b.savedSelection)) {
+        const index = new Map(a.objects.map((o, i) => [o.id, i + 1]));
+        const out = new Out();
+        if (b.savedSelection?.length) out.rec(9000, selectionRecord(b.savedSelection, index));
+        changedSelections.set(pi, out.bytes());
+        a.savedSelection = b.savedSelection;
+      }
     }
-    if (r.tag === 1001) { active = false; pair = undefined; }
+    if (r.tag === 1001) {
+      const record = changedSelections.get(pi);
+      if (active && record?.length) patches.set(r, cat([record, r.raw]));
+      active = false; pair = undefined;
+    }
     if (!active) continue;
+    if (r.tag === 9000 && changedSelections.has(pi)) {
+      if (r.data.length % 4 !== 0) return;
+      patches.set(r, new Uint8Array());
+    }
     if (r.tag === 2000) {
       oi++;
       const a = before.pages[pi]?.objects[oi], b = doc.pages[pi]?.objects[oi];
@@ -1900,8 +2015,11 @@ export function encodeFile(doc: Doc, source: unknown): EncodeResult {
     // 才允许以重建方式改写它；否则保留原文件，改存当前模型为 .ngsp。
     if (!patched && src?.kind === 'gsp' && src.bytes) {
       if (!src.unmodifiedJson) throw new Unsupported('来源课件缺少完整性快照，请重新打开后保存');
-      const baseline = encodeGsp(JSON.parse(src.unmodifiedJson) as Doc);
-      if (baseline.length !== src.bytes.length || baseline.some((v, i) => v !== src.bytes![i])) throw new Unsupported('来源课件含有尚不能确认完整保留的格式信息');
+      const before = JSON.parse(src.unmodifiedJson) as Doc;
+      const matches = (baseline: Uint8Array) => baseline.length === src.bytes!.length && baseline.every((v, i) => v === src.bytes![i]);
+      if (!matches(encodeGsp(before)) && !matches(encodeGspBytes(before, new Set(), true))) {
+        throw new Unsupported('来源课件含有尚不能确认完整保留的格式信息');
+      }
     }
     const bytes = patched ?? encodeGsp(doc, notes);
     const check = decodeGsp(bytes);

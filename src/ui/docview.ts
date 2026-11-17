@@ -9,7 +9,8 @@ import { fontAt, replaceText, styleRange } from '../core/text-runs';
 import { Store } from '../core/store';
 import { toolInputFromHits, toolInputLabel, acceptsInput, applyTool, automaticToolInputs, type Tool } from '../core/tooling';
 import { applyDisplay, clipStraight, drawPage, drawPoint, typeName, wrap, imageLoaded, embeddedButtonAt, strokeShape } from './render';
-import { DEFAULT_DISPLAY, pageDisplay, type DisplayPrefs, type Page } from '../core/model';
+import { DEFAULT_DISPLAY, pageDisplay, type DisplayPrefs, type Doc, type Page } from '../core/model';
+import { markerDrawing, paintMarker } from './bitmap-function';
 import type { EvalCtx, Results } from '../core/engine';
 import type { App } from '../app';
 
@@ -76,6 +77,7 @@ export class DocView {
   readonly title = document.createElement('div');
   store: Store;
   sel: Id[] = [];
+  private readonly pageSelections = new WeakMap<Page, Id[]>();
   marks: Marks = {};
   /** 双击标记后的指示动画状态（只在预览层绘制，不属于文档）。 */
   private markFx?: { kind: 'center' | 'mirror'; id: Id; t0: number };
@@ -310,8 +312,8 @@ export class DocView {
       }
     }
     if (d.mode === 'stroke' && d.stroke) {
-      ctx.strokeStyle = this.app.settings.marker.color; ctx.lineWidth = this.app.settings.marker.thick ? 4 : 1.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath(); d.stroke.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke();
+      const mk = this.app.settings.marker;
+      paintMarker(ctx, d.stroke, mk.color, mk.thick ? 4 : 2);
     }
     if (d.mode === 'text-box' && d.rect) { ctx.setLineDash([4, 3]); ctx.strokeStyle = '#333'; ctx.strokeRect(d.rect.x0 + .5, d.rect.y0 + .5, d.rect.x1 - d.rect.x0, d.rect.y1 - d.rect.y0); }
     // 信息气泡
@@ -359,6 +361,24 @@ export class DocView {
 
   // ------------- 选择 -------------
   setSel(ids: Id[]) { this.sel = [...new Set(ids)].filter(i => this.store.get(i)); this.app.refresh(); this.invalidate(); }
+  switchPage(index: number) {
+    if (index === this.store.doc.current) return;
+    this.pageSelections.set(this.store.page, this.sel);
+    this.store.switchPage(index);
+    this.eraseTraces();
+    this.setSel(this.pageSelections.get(this.store.page) ?? this.store.page.savedSelection ?? []);
+  }
+
+  documentForSave(): Doc {
+    const { doc } = this.store;
+    return { ...doc, pages: doc.pages.map((page, i) => {
+      const ids = i === doc.current ? this.sel : this.pageSelections.get(page);
+      if (ids === undefined) return { ...page };
+      const existing = new Set(page.objects.map(o => o.id));
+      const savedSelection = ids.filter(id => existing.has(id));
+      return { ...page, savedSelection: savedSelection.length ? savedSelection : undefined };
+    }) };
+  }
   clearSel() { if (this.sel.length) this.setSel([]); }
 
   // ------------- 指针事件 -------------
@@ -762,7 +782,8 @@ export class DocView {
     if (d.mode === 'stroke' && d.stroke && d.stroke.length > 1) {
       const pts = d.stroke;
       const mk = this.app.settings.marker;
-      const o = st.run('构造绘图', () => st.add({ k: 'stroke', pts }, { style: { color: mk.color, pointSize: 2, width: mk.thick ? 3 : 1, dash: 'solid' } }));
+      const drawing = markerDrawing(pts, mk.color, mk.thick ? 4 : 2);
+      const o = st.run('构造绘图', () => drawing ? st.add(drawing) : st.add({ k: 'stroke', pts }, { style: { color: mk.color, pointSize: 2, width: mk.thick ? 3 : 1, dash: 'solid' } }));
       this.setSel([o.id]); return;
     }
     if (d.mode === 'text-box') { this.createText(d.rect && (d.rect.x1 - d.rect.x0 > 8 || d.rect.y1 - d.rect.y0 > 8) ? d.rect : { x0: p.x, y0: p.y, x1: p.x + 120, y1: p.y + 24 }); return; }

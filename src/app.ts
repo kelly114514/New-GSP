@@ -5,7 +5,7 @@ import { formatQ, parseExpr, usesX, type Expr } from './core/expr';
 import { DEFAULT_COLORS, DEFAULT_DISPLAY, TEXT_DEFAULTS, childrenOf, parentsOf, newDoc, pageAutoSnap, pageDisplay, type ButtonAction, type DisplayPrefs, type FontSpec, type Id, type Obj } from './core/model';
 import type { Pt } from './core/geom';
 import { Store } from './core/store';
-import { projectOnPath } from './core/engine';
+import { initialPlotDomain, projectOnPath } from './core/engine';
 import { legacyHelpTopic } from './core/link';
 import { analyse, executeCommand, fontTargets, mergeTextSource, queryCommand, type Ctx, type Sel } from './commands';
 import { Dialogs } from './ui/dialogs';
@@ -214,15 +214,19 @@ export class App {
       store.source = r.source;
       store.protectedReason = (r.source as Source).protectedReason;
       const v = this.addView(store, f.path);
+      v.setSel(store.page.savedSelection ?? []);
       v.store.doc.name = f.name.replace(/\.n?gsp$/i, '');
       if (r.notes.length) this.dlg.message(r.notes.join('\n'));
       this.addRecent(f.path ?? f.name);
       v.resize();
-      for (const id of store.page.startupButtons ?? []) {
+      for (const id of store.page.savedSelection ?? []) {
         const button = store.get(id);
         if (button?.def.k !== 'button') continue;
         const action = button.def.action.type;
-        if (action === 'animate' || action === 'hideshow' || (action === 'move' && !store.protectedReason)) this.pressButton(v, button);
+        if (action === 'animate' || action === 'hideshow' || action === 'series' || action === 'scroll' || (action === 'move' && !store.protectedReason)) {
+          if (action === 'hideshow' || action === 'series' || action === 'scroll') v.clearSel();
+          this.pressButton(v, button);
+        }
       }
     } catch (e) { this.dlg.message(`无法打开文件：${e instanceof Error ? e.message : String(e)}`); }
   }
@@ -231,24 +235,30 @@ export class App {
   async save(v: DocView, saveAs: boolean): Promise<boolean> {
     try {
       const st = v.store;
+      const doc = v.documentForSave();
       let bytes: Uint8Array, ext: 'gsp' | 'ngsp' = 'gsp', notes: string[] = [];
       let src = st.source as Source | undefined;
-      if (src?.kind === 'ngsp' && v.path?.toLowerCase().endsWith('.ngsp') && !saveAs) { bytes = encodeNgsp(st.doc); ext = 'ngsp'; }
+      if (src?.kind === 'ngsp' && v.path?.toLowerCase().endsWith('.ngsp') && !saveAs) { bytes = encodeNgsp(doc); ext = 'ngsp'; }
       else {
-        const enc = encodeFile(st.doc, st.source);
+        const enc = encodeFile(doc, st.source);
         if (enc.ok) { bytes = enc.bytes; src = enc.source; notes = enc.notes ?? []; }
         else {
           const go = await this.dlg.confirm(`${enc.reason}
 
 可以改存为“新版课件”（.ngsp）：它完整保存所有内容，只能用新版打开。要这样保存吗？`);
           if (!go) return false;
-          bytes = encodeNgsp(st.doc); ext = 'ngsp'; src = { kind: 'ngsp' };
+          bytes = encodeNgsp(doc); ext = 'ngsp'; src = { kind: 'ngsp' };
         }
       }
       const keepPath = !saveAs && v.path && v.path.toLowerCase().endsWith(`.${ext}`) ? v.path : undefined;
       const res = await desktop.saveFile(bytes, keepPath, `${st.doc.name}.${ext}`, ext);
       if (!res) return false;
       v.path = res.path;
+      for (const [i, pg] of st.doc.pages.entries()) {
+        const ids = doc.pages[i]?.savedSelection;
+        if (ids?.length) pg.savedSelection = ids;
+        else delete pg.savedSelection;
+      }
       st.doc.name = res.name.replace(/\.n?gsp$/i, '');
       st.source = src;
       st.markSaved();
@@ -470,21 +480,21 @@ export class App {
     st.run(plot ? '绘制新函数' : '新建函数', () => {
       const f = st.add({ k: 'func', name: r.name, expr: r.expr, param: r.variable, ...(r.form !== 'y=f(x)' ? { form: r.form } : {}), ...(r.symbol ? { symbol: true } : {}) }, { at: this.nextTextPos(v), label: r.name });
       made.push(f.id);
-      if (plot) {
-        const sys = findSys(st) ?? createSystem(st);
-        made.push(st.add({ k: 'plot', func: f.id, sys: sys.id, samples: 300 }, { style: { color: '#000080', pointSize: 2, width: 2, dash: 'solid' } }).id);
-      }
+      if (plot) made.push(this.addFunctionPlot(v, f).id);
     });
     v.setSel(made.slice(-1));
   }
   /** 为已有函数画图像（选中函数时的“绘制函数”）。 */
   plotFunction(v: DocView, f: Obj) {
-    const st = v.store; let made: Obj | undefined;
-    st.run('绘制函数', () => {
-      const sys = findSys(st) ?? createSystem(st);
-      made = st.add({ k: 'plot', func: f.id, sys: sys.id, samples: 300 }, { style: { color: '#000080', pointSize: 2, width: 2, dash: 'solid' } });
-    });
+    const made = v.store.run('绘制函数', () => this.addFunctionPlot(v, f));
     if (made) v.setSel([made.id]);
+  }
+  private addFunctionPlot(v: DocView, f: Obj): Obj {
+    const st = v.store, sys = findSys(st) ?? createSystem(st);
+    const form = f.def.k === 'func' ? f.def.form : undefined;
+    const domain = form === 'r=f(t)' || form === 't=f(r)' ? undefined
+      : initialPlotDomain(st.results.get(sys.id)?.shape, v.viewRect(), form === 'x=f(y)');
+    return st.add({ k: 'plot', func: f.id, sys: sys.id, samples: 750, ...domain }, { style: { color: '#000080', pointSize: 2, width: 2, dash: 'solid' } });
   }
   makeParamCurve(v: DocView, r: { fx: Id; fy: Id; polar: boolean; lo: number; hi: number }) {
     const st = v.store;
@@ -636,7 +646,7 @@ export class App {
         if (!hide && a.select !== false) v.setSel(targets.map(t => t.id));
         v.invalidate(); break;
       }
-      case 'animate': this.anim.toggle(v, a.targets.map(id => st.get(id)).filter((x): x is Obj => !!x), a.speed, a.direction); break;
+      case 'animate': this.anim.toggle(v, a.targets.map(id => st.get(id)).filter((x): x is Obj => !!x), a.speed, a.direction, a); break;
       case 'move': {
         for (const [from, to] of [[a.from, a.to], ...(a.pairs ?? [])]) this.anim.moveTo(v, from, to, a.speed, a.toInitial);
         break;
@@ -645,7 +655,7 @@ export class App {
         const topic = a.url && legacyHelpTopic(a.url);
         if (topic) void this.dlg.message(topic);
         else if (a.url) void desktop.openUrl(a.url).catch(() => this.dlg.message('系统未能打开这个链接。'));
-        else if (a.page >= 1 && a.page <= st.doc.pages.length) { st.switchPage(a.page - 1); v.sel = []; this.refresh(); }
+        else if (a.page >= 1 && a.page <= st.doc.pages.length) v.switchPage(a.page - 1);
         break;
       }
       case 'scroll': { const s = st.results.get(a.point)?.shape; if (s?.k === 'pt') { v.scroll = a.where === 'center' ? { x: s.p.x - (v.canvas.width / v.dpr) / 2, y: s.p.y - (v.canvas.height / v.dpr) / 2 } : { x: s.p.x, y: s.p.y }; v.updateView(); v.eraseTraces(); v.invalidate(); } break; }
@@ -722,7 +732,7 @@ export class App {
     const doc = v.store.doc, show = doc.pages.length > 1 && doc.settings.showPageTabs !== false;
     this.pagebar.hidden = !show;
     if (!show) return;
-    this.pagebar.replaceChildren(...doc.pages.map((p, i) => { const b = document.createElement('button'); b.textContent = p.name; b.className = i === doc.current ? 'on' : ''; b.onclick = () => { v.store.switchPage(i); v.sel = []; v.eraseTraces(); this.refresh(); }; return b; }));
+    this.pagebar.replaceChildren(...doc.pages.map((p, i) => { const b = document.createElement('button'); b.textContent = p.name; b.className = i === doc.current ? 'on' : ''; b.onclick = () => v.switchPage(i); return b; }));
   }
   showContextMenu(v: DocView, e: MouseEvent, p: Pt) {
     // 右键不会经过 DocView.onDown 的前台切换；先激活目标文档，避免从另一个文档取命令状态或执行目标。

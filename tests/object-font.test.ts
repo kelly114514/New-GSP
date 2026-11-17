@@ -4,7 +4,7 @@ import { Store } from '../src/core/store';
 import { decodeFile, encodeFile, encodeNgsp } from '../src/gsp/codec';
 import type { Id } from '../src/core/model';
 
-it('数值和表格的字体操作可撤消，并在保存时保护格式', () => {
+it('数值和表格的字体操作可撤消，并在保存后保留样式', () => {
   const st = new Store(); let parameter: Id = 0, table: Id = 0;
   st.run('构造', () => {
     parameter = st.add({ k: 'param', name: 't', value: 2, unit: 'none', showEdit: true }, { at: { x: 10, y: 10 } }).id;
@@ -19,7 +19,16 @@ it('数值和表格的字体操作可撤消，并在保存时保护格式', () =
   app.fontSize(view as never, 2);
   expect(st.get(parameter)?.font?.size).toBe(20);
   expect(st.get(table)?.font?.size).toBe(16);
-  expect(encodeFile(st.doc, undefined).ok).toBe(false);
+  const saved = encodeFile(st.doc, undefined);
+  if (!saved.ok) throw new Error(saved.reason);
+  const [savedParameter, savedTable] = decodeFile(saved.bytes, '字体.gsp').doc.pages[0].objects;
+  expect(savedParameter.font).toEqual(st.get(parameter)?.font);
+  expect(savedTable.font).toEqual(st.get(table)?.font);
+  const stale = structuredClone(st.doc);
+  const draftTable = stale.pages[0].objects[1].def;
+  if (draftTable.k !== 'table') throw new Error('表格');
+  draftTable.rows[0][0] = 8;
+  expect(encodeFile(stale, undefined)).toMatchObject({ ok: false, unsupported: ['原版会重算与当前列值不同的表格最后一行'] });
   expect(decodeFile(encodeNgsp(st.doc), '字体.ngsp').doc).toEqual(st.doc);
   st.doUndo();
   expect(st.get(parameter)?.font?.size).toBe(18);
